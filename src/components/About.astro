@@ -1,0 +1,50 @@
+---
+// src/components/About.astro
+// ───────────────────────────
+// Seção sobre — statement editorial + bio + estatísticas
+---
+
+<section id="about" class="section reveal-section">
+  <div class="container">
+
+    <header class="section-header">
+      <span class="section-index">01</span>
+      <h2 data-i18n="about.title">Sobre Mim</h2>
+    </header>
+
+    <div class="about-layout">
+
+      <!-- Frase editorial grande (sticky no desktop) -->
+      <p class="about-statement" data-i18n="about.statement">
+        Transformo ideias em interfaces <em>precisas</em>,
+        <em>intencionais</em> e <em>premium</em>.
+      </p>
+
+      <!-- Bio + estatísticas -->
+      <div class="about-detail">
+
+        <p class="about-bio reveal-item" data-i18n="about.bio">
+          Sou um desenvolvedor apaixonado por criar interfaces limpas e com visual
+          premium. Foco sempre na melhor experiência para o usuário — cada detalhe importa.
+        </p>
+
+        <div class="about-stats">
+          <div class="stat reveal-item" style="--delay: 0.1s">
+            <strong class="stat-num" data-counter data-value="3"   data-suffix="+">0+</strong>
+            <span   class="stat-label" data-i18n="about.stat1">Anos de Experiência</span>
+          </div>
+          <div class="stat reveal-item" style="--delay: 0.2s">
+            <strong class="stat-num" data-counter data-value="20"  data-suffix="+">0+</strong>
+            <span   class="stat-label" data-i18n="about.stat2">Projetos Entregues</span>
+          </div>
+          <div class="stat reveal-item" style="--delay: 0.3s">
+            <strong class="stat-num" data-counter data-value="100" data-suffix="%">0%</strong>
+            <span   class="stat-label" data-i18n="about.stat3">Dedicação</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>

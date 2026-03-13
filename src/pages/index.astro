@@ -1,0 +1,58 @@
+---
+// src/pages/index.astro
+// ─────────────────────
+// Página principal — importa cada componente de seção
+import Nav     from '../components/Nav.astro';
+import Hero    from '../components/Hero.astro';
+import About   from '../components/About.astro';
+import Services from '../components/Services.astro';
+import Contact from '../components/Contact.astro';
+import Footer  from '../components/Footer.astro';
+
+import '../styles/global.css';
+---
+
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark" data-lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eduardo Ritter — Developer & Creative</title>
+
+  <!-- Aplica tema antes de renderizar (evita flash) -->
+  <script is:inline>
+    (function () {
+      var s = localStorage.getItem('theme');
+      var d = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', s || (d ? 'dark' : 'light'));
+    })();
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+
+<body>
+
+  <!-- Linha de progresso de scroll -->
+  <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+  <Nav />
+
+  <main>
+    <Hero />
+    <About />
+    <Services />
+    <Contact />
+  </main>
+
+  <Footer />
+
+  <!-- Script principal — Astro processa e otimiza automaticamente -->
+  <script>
+    import '../scripts/main.js';
+  </script>
+
+</body>
+</html>

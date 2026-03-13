@@ -1,0 +1,48 @@
+---
+// src/components/Contact.astro
+// ─────────────────────────────
+// Seção contato — fundo invertido (claro/escuro automático)
+---
+
+<section id="contact" class="section section-inverted reveal-section">
+  <div class="container">
+
+    <header class="section-header">
+      <span class="section-index">03</span>
+      <h2 data-i18n="contact.title">Entre em Contato</h2>
+    </header>
+
+    <div class="contact-layout">
+
+      <!-- Frase grande (sticky no desktop) -->
+      <h3 class="contact-headline" data-i18n="contact.headline">
+        Vamos construir<br>algo excepcional.
+      </h3>
+
+      <!-- Detalhes de contato -->
+      <div class="contact-right">
+
+        <p class="contact-sub reveal-item" data-i18n="contact.sub">
+          Disponível para novos projetos.
+        </p>
+
+        <a href="mailto:contato@eduardoritter.com"
+           class="contact-email reveal-item"
+           style="--delay: 0.1s">
+          contato@eduardoritter.com
+        </a>
+
+        <nav class="contact-links reveal-item" style="--delay: 0.2s" aria-label="Redes sociais">
+          <a href="#" class="contact-link">
+            LinkedIn <span class="arrow" aria-hidden="true">↗</span>
+          </a>
+          <a href="#" class="contact-link">
+            GitHub <span class="arrow" aria-hidden="true">↗</span>
+          </a>
+        </nav>
+
+      </div>
+    </div>
+
+  </div>
+</section>
