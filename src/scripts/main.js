@@ -24,59 +24,77 @@ document.addEventListener('DOMContentLoaded', () => {
     const T = {
 
         pt: {
-            'nav.home':             'Início',
-            'nav.about':            'Sobre',
-            'nav.services':         'Serviços',
-            'nav.contact':          'Contato',
-            'hero.tag':             'Desenvolvedor &amp; Criativo',
-            'hero.sub':             'Criando experiências digitais<br>modernas e impactantes.',
-            'hero.cta':             'Vamos Conversar',
-            'hero.scroll':          'Rolar',
-            'about.title':          'Sobre Mim',
-            'about.statement':      'Transformo ideias em interfaces <em>precisas</em>, <em>intencionais</em> e <em>premium</em>.',
-            'about.bio':            'Sou um desenvolvedor apaixonado por criar interfaces limpas e com visual premium. Foco sempre na melhor experiência para o usuário — cada detalhe importa.',
-            'about.stat1':          'Anos de Experiência',
-            'about.stat2':          'Projetos Entregues',
-            'about.stat3':          'Dedicação',
-            'services.title':       'Serviços',
-            'services.item1.title': 'Design &amp; UI',
-            'services.item1.text':  'Interfaces modernas, responsivas e com atenção precisa aos detalhes visuais.',
-            'services.item2.title': 'Desenvolvimento',
-            'services.item2.text':  'HTML5, CSS3, JavaScript — código limpo, performático e bem estruturado.',
-            'services.item3.title': 'Soluções Digitais',
-            'services.item3.text':  'Tecnologia eficiente focada em resolver problemas reais com precisão.',
-            'contact.title':        'Entre em Contato',
-            'contact.headline':     'Vamos construir<br>algo excepcional.',
-            'contact.sub':          'Disponível para novos projetos.',
-            'footer.text':          '&copy; 2026 — Todos os direitos reservados.',
+            'nav.home': 'Início',
+            'nav.about': 'Sobre',
+            'nav.services': 'Jornada',
+            'nav.expertise': 'Expertise',
+            'nav.contact': 'Contato',
+            'hero.tag': 'Staff AI Engineer &amp; Global NASA Winner',
+            'hero.sub': 'Projetando o futuro com IA Generativa<br>e arquiteturas escaláveis.',
+            'hero.cta': 'Vamos Conversar',
+            'hero.scroll': 'Rolar',
+            'about.title': 'Sobre Mim',
+            'about.statement': 'Transformo complexidade técnica em <em>impacto real</em> com IA.',
+            'about.bio': 'Sou Staff AI Engineer com mais de 15 anos de experiência projetando sistemas de alta escala. Vencedor Global do NASA Space Apps Challenge e reconhecido pela IBM como um dos Top 50 Inovadores em IA do Brasil, combino visão de produto com engenharia profunda para criar soluções que transformam indústrias.',
+            'about.stat1': 'Anos de Experiência',
+            'about.stat2': 'Prêmio Global NASA',
+            'about.stat3': 'Top 50 AI IBM',
+            'services.title': 'Expertise',
+            'services.item1.title': 'Engenharia de IA &amp; LLMs',
+            'services.item1.text': 'Arquiteturas de RAG, Agentes Autônomos e Prompt Engineering avançado com GPT-4 e Gemini.',
+            'services.item2.title': 'Arquitetura de Sistemas',
+            'services.item2.text': 'Sistemas distribuídos, Cloud (GCP/AWS) e pipelines de dados escaláveis para milhões de usuários.',
+            'services.item3.title': 'Inovação de Produto',
+            'services.item3.text': 'Liderança técnica focada em resultados de negócio, como o aumento de 70% em conversão na Contabilizei.',
+            'experience.title': 'Jornada',
+            'experience.job1.title': 'Staff AI Engineer @ Contabilizei',
+            'experience.job1.date': '2024 — Presente',
+            'experience.job2.title': 'Head of AI @ BrandLovrs',
+            'experience.job2.date': '2023 — 2024',
+            'experience.job3.title': 'Senior Data Scientist @ XP Inc.',
+            'experience.job3.date': '2021 — 2023',
+            'contact.title': 'Entre em Contato',
+            'contact.headline': 'Vamos construir<br>o próximo nível.',
+            'contact.sub': 'Disponível para parcerias e projetos de alto impacto.',
+            'experience.cv': 'Ver Currículo Completo (PDF)',
+            'footer.text': '&copy; 2026 — Eduardo Moraes Ritter. Todos os direitos reservados.',
         },
 
         en: {
-            'nav.home':             'Home',
-            'nav.about':            'About',
-            'nav.services':         'Services',
-            'nav.contact':          'Contact',
-            'hero.tag':             'Developer &amp; Creative',
-            'hero.sub':             'Creating modern and<br>impactful digital experiences.',
-            'hero.cta':             "Let's Talk",
-            'hero.scroll':          'Scroll',
-            'about.title':          'About Me',
-            'about.statement':      'Transforming ideas into <em>precise</em>, <em>intentional</em>, and <em>premium</em> interfaces.',
-            'about.bio':            "I'm a developer passionate about creating clean and premium interfaces. I always focus on the best user experience — every detail matters.",
-            'about.stat1':          'Years of Experience',
-            'about.stat2':          'Projects Delivered',
-            'about.stat3':          'Dedication',
-            'services.title':       'Services',
-            'services.item1.title': 'Design &amp; UI',
-            'services.item1.text':  'Modern, responsive interfaces with precise attention to visual detail.',
-            'services.item2.title': 'Development',
-            'services.item2.text':  'HTML5, CSS3, JavaScript — clean, performant and well-structured code.',
-            'services.item3.title': 'Digital Solutions',
-            'services.item3.text':  'Efficient technology focused on solving real problems with precision.',
-            'contact.title':        'Get in Touch',
-            'contact.headline':     "Let's build<br>something exceptional.",
-            'contact.sub':          'Available for new projects.',
-            'footer.text':          '&copy; 2026 — All rights reserved.',
+            'nav.home': 'Home',
+            'nav.about': 'About',
+            'nav.services': 'Journey',
+            'nav.expertise': 'Expertise',
+            'nav.contact': 'Contact',
+            'hero.tag': 'Staff AI Engineer &amp; Global NASA Winner',
+            'hero.sub': 'Designing the future with Generative AI<br>and scalable architectures.',
+            'hero.cta': "Let's Talk",
+            'hero.scroll': 'Scroll',
+            'about.title': 'About Me',
+            'about.statement': 'Transforming technical complexity into <em>real impact</em> with AI.',
+            'about.bio': "I'm a Staff AI Engineer with over 15 years of experience designing high-scale systems. Global Winner of the NASA Space Apps Challenge and recognized by IBM as one of the Top 50 AI Innovators in Brazil, I combine product vision with deep engineering to create solutions that transform industries.",
+            'about.stat1': 'Years of Experience',
+            'about.stat2': 'NASA Global Award',
+            'about.stat3': 'Top 50 AI IBM',
+            'services.title': 'Expertise',
+            'services.item1.title': 'AI Engineering &amp; LLMs',
+            'services.item1.text': 'RAG architectures, Autonomous Agents, and advanced Prompt Engineering with GPT-4 and Gemini.',
+            'services.item2.title': 'System Architecture',
+            'services.item2.text': 'Distributed systems, Cloud (GCP/AWS), and scalable data pipelines for millions of users.',
+            'services.item3.title': 'Product Innovation',
+            'services.item3.text': 'Technical leadership focused on business results, such as the 70% conversion increase at Contabilizei.',
+            'experience.title': 'Journey',
+            'experience.job1.title': 'Staff AI Engineer @ Contabilizei',
+            'experience.job1.date': '2024 — Present',
+            'experience.job2.title': 'Head of AI @ BrandLovrs',
+            'experience.job2.date': '2023 — 2024',
+            'experience.job3.title': 'Senior Data Scientist @ XP Inc.',
+            'experience.job3.date': '2021 — 2023',
+            'contact.title': 'Get in Touch',
+            'contact.headline': "Let's build<br>the next level.",
+            'contact.sub': 'Available for partnerships and high-impact projects.',
+            'experience.cv': 'View Full Resume (PDF)',
+            'footer.text': '&copy; 2026 — Eduardo Moraes Ritter. All rights reserved.',
         },
 
     };
@@ -186,15 +204,15 @@ document.addEventListener('DOMContentLoaded', () => {
        ========================================================== */
 
     function animateCounter(el) {
-        const target   = parseInt(el.getAttribute('data-value'), 10) || 0;
-        const suffix   = el.getAttribute('data-suffix') || '';
+        const target = parseInt(el.getAttribute('data-value'), 10) || 0;
+        const suffix = el.getAttribute('data-suffix') || '';
         const duration = 1400;
-        let start      = null;
+        let start = null;
 
         function step(ts) {
             if (!start) start = ts;
             const progress = Math.min((ts - start) / duration, 1);
-            const eased    = 1 - Math.pow(1 - progress, 3); /* ease-out cubic */
+            const eased = 1 - Math.pow(1 - progress, 3); /* ease-out cubic */
             el.textContent = Math.round(target * eased) + suffix;
             if (progress < 1) requestAnimationFrame(step);
         }
@@ -208,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
        ========================================================== */
 
     const hamburger = document.getElementById('hamburger');
-    const navLinks  = document.getElementById('navLinks');
+    const navLinks = document.getElementById('navLinks');
 
     if (hamburger && navLinks) {
         hamburger.addEventListener('click', () => {
