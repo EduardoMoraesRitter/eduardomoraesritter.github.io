@@ -1,0 +1,160 @@
+---
+// src/components/Recognition.astro
+// ──────────────────────────────────
+// Seção de Reconhecimento e Mídia — Layout editorial premium
+---
+
+<section id="recognition" class="section reveal-section">
+  <div class="container">
+
+    <header class="section-header">
+      <span class="section-index">03</span>
+      <h2 data-i18n="recognition.title">Impacto &amp; Mídia</h2>
+    </header>
+
+    <div class="recognition-grid">
+
+      <!-- Featured: NASA Global Win -->
+      <div class="recognition-card featured reveal-item" style="--delay: 0s">
+        <div class="card-content">
+          <span class="card-tag label">Global Award</span>
+          <h3 data-i18n="recognition.nasa.title">NASA Space Apps Global Winner</h3>
+          <p data-i18n="recognition.nasa.text">Vencedor mundial na categoria Galactic Impact com o projeto Poseidon, uma IA para detecção de manchas de óleo via satélite.</p>
+          <div class="card-links">
+            <a href="https://agenciabrasil.ebc.com.br/geral/noticia/2020-01/brasileiros-ganham-concurso-de-solucoes-tecnologicas-da-nasa" target="_blank" class="link-item">Agência Brasil</a>
+            <a href="https://www.dw.com/pt-br/brasileiros-recebem-pr%C3%AAmio-da-nasa-por-projeto-de-ia/a-65178679" target="_blank" class="link-item">DW News</a>
+            <a href="https://g1.globo.com/sp/mogi-das-cruzes-suzano/noticia/2020/02/07/equipe-de-mogiana-desenvolve-inteligencia-artificial-para-detectar-manchas-de-oleo-e-vence-concurso-da-nasa.ghtml" target="_blank" class="link-item">G1 Globo</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Featured: IBM C0D3RS -->
+      <div class="recognition-card reveal-item" style="--delay: 0.1s">
+        <div class="card-content">
+          <span class="card-tag label">Prime Video</span>
+          <h3 data-i18n="recognition.ibm.title">C0D3RS Championship</h3>
+          <p data-i18n="recognition.ibm.text">Destaque na minissérie da IBM sobre os principais desenvolvedores da América Latina resolvendo problemas globais.</p>
+          <div class="card-links">
+            <a href="https://www.primevideo.com/detail/C0d3rs-Championship/0GS98CG03BVM7C224YK7KIWXOJ" target="_blank" class="link-item">Prime Video</a>
+            <a href="https://brasil.newsroom.ibm.com/2022-07-28-C0D3RS-CHAMPIONSHIP-a-primeira-minisserie-para-promover-a-tecnologia-na-America-Latina" target="_blank" class="link-item">IBM News</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Featured: Podcasts/Interviews -->
+      <div class="recognition-card reveal-item" style="--delay: 0.2s">
+        <div class="card-content">
+          <span class="card-tag label">Podcasts &amp; Interviews</span>
+          <h3 data-i18n="recognition.media.title">Talks &amp; Deep Dives</h3>
+          <p data-i18n="recognition.media.text">Discussões profundas sobre IA, Hackathons da NASA e o Squad de Ciência contra o óleo no mar.</p>
+          <div class="card-links">
+            <a href="https://www.alura.com.br/podcast/hackathons-nasa-e-manchas-de-oleo-hipsters-ponto-tech-178-a387" target="_blank" class="link-item">Alura Podcast</a>
+            <a href="https://braziljournal.com/o-squad-da-ciencia-contra-o-oleo-no-mar/" target="_blank" class="link-item">Brazil Journal</a>
+            <a href="https://www.youtube.com/watch?v=O9uXr5s8-CY" target="_blank" class="link-item">YouTube Interview</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<style>
+  .recognition-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    margin-top: 40px;
+  }
+
+  .recognition-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.4s var(--ease), border-color 0.4s var(--ease);
+  }
+
+  .recognition-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--border-hover);
+  }
+
+  .recognition-card.featured {
+    grid-column: span 2;
+    background: var(--text-1);
+    color: var(--bg);
+  }
+
+  .recognition-card.featured .card-tag,
+  .recognition-card.featured .link-item,
+  .recognition-card.featured p {
+    color: var(--bg);
+    opacity: 0.8;
+  }
+
+  .recognition-card.featured h3 {
+    color: var(--bg);
+  }
+
+  .recognition-card.featured .link-item {
+    border-color: rgba(0,0,0,0.2);
+  }
+
+  .recognition-card h3 {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 3vw, 2.8rem);
+    font-weight: 300;
+    margin: 16px 0 24px;
+    line-height: 1.1;
+  }
+
+  .recognition-card p {
+    font-size: 1rem;
+    font-weight: 300;
+    color: var(--text-2);
+    line-height: 1.7;
+    margin-bottom: 32px;
+    max-width: 600px;
+  }
+
+  .card-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .link-item {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    transition: all 0.3s var(--ease);
+  }
+
+  .link-item:hover {
+    background: var(--text-1);
+    color: var(--bg);
+    border-color: var(--text-1);
+  }
+
+  .recognition-card.featured .link-item:hover {
+    background: var(--bg);
+    color: var(--text-1);
+    border-color: var(--bg);
+  }
+
+  @media (max-width: 900px) {
+    .recognition-grid {
+      grid-template-columns: 1fr;
+    }
+    .recognition-card.featured {
+      grid-column: span 1;
+    }
+  }
+</style>
