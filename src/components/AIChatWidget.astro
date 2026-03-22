@@ -1,0 +1,880 @@
+---
+// src/components/AIChatWidget.astro
+// ─────────────────────────────────
+// Widget de IA: caixa de texto no Hero + modal de chat completo
+---
+
+<!-- ─── Input inline no Hero ─── -->
+<div class="ai-hero-input-wrapper" id="aiHeroInputWrapper">
+  <div class="ai-binary-bg" aria-hidden="true" id="aiBinaryBg"></div>
+
+  <div class="ai-hero-input-box">
+    <div class="ai-input-inner">
+      <div class="ai-input-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 0v4m0 16v-4m10-6h-4M6 12H2m15.07-7.07-2.83 2.83M8.76 15.24 5.93 18.07M18.07 18.07l-2.83-2.83M8.76 8.76 5.93 5.93"/>
+        </svg>
+      </div>
+      <input
+        id="aiHeroInput"
+        type="text"
+        class="ai-hero-input"
+        placeholder="Pergunte algo sobre o Eduardo..."
+        autocomplete="off"
+        aria-label="Iniciar conversa com IA"
+      />
+      <button id="aiHeroSend" class="ai-send-btn" aria-label="Enviar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14M13 6l6 6-6 6"/>
+        </svg>
+      </button>
+    </div>
+    <div class="ai-hero-suggestions">
+      <button class="ai-suggestion-chip" data-msg="Quais são suas principais habilidades?">Habilidades</button>
+      <button class="ai-suggestion-chip" data-msg="Fale sobre o prêmio NASA">Prêmio NASA</button>
+      <button class="ai-suggestion-chip" data-msg="Quais serviços você oferece?">Serviços</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal de Chat ─── -->
+<div class="ai-modal-overlay" id="aiModalOverlay" role="dialog" aria-modal="true" aria-label="Chat com IA - Eduardo Ritter">
+  <div class="ai-modal" id="aiModal">
+
+    <!-- Header -->
+    <div class="ai-modal-header">
+      <div class="ai-modal-title">
+        <div class="ai-status-dot"></div>
+        <span class="ai-modal-name">Eduardo Ritter IA</span>
+        <span class="ai-modal-sub">Portfólio Assistant</span>
+      </div>
+      <button class="ai-modal-close" id="aiModalClose" aria-label="Fechar chat">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Messages Area -->
+    <div class="ai-messages" id="aiMessages">
+      <!-- Mensagem inicial -->
+      <div class="ai-msg ai-msg--bot">
+        <div class="ai-msg-avatar">ER</div>
+        <div class="ai-msg-bubble">
+          Olá! Sou a IA do portfólio do Eduardo Ritter. Posso te contar sobre sua trajetória, habilidades, projetos e muito mais. O que você gostaria de saber?
+        </div>
+      </div>
+    </div>
+
+    <!-- Typing indicator -->
+    <div class="ai-typing" id="aiTyping" style="display:none">
+      <div class="ai-msg-avatar ai-typing-avatar">ER</div>
+      <div class="ai-typing-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="ai-modal-input-area">
+      <input
+        id="aiModalInput"
+        type="text"
+        class="ai-modal-input"
+        placeholder="Digite sua mensagem..."
+        autocomplete="off"
+      />
+      <button class="ai-modal-send" id="aiModalSend" aria-label="Enviar mensagem">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14M13 6l6 6-6 6"/>
+        </svg>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<style>
+  /* ─── Binary Background ─── */
+  .ai-hero-input-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(8, 8, 8, 0.92);
+    border: 1px solid rgba(201, 169, 110, 0.2);
+    box-shadow: 0 0 40px rgba(201, 169, 110, 0.06), 0 8px 32px rgba(0,0,0,0.4);
+    transition: border-color 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  }
+
+  .ai-hero-input-wrapper:hover,
+  .ai-hero-input-wrapper:focus-within {
+    border-color: rgba(201, 169, 110, 0.45);
+    box-shadow: 0 0 60px rgba(201, 169, 110, 0.12), 0 8px 40px rgba(0,0,0,0.5);
+  }
+
+  .ai-binary-bg {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.4;
+    color: rgba(201, 169, 110, 0.07);
+    user-select: none;
+    letter-spacing: 0.08em;
+  }
+
+  .ai-binary-bg span {
+    position: absolute;
+    animation: binaryFall linear infinite;
+    will-change: transform, opacity;
+  }
+
+  @keyframes binaryFall {
+    0% { transform: translateY(-100%); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(200px); opacity: 0; }
+  }
+
+  .ai-hero-input-box {
+    position: relative;
+    z-index: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .ai-input-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 10px 12px;
+    transition: border-color 0.25s;
+  }
+
+  .ai-hero-input-wrapper:focus-within .ai-input-inner {
+    border-color: rgba(201, 169, 110, 0.3);
+  }
+
+  .ai-input-icon {
+    color: rgba(201, 169, 110, 0.5);
+    flex-shrink: 0;
+    display: flex;
+  }
+
+  .ai-hero-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #f0ede8;
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    font-weight: 300;
+    caret-color: var(--accent);
+    cursor: none;
+  }
+
+  .ai-hero-input::placeholder {
+    color: rgba(240, 237, 232, 0.3);
+  }
+
+  .ai-send-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--accent);
+    border: none;
+    color: #080808;
+    cursor: none;
+    flex-shrink: 0;
+    transition: transform 0.2s var(--ease), background 0.2s;
+  }
+
+  .ai-send-btn:hover {
+    transform: scale(1.08);
+    background: #d4b67a;
+  }
+
+  .ai-send-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* Suggestion chips */
+  .ai-hero-suggestions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .ai-suggestion-chip {
+    padding: 5px 12px;
+    background: rgba(201, 169, 110, 0.08);
+    border: 1px solid rgba(201, 169, 110, 0.18);
+    border-radius: 20px;
+    color: rgba(201, 169, 110, 0.8);
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    cursor: none;
+    transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
+  }
+
+  .ai-suggestion-chip:hover {
+    background: rgba(201, 169, 110, 0.18);
+    border-color: rgba(201, 169, 110, 0.4);
+    color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  /* ─── Modal Overlay ─── */
+  .ai-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 20px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.35s var(--ease);
+  }
+
+  .ai-modal-overlay.is-open {
+    pointer-events: all;
+    opacity: 1;
+  }
+
+  .ai-modal-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.35s var(--ease);
+  }
+
+  .ai-modal-overlay.is-open::before {
+    opacity: 1;
+  }
+
+  /* ─── Modal Box ─── */
+  .ai-modal {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 440px;
+    height: 600px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: #0c0c0c;
+    border: 1px solid rgba(201, 169, 110, 0.2);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03);
+    transform: translateY(24px) scale(0.97);
+    transition: transform 0.35s var(--ease);
+  }
+
+  .ai-modal-overlay.is-open .ai-modal {
+    transform: translateY(0) scale(1);
+  }
+
+  /* Modal Header */
+  .ai-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02);
+    flex-shrink: 0;
+  }
+
+  .ai-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ai-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
+    animation: statusPulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes statusPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(0.85); }
+  }
+
+  .ai-modal-name {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: #f0ede8;
+    letter-spacing: -0.01em;
+  }
+
+  .ai-modal-sub {
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(201, 169, 110, 0.6);
+  }
+
+  .ai-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(240, 237, 232, 0.5);
+    cursor: none;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+  }
+
+  .ai-modal-close:hover {
+    background: rgba(255,255,255,0.06);
+    color: #f0ede8;
+    border-color: rgba(255,255,255,0.15);
+  }
+
+  /* Messages */
+  .ai-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scroll-behavior: smooth;
+  }
+
+  .ai-messages::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .ai-messages::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .ai-messages::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+  }
+
+  .ai-msg {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    animation: msgSlideIn 0.3s var(--ease);
+  }
+
+  @keyframes msgSlideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .ai-msg--user {
+    flex-direction: row-reverse;
+  }
+
+  .ai-msg-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(201, 169, 110, 0.3), rgba(201, 169, 110, 0.1));
+    border: 1px solid rgba(201, 169, 110, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    flex-shrink: 0;
+    font-family: var(--font-body);
+  }
+
+  .ai-msg--user .ai-msg-avatar {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.04));
+    border-color: rgba(255,255,255,0.12);
+    color: rgba(240, 237, 232, 0.7);
+  }
+
+  .ai-msg-bubble {
+    max-width: 78%;
+    padding: 12px 15px;
+    border-radius: 14px;
+    font-size: 0.87rem;
+    line-height: 1.65;
+    font-weight: 300;
+  }
+
+  .ai-msg--bot .ai-msg-bubble {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    color: rgba(240, 237, 232, 0.9);
+    border-top-left-radius: 4px;
+  }
+
+  .ai-msg--user .ai-msg-bubble {
+    background: linear-gradient(135deg, rgba(201, 169, 110, 0.2), rgba(201, 169, 110, 0.1));
+    border: 1px solid rgba(201, 169, 110, 0.25);
+    color: rgba(240, 237, 232, 0.95);
+    border-top-right-radius: 4px;
+  }
+
+  /* Typing indicator */
+  .ai-typing {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px 16px;
+    flex-shrink: 0;
+  }
+
+  .ai-typing-avatar {
+    /* inherits .ai-msg-avatar styles via JS cloning */
+  }
+
+  .ai-typing-dots {
+    display: flex;
+    gap: 5px;
+    padding: 12px 15px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    border-top-left-radius: 4px;
+  }
+
+  .ai-typing-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(201, 169, 110, 0.5);
+    animation: typingBounce 1.2s ease-in-out infinite;
+  }
+
+  .ai-typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .ai-typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-6px); opacity: 1; }
+  }
+
+  /* Modal input area */
+  .ai-modal-input-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.01);
+    flex-shrink: 0;
+  }
+
+  .ai-modal-input {
+    flex: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: #f0ede8;
+    font-family: var(--font-body);
+    font-size: 0.87rem;
+    font-weight: 300;
+    outline: none;
+    caret-color: var(--accent);
+    transition: border-color 0.25s;
+    cursor: none;
+  }
+
+  .ai-modal-input::placeholder {
+    color: rgba(240, 237, 232, 0.25);
+  }
+
+  .ai-modal-input:focus {
+    border-color: rgba(201, 169, 110, 0.35);
+  }
+
+  .ai-modal-send {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--accent);
+    border: none;
+    color: #080808;
+    cursor: none;
+    flex-shrink: 0;
+    transition: transform 0.2s var(--ease), background 0.2s, opacity 0.2s;
+  }
+
+  .ai-modal-send:hover {
+    transform: scale(1.06);
+    background: #d4b67a;
+  }
+
+  .ai-modal-send:disabled {
+    opacity: 0.4;
+    transform: none;
+  }
+
+  /* ─── Light mode adjustments ─── */
+  [data-theme="light"] .ai-hero-input-wrapper {
+    background: rgba(250, 249, 247, 0.95);
+    border-color: rgba(201, 169, 110, 0.25);
+  }
+
+  [data-theme="light"] .ai-hero-input {
+    color: #0d0c0a;
+  }
+
+  [data-theme="light"] .ai-hero-input::placeholder {
+    color: rgba(13, 12, 10, 0.35);
+  }
+
+  [data-theme="light"] .ai-input-inner {
+    background: rgba(0,0,0,0.03);
+    border-color: rgba(0,0,0,0.08);
+  }
+
+  [data-theme="light"] .ai-binary-bg {
+    color: rgba(201, 169, 110, 0.1);
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 768px) {
+    .ai-modal-overlay {
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .ai-modal {
+      max-width: 100%;
+      border-radius: 20px 20px 0 0;
+      height: 75vh;
+    }
+
+    .ai-hero-suggestions {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const API_URL = import.meta.env.DEV
+      ? '/api/chat'
+      : 'https://qwen-chat-478866638874.us-central1.run.app/chat';
+
+    // ─── System prompt com todo o conteúdo do portfólio ───
+    const SYSTEM_PROMPT = `Você é a IA assistente do portfólio profissional de Eduardo Ritter — Staff AI Engineer, vencedor global da NASA e especialista em IA Generativa com mais de 15 anos de experiência. Responda de forma amigável, concisa e informativa em português (ou inglês se o usuário perguntar em inglês). NUNCA invente informações — use apenas o contexto abaixo. Represente Eduardo com orgulho, entusiasmo e profissionalismo.
+
+=== IDENTIDADE ===
+Nome: Eduardo Ritter (também chamado de "Edu" ou "Eduardo Moraes Ritter")
+Título: Staff AI Engineer
+Slogan: "Projetando o futuro com IA Generativa e arquiteturas escaláveis."
+Missão: Transformar ideias em interfaces precisas, intencionais e premium — com foco na melhor experiência para o usuário.
+Localização: Brasil
+
+=== EXPERIÊNCIA PROFISSIONAL ===
+
+1. Staff AI Engineer @ Contabilizei (2024 — Presente)
+   - Lidera a automação de onboarding e vendas utilizando IA Generativa
+   - Alcançou +70% de conversão em processos automatizados
+   - Reduziu drasticamente operações manuais com agentes de IA
+
+2. Head of AI @ BrandLovrs (2023 — 2024)
+   - Arquitetou sistemas de recomendação baseados em LLMs e analytics avançado
+   - Tornou a IA o core da infraestrutura de toda a empresa
+   - Liderou a estratégia de produto orientada por inteligência artificial
+
+3. Senior Data Scientist @ XP Inc. (2021 — 2023)
+   - Desenvolveu modelos de ML e chatbots para milhões de usuários
+   - Integrou soluções de IA via WhatsApp e Alexa
+   - Reduziu suporte humano em 25% com automação inteligente
+
+=== CONQUISTAS E RECONHECIMENTOS ===
+
+🏆 NASA Space Apps Challenge — Vencedor Global (1º lugar mundial)
+   - Projeto: Poseidon — IA com Redes Neurais Convolucionais (Deep Learning) e imagens de satélite SAR (Radar de Abertura Sintética) para identificar manchas de óleo nos oceanos mesmo através de nuvens ou à noite.
+   - Desenvolvido em resposta ao desastre ambiental de 2019 no Brasil
+   - Automatiza o monitoramento marítimo global, reduzindo drasticamente o tempo de resposta
+   - Repercussão: Agência Brasil, DW News, G1 Globo
+   - Links: https://2019.spaceappschallenge.org/challenges/living-our-world/smash-your-sdgs/teams/massa/
+
+🎬 C0D3RS Championship — IBM & Amazon Prime Video
+   - Finalista representando o Brasil na minissérie exclusiva
+   - Competição entre os melhores desenvolvedores da América Latina
+   - Usou IBM Cloud e IA para resolver problemas reais da sociedade
+   - Disponível no Amazon Prime Video
+
+🎙️ Podcast Hipsters Ponto Tech (Alura)
+   - Discussão sobre Hackathons da NASA e IA para detecção de óleo no mar
+   - Spotify: episódio 4jdimruOz6KDv1j7Xj9KS6
+
+📺 Palestra EducaXperience — "Como a Tecnologia nos levou à NASA?"
+   - Keynote sobre tecnologia, inovação e os bastidores da vitória global
+   - YouTube: https://www.youtube.com/watch?v=ppB_1756qcI
+
+📊 Estatísticas:
+   - 15+ anos de experiência em tecnologia e IA
+   - 1º lugar no Prêmio Global NASA
+   - Top 50 AI IBM
+   - Currículo: /assets/docs/Ritter_Resume.pdf
+
+=== EXPERTISE E SERVIÇOS ===
+
+01. Engenharia de IA & LLMs
+    Soluções seguras e escaláveis usando RAG, Agentes Autônomos e Modelos de Linguagem avançados. Implementação de pipelines de IA end-to-end.
+
+02. Arquitetura Cloud
+    Design de sistemas distribuídos em GCP e AWS com foco em performance, resiliência e otimização de custo. Infraestrutura como código.
+
+03. Data Science
+    Modelagem preditiva, análise de dados, visão computacional (CNNs, Deep Learning) aplicada a problemas reais de negócios.
+
+=== STACK TECNOLÓGICO ===
+Linguagens: Python, Golang
+IA/ML: OpenAI, Google Gemini, LangChain, Vertex AI, TensorFlow, RAG, Vector DBs
+Cloud: GCP (Google Cloud Platform), AWS
+DevOps: Docker, CI/CD
+Integrações: WhatsApp API, Alexa, APIs REST
+
+=== CONTATO ===
+- Email: contato@eduardoritter.com
+- LinkedIn: https://www.linkedin.com/in/eduardoritter/
+- GitHub: https://github.com/EduardoMoraesRitter
+- Disponível para novos projetos e colaborações
+
+=== REGRAS DE COMPORTAMENTO ===
+- Seja sempre simpático, direto e profissional
+- Responda perguntas sobre trajetória, projetos, tecnologia e contato com base apenas no contexto acima
+- Se alguém perguntar algo fora do escopo, diga que pode perguntar diretamente ao Eduardo pelo email ou LinkedIn
+- Perguntas em inglês → responda em inglês; em português → responda em português
+- Não invente projetos, tecnologias ou conquistas que não estejam listadas acima
+- Se alguém quiser contratar Eduardo ou saber disponibilidade, informe que ele está disponível para novos projetos e forneça o email e LinkedIn`;
+
+    // State
+    let chatHistory = [];
+    let isLoading = false;
+
+    // DOM refs
+    const heroInput = document.getElementById('aiHeroInput');
+    const heroSend = document.getElementById('aiHeroSend');
+    const overlay = document.getElementById('aiModalOverlay');
+    const modalInput = document.getElementById('aiModalInput');
+    const modalSend = document.getElementById('aiModalSend');
+    const messagesEl = document.getElementById('aiMessages');
+    const typingEl = document.getElementById('aiTyping');
+    const closeBtn = document.getElementById('aiModalClose');
+    const chips = document.querySelectorAll('.ai-suggestion-chip');
+
+    // ─── Binary background animation ───
+    const binaryBg = document.getElementById('aiBinaryBg');
+    if (binaryBg) {
+      const chars = ['0', '1'];
+      const columns = 18;
+      for (let i = 0; i < columns; i++) {
+        const span = document.createElement('span');
+        const left = (i / columns * 100) + (Math.random() * 5 - 2.5);
+        const duration = 2.5 + Math.random() * 3;
+        const delay = Math.random() * 4;
+        const length = Math.floor(3 + Math.random() * 5);
+        let text = '';
+        for (let j = 0; j < length; j++) text += chars[Math.floor(Math.random() * 2)];
+        span.textContent = text;
+        span.style.cssText = `left:${left}%; top:0; animation-duration:${duration}s; animation-delay:${delay}s;`;
+        binaryBg.appendChild(span);
+      }
+
+      // Regenerate chars periodically for variety
+      setInterval(() => {
+        binaryBg.querySelectorAll('span').forEach(s => {
+          const length = Math.floor(3 + Math.random() * 5);
+          let t = '';
+          for (let j = 0; j < length; j++) t += chars[Math.floor(Math.random() * 2)];
+          s.textContent = t;
+        });
+      }, 1500);
+    }
+
+    // ─── Open modal ───
+    function openModal(initialMsg) {
+      overlay.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => modalInput.focus(), 350);
+
+      if (initialMsg && initialMsg.trim()) {
+        setTimeout(() => sendMessage(initialMsg.trim()), 200);
+      }
+    }
+
+    // ─── Close modal ───
+    function closeModal() {
+      overlay.classList.remove('is-open');
+      document.body.style.overflow = '';
+    }
+
+    // ─── Append message ───
+    function appendMessage(role, text) {
+      const msg = document.createElement('div');
+      msg.className = `ai-msg ai-msg--${role === 'user' ? 'user' : 'bot'}`;
+
+      const avatar = document.createElement('div');
+      avatar.className = 'ai-msg-avatar';
+      avatar.textContent = role === 'user' ? 'Você' : 'ER';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'ai-msg-bubble';
+      bubble.textContent = text;
+
+      msg.appendChild(avatar);
+      msg.appendChild(bubble);
+      messagesEl.appendChild(msg);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    // ─── Show / hide typing ───
+    function showTyping(show) {
+      typingEl.style.display = show ? 'flex' : 'none';
+      if (show) messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    // ─── Send message to API ───
+    async function sendMessage(text) {
+      if (!text || isLoading) return;
+      isLoading = true;
+      modalSend.disabled = true;
+
+      // Add user message
+      chatHistory.push({ role: 'user', content: text });
+      appendMessage('user', text);
+
+      // Clear inputs
+      heroInput.value = '';
+      modalInput.value = '';
+
+      showTyping(true);
+
+      try {
+        // Build payload with system context in first user message if first turn
+        const historyToSend = chatHistory.slice(0, -1); // all but the last
+        const messageToSend = chatHistory.length === 1
+          ? `[Contexto do sistema: ${SYSTEM_PROMPT}]\n\nUsuário: ${text}`
+          : text;
+
+        const payload = {
+          message: messageToSend,
+          history: historyToSend,
+        };
+
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+        const reply = data.resposta || 'Não consegui responder agora. Tente novamente.';
+
+        chatHistory.push({ role: 'assistant', content: reply });
+        showTyping(false);
+        appendMessage('bot', reply);
+
+      } catch (err) {
+        console.error('AI Chat error:', err);
+        showTyping(false);
+        appendMessage('bot', 'Ops! Tive um problema de conexão. Tente novamente em instantes.');
+        chatHistory.pop(); // remove failed user msg from history
+      } finally {
+        isLoading = false;
+        modalSend.disabled = false;
+        modalInput.focus();
+      }
+    }
+
+    // ─── Event listeners ───
+
+    // Hero input: Enter or send button
+    heroInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && heroInput.value.trim()) {
+        const msg = heroInput.value.trim();
+        openModal(msg);
+      }
+    });
+
+    heroSend?.addEventListener('click', () => {
+      const msg = heroInput?.value.trim();
+      if (msg) openModal(msg);
+      else openModal(null);
+    });
+
+    // Suggestion chips
+    chips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const msg = chip.dataset.msg;
+        openModal(msg);
+      });
+    });
+
+    // Modal input: Enter or send button
+    modalInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage(modalInput.value.trim());
+      }
+    });
+
+    modalSend?.addEventListener('click', () => {
+      sendMessage(modalInput.value.trim());
+    });
+
+    // Close on button
+    closeBtn?.addEventListener('click', closeModal);
+
+    // Close on overlay click (outside modal)
+    overlay?.addEventListener('click', (e) => {
+      if (e.target === overlay) closeModal();
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && overlay?.classList.contains('is-open')) {
+        closeModal();
+      }
+    });
+  })();
+</script>

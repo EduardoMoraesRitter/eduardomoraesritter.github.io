@@ -303,7 +303,170 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     /* ==========================================================
-       09. INIT
+       09. DOT GRID — EFEITO LUPA
+       ========================================================== */
+
+    // Canvas substitui o grid CSS estático
+    const _hideGrid = document.createElement('style');
+    _hideGrid.textContent = 'body::before { display: none !important; }';
+    document.head.appendChild(_hideGrid);
+
+    const dotCanvas = document.createElement('canvas');
+    dotCanvas.setAttribute('aria-hidden', 'true');
+    dotCanvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:0;';
+    document.body.prepend(dotCanvas);
+
+    const dCtx    = dotCanvas.getContext('2d');
+    const GRID     = 30;
+    const BASE_R   = 1.5;
+    const GLOW_R   = 90;  // raio da distorção dos pontos
+    const LIGHT_R  = 160; // raio do pool de luz
+    const LENS_STR = 0.32; // força do fisheye (suave)
+    const LERP     = 0.08;
+
+    const mPos    = { x: -9999, y: -9999 };
+    const mTarget = { x: -9999, y: -9999 };
+    let   mReady  = false;
+
+    document.addEventListener('mousemove', e => {
+        if (!mReady) { mPos.x = e.clientX; mPos.y = e.clientY; mReady = true; }
+        mTarget.x = e.clientX;
+        mTarget.y = e.clientY;
+    }, { passive: true });
+
+    function isDark() {
+        return document.documentElement.getAttribute('data-theme') !== 'light';
+    }
+
+    function resizeDotCanvas() {
+        dotCanvas.width  = window.innerWidth;
+        dotCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeDotCanvas, { passive: true });
+    resizeDotCanvas();
+
+    function drawFrame() {
+        mPos.x += (mTarget.x - mPos.x) * LERP;
+        mPos.y += (mTarget.y - mPos.y) * LERP;
+
+        const w     = dotCanvas.width;
+        const h     = dotCanvas.height;
+        const dark  = isDark();
+
+        dCtx.clearRect(0, 0, w, h);
+
+        // Pool de luz suave (mais fraco)
+        if (mReady) {
+            const glow = dCtx.createRadialGradient(mPos.x, mPos.y, 0, mPos.x, mPos.y, LIGHT_R);
+            glow.addColorStop(0,   dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)');
+            glow.addColorStop(0.55, dark ? 'rgba(255,255,255,0.012)': 'rgba(0,0,0,0.008)');
+            glow.addColorStop(1,    'rgba(0,0,0,0)');
+            dCtx.fillStyle = glow;
+            dCtx.fillRect(0, 0, w, h);
+        }
+
+        // Pontos com fisheye suave + brilho leve perto do cursor
+        const cols = Math.ceil(w / GRID) + 1;
+        const rows = Math.ceil(h / GRID) + 1;
+
+        for (let r = 0; r <= rows; r++) {
+            for (let c = 0; c <= cols; c++) {
+                const gx = c * GRID;
+                const gy = r * GRID;
+
+                let px    = gx;
+                let py    = gy;
+                let alpha = dark ? 0.045 : 0.055;
+                let dotR  = BASE_R;
+
+                if (mReady) {
+                    const dx   = gx - mPos.x;
+                    const dy   = gy - mPos.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < GLOW_R && dist > 0.5) {
+                        const n = dist / GLOW_R;
+                        const z = Math.sqrt(1 - n * n);
+
+                        // Fisheye: empurra pontos radialmente pra fora
+                        const lens = (1 / z - 1) * LENS_STR;
+                        px = mPos.x + dx * (1 + lens);
+                        py = mPos.y + dy * (1 + lens);
+
+                        // Leve brilho extra baseado na distância original
+                        const boost = (1 - n) * (1 - n);
+                        alpha += boost * (dark ? 0.13 : 0.10);
+                        dotR  += boost * 0.4;
+                    }
+                }
+
+                dCtx.fillStyle = dark
+                    ? `rgba(255,255,255,${alpha})`
+                    : `rgba(0,0,0,${alpha})`;
+                dCtx.beginPath();
+                dCtx.arc(px, py, dotR, 0, Math.PI * 2);
+                dCtx.fill();
+            }
+        }
+
+        requestAnimationFrame(drawFrame);
+    }
+
+    drawFrame();
+
+
+    /* ==========================================================
+       10. CUSTOM CURSOR
+       ========================================================== */
+
+    const cursorDot  = document.createElement('div');
+    const cursorRing = document.createElement('div');
+    cursorDot.className  = 'cursor-dot';
+    cursorRing.className = 'cursor-ring';
+    document.body.append(cursorDot, cursorRing);
+
+    let cursorX = -200, cursorY = -200;
+    let ringX   = -200, ringY   = -200;
+    const RING_LERP = 0.12;
+
+    document.addEventListener('mousemove', e => {
+        cursorX = e.clientX;
+        cursorY = e.clientY;
+        cursorDot.style.left = cursorX + 'px';
+        cursorDot.style.top  = cursorY + 'px';
+    }, { passive: true });
+
+    (function animateCursorRing() {
+        ringX += (cursorX - ringX) * RING_LERP;
+        ringY += (cursorY - ringY) * RING_LERP;
+        cursorRing.style.left = ringX + 'px';
+        cursorRing.style.top  = ringY + 'px';
+        requestAnimationFrame(animateCursorRing);
+    })();
+
+    // Hover state on interactive elements
+    const HOVER_SELECTORS = 'a, button, [role="button"], .service-item, .recognition-card, .stat, input, textarea';
+    document.querySelectorAll(HOVER_SELECTORS).forEach(el => {
+        el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
+        el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+    });
+
+    document.addEventListener('mousedown', () => document.body.classList.add('cursor-click'));
+    document.addEventListener('mouseup',   () => document.body.classList.remove('cursor-click'));
+
+    // Hide cursor when it leaves the window
+    document.addEventListener('mouseleave', () => {
+        cursorDot.style.opacity  = '0';
+        cursorRing.style.opacity = '0';
+    });
+    document.addEventListener('mouseenter', () => {
+        cursorDot.style.opacity  = '1';
+        cursorRing.style.opacity = '1';
+    });
+
+
+    /* ==========================================================
+       11. INIT
        ========================================================== */
 
     applyLang(detectLang());

@@ -2,6 +2,8 @@
 dist/
 .astro/
 
+test/
+
 # Dependencies
 node_modules/
 

@@ -1,7 +1,8 @@
 ---
 // src/components/Hero.astro
 // ──────────────────────────
-// Seção inicial com nome, tagline e CTA
+// Seção inicial — Google Sans Display, layout Stitch-inspired + AI Chat Widget
+import AIChatWidget from './AIChatWidget.astro';
 ---
 
 <section id="hero" class="hero">
@@ -9,22 +10,42 @@
     <div class="hero-inner">
 
       <div class="hero-meta">
-        <span class="label" data-i18n="hero.tag">Desenvolvedor &amp; Criativo</span>
+        <div class="hero-tag-wrapper">
+          <span class="hero-tag-dot"></span>
+          <span class="label" data-i18n="hero.tag">Staff AI Engineer &amp; Global NASA Winner</span>
+        </div>
         <span class="label">2026</span>
       </div>
 
-      <h1 class="hero-headline">
-        <span class="headline-line">Eduardo</span>
-        <span class="headline-line">Ritter</span>
-      </h1>
+      <!-- headline + AI widget (lado a lado) -->
+      <div class="hero-center-row">
+        <h1 class="hero-headline">
+          <span class="headline-line">Eduardo</span>
+          <span class="headline-line">Ritter</span>
+        </h1>
+
+        <!-- AI Chat Widget inline -->
+        <div class="hero-ai-slot">
+          <p class="hero-ai-label">
+            <span class="hero-ai-label-dot"></span>
+            <span data-i18n="hero.aiLabel">Converse com minha IA</span>
+          </p>
+          <AIChatWidget />
+        </div>
+      </div>
 
       <div class="hero-bottom">
         <div class="hero-content-block">
           <p class="hero-sub" data-i18n="hero.sub">
-            Criando experiências digitais<br>modernas e impactantes.
+            Projetando o futuro com IA Generativa<br>e arquiteturas escaláveis.
           </p>
           <div class="hero-actions">
-            <a href="#contact" class="btn-outline" data-i18n="hero.cta">Vamos Conversar</a>
+            <a href="#contact" class="btn-outline">
+              <span data-i18n="hero.cta">Vamos Conversar</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M1 6h10M6 1l5 5-5 5"/>
+              </svg>
+            </a>
           </div>
         </div>
 
@@ -37,3 +58,74 @@
     </div>
   </div>
 </section>
+
+<style>
+  /* ─── Center row: headline + AI widget ─── */
+  .hero-center-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(32px, 5vw, 64px);
+    margin-top: auto;
+    margin-bottom: auto;
+    flex-wrap: wrap;
+  }
+
+  /* Keep the headline always left */
+  .hero-center-row .hero-headline {
+    margin-top: 0;
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  /* AI slot: right side */
+  .hero-ai-slot {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+    min-width: 280px;
+    max-width: 520px;
+  }
+
+  /* Small label above the input */
+  .hero-ai-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-body);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(201, 169, 110, 0.7);
+  }
+
+  .hero-ai-label-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.6);
+    animation: labelDotPulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes labelDotPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(0.7); }
+  }
+
+  /* ─── Responsive: stack on mobile ─── */
+  @media (max-width: 900px) {
+    .hero-center-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .hero-ai-slot {
+      max-width: 100%;
+      width: 100%;
+    }
+  }
+</style>

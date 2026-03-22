@@ -1,0 +1,628 @@
+---
+// src/components/Architecture.astro
+---
+
+<section id="architecture" class="arch-section">
+  <div class="container">
+
+    <div class="arch-header reveal">
+      <div>
+        <span class="label">Sistema</span>
+        <h2 class="arch-title">Arquitetura Conversacional</h2>
+      </div>
+      <p class="arch-subtitle">Clique em cada bloco para explorar</p>
+    </div>
+
+    <div class="arch-wrapper reveal">
+      <svg id="archSvg" viewBox="0 0 960 590" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+
+        <defs>
+          <!-- Arrow markers -->
+          <marker id="a-or" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#e8960a"/></marker>
+          <marker id="a-bl" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#5bbfef"/></marker>
+          <marker id="a-gy" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#555"/></marker>
+          <marker id="a-ev" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#a3cfff"/></marker>
+          <marker id="a-or-rev" markerWidth="7" markerHeight="7" refX="2" refY="3" orient="auto"><path d="M7,0 L7,6 L0,3z" fill="#e8960a"/></marker>
+
+          <!-- Glow filters -->
+          <filter id="glow-or" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="2.5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow-bl" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="2" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow-node" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="4" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow-ai" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="6" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- ══ CONNECTIONS ══ -->
+
+        <!-- 1. Channels → Tunnel (orange solid) -->
+        <line class="flow-or" x1="166" y1="224" x2="192" y2="224" stroke="#e8960a" stroke-width="1.5" marker-end="url(#a-or)"/>
+        <text x="180" y="213" class="elbl or">Request</text>
+
+        <!-- 2. Tunnel → AI Engine (orange solid) -->
+        <line class="flow-or" x1="546" y1="224" x2="585" y2="224" stroke="#e8960a" stroke-width="1.5" marker-end="url(#a-or)"/>
+        <text x="565" y="213" class="elbl or">Process</text>
+
+        <!-- 5. Response: AI Engine → Channels (orange, dashed, goes below) -->
+        <path class="flow-or-resp" d="M 590 249 Q 590 292 369 310 Q 140 328 70 249" stroke="#e8960a" stroke-width="1" stroke-dasharray="5,4" fill="none" marker-end="url(#a-or)"/>
+        <text x="319" y="302" class="elbl or" style="font-size:7.5px">5. Response</text>
+
+        <!-- 3. AI → KB (blue dashed up) -->
+        <path class="flow-bl" d="M 754 212 Q 800 170 803 107" stroke="#5bbfef" stroke-width="1.2" stroke-dasharray="5,4" fill="none" marker-end="url(#a-bl)"/>
+        <text x="797" y="160" class="elbl bl">3. Retrieve</text>
+
+        <!-- 4. AI → Tools (blue dashed down) -->
+        <path class="flow-bl" d="M 754 236 Q 800 288 803 326" stroke="#5bbfef" stroke-width="1.2" stroke-dasharray="5,4" fill="none" marker-end="url(#a-bl)"/>
+        <text x="793" y="290" class="elbl bl">4. Execute</text>
+
+        <!-- 5. Tunnel → Monitoring (Logs, grey dashed) -->
+        <path class="flow-gy" d="M 369 263 Q 369 440 378 448" stroke="#555" stroke-width="1.2" stroke-dasharray="4,4" fill="none" marker-end="url(#a-gy)"/>
+        <text x="352" y="370" class="elbl gy">Logs</text>
+
+        <!-- 6. AI Engine → Monitoring (Metrics, grey dashed) -->
+        <path class="flow-gy" d="M 670 250 Q 670 490 543 470" stroke="#555" stroke-width="1.2" stroke-dasharray="4,4" fill="none" marker-end="url(#a-gy)"/>
+        <text x="642" y="400" class="elbl gy">Metrics</text>
+
+        <!-- 7. Monitoring → AI Engine (Prompt Evolution cycle) -->
+        <path class="flow-ev" d="M 378 448 Q 300 340 585 232" stroke="#a3cfff" stroke-width="1.2" stroke-dasharray="5,3" fill="none" marker-end="url(#a-ev)"/>
+        <text x="318" y="392" class="elbl ev">Prompt Evolution</text>
+
+        <!-- ══ TUNNEL PIPE (clickable) ══ -->
+        <g id="tunnelNode" class="tunnel-node" style="cursor:pointer">
+          <rect x="192" y="185" width="354" height="78" fill="rgba(255,255,255,0.012)"/>
+          <line x1="192" y1="185" x2="546" y2="185" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="6,5"/>
+          <line x1="192" y1="263" x2="546" y2="263" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="6,5"/>
+          <ellipse id="tcap-l" cx="192" cy="224" rx="15" ry="39" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+          <ellipse id="tcap-r" cx="546" cy="224" rx="15" ry="39" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+          <text x="369" y="220" class="tunnel-main-lbl">Túnel de Comunicação</text>
+          <text x="369" y="235" class="tunnel-sub-lbl">clique para expandir</text>
+        </g>
+        <text x="369" y="177" class="tunnel-lbl">Túnel de Comunicação</text>
+
+        <!-- ══ NODE: Channels ══ -->
+        <g class="arch-node" data-node="channels" data-exph="172" transform="translate(22, 199)">
+          <rect class="nbg" width="144" height="50" rx="5"/>
+          <!-- Chat bubble icon -->
+          <rect x="8" y="10" width="22" height="15" rx="3" fill="none" stroke="#666" stroke-width="1.2"/>
+          <circle cx="14" cy="17.5" r="1.5" fill="#666"/>
+          <circle cx="19" cy="17.5" r="1.5" fill="#666"/>
+          <circle cx="24" cy="17.5" r="1.5" fill="#666"/>
+          <path d="M11,25 L10,30 L16,25" fill="none" stroke="#666" stroke-width="1.1" stroke-linejoin="round"/>
+          <text class="ntitle" x="36" y="27">Channels</text>
+          <text class="nplus" x="132" y="27">+</text>
+          <g class="ndetails">
+            <line class="nsep" x1="10" y1="56" x2="134" y2="56"/>
+            <text class="nitem" x="16" y="72">WhatsApp Business</text>
+            <text class="nitem" x="16" y="88">Instagram Direct</text>
+            <text class="nitem" x="16" y="104">Webchat embeddable</text>
+            <text class="nitem" x="16" y="120">Telegram Bot</text>
+            <text class="nitem" x="16" y="136">API REST pública</text>
+            <text class="ndesc" x="10" y="154">Entrada unificada — qualquer</text>
+            <text class="ndesc" x="10" y="166">canal, mesma experiência.</text>
+          </g>
+        </g>
+
+        <!-- ══ NODE: AI Engine ══ -->
+        <g class="arch-node node-ai" data-node="ai" data-exph="190" transform="translate(585, 199)">
+          <!-- Pulse ring (decorative, animated via CSS) -->
+          <circle class="ai-pulse-ring" cx="20" cy="24" r="28" fill="none" stroke="rgba(232,150,10,0.12)" stroke-width="1"/>
+          <rect class="nbg nbg-ai" width="168" height="50" rx="5"/>
+          <!-- Neural net icon -->
+          <circle cx="13" cy="18" r="2.8" fill="none" stroke="#888" stroke-width="1.1"/>
+          <circle cx="13" cy="30" r="2.8" fill="none" stroke="#888" stroke-width="1.1"/>
+          <circle cx="24" cy="13" r="2.8" fill="none" stroke="#999" stroke-width="1.1"/>
+          <circle cx="24" cy="24" r="2.8" fill="none" stroke="#999" stroke-width="1.1"/>
+          <circle cx="24" cy="35" r="2.8" fill="none" stroke="#999" stroke-width="1.1"/>
+          <circle cx="35" cy="24" r="2.8" fill="none" stroke="#888" stroke-width="1.1"/>
+          <line x1="16" y1="18" x2="21" y2="14" stroke="#555" stroke-width="0.9"/>
+          <line x1="16" y1="18" x2="21" y2="24" stroke="#555" stroke-width="0.9"/>
+          <line x1="16" y1="18" x2="21" y2="35" stroke="#555" stroke-width="0.9"/>
+          <line x1="16" y1="30" x2="21" y2="24" stroke="#555" stroke-width="0.9"/>
+          <line x1="16" y1="30" x2="21" y2="35" stroke="#555" stroke-width="0.9"/>
+          <line x1="27" y1="13" x2="32" y2="24" stroke="#555" stroke-width="0.9"/>
+          <line x1="27" y1="24" x2="32" y2="24" stroke="#555" stroke-width="0.9"/>
+          <line x1="27" y1="35" x2="32" y2="24" stroke="#555" stroke-width="0.9"/>
+          <text class="ntitle ntitle-ai" x="44" y="27">AI Engine</text>
+          <text class="nplus" x="156" y="27">+</text>
+          <g class="ndetails">
+            <line class="nsep" x1="10" y1="56" x2="158" y2="56"/>
+            <text class="nitem" x="16" y="72">LLM (Claude / GPT-4)</text>
+            <text class="nitem" x="16" y="88">Context Manager</text>
+            <text class="nitem" x="16" y="104">Memory Buffer</text>
+            <text class="nitem" x="16" y="120">Intent Classifier</text>
+            <text class="nitem" x="16" y="136">Response Builder</text>
+            <text class="nitem" x="16" y="152">Tool Orchestrator</text>
+            <text class="ndesc" x="10" y="172">Núcleo de inteligência —</text>
+            <text class="ndesc" x="10" y="184">orquestra LLM e ferramentas.</text>
+          </g>
+        </g>
+
+        <!-- ══ NODE: Knowledge Base (DB Cylinder) ══ -->
+        <g class="arch-node" data-node="knowledge" data-exph="185" transform="translate(800, 46)">
+          <ellipse class="cyl-lid" cx="77.5" cy="14" rx="77.5" ry="12"/>
+          <rect class="nbg cyl-body" x="0" y="14" width="155" height="40" rx="0"/>
+          <path class="cyl-arc" d="M 0 54 Q 77.5 67 155 54" fill="none"/>
+          <text class="ntitle" x="14" y="38">Knowledge Base</text>
+          <text class="nplus" x="143" y="38">+</text>
+          <g class="ndetails">
+            <line class="nsep" x1="10" y1="62" x2="145" y2="62"/>
+            <text class="nitem" x="16" y="78">Vector Store (Pinecone)</text>
+            <text class="nitem" x="16" y="94">RAG Pipeline</text>
+            <text class="nitem" x="16" y="110">Embedding Model</text>
+            <text class="nitem" x="16" y="126">Document Ingestion</text>
+            <text class="nitem" x="16" y="142">Hybrid Search</text>
+            <text class="ndesc" x="10" y="162">Recupera contexto via RAG,</text>
+            <text class="ndesc" x="10" y="175">alimentando o LLM com dados.</text>
+          </g>
+        </g>
+
+        <!-- ══ NODE: Tools & Prompts ══ -->
+        <g class="arch-node" data-node="tools" data-exph="172" transform="translate(800, 326)">
+          <rect class="nbg" width="155" height="50" rx="5"/>
+          <path d="M30,10 Q36,7 36,13 Q36,17 32,19 L20,31 Q18,35 14,35 Q10,35 10,31 Q10,27 14,27 L26,15 Q28,11 30,10 Z" fill="none" stroke="#666" stroke-width="1.2" stroke-linejoin="round"/>
+          <circle cx="14" cy="31" r="2" fill="#555"/>
+          <text class="ntitle" x="44" y="27">Tools & Prompts</text>
+          <text class="nplus" x="143" y="27">+</text>
+          <g class="ndetails">
+            <line class="nsep" x1="10" y1="56" x2="145" y2="56"/>
+            <text class="nitem" x="16" y="72">Function Calling</text>
+            <text class="nitem" x="16" y="88">Prompt Templates</text>
+            <text class="nitem" x="16" y="104">CRM Integration</text>
+            <text class="nitem" x="16" y="120">Calendar / Scheduling</text>
+            <text class="nitem" x="16" y="136">System Prompts</text>
+            <text class="ndesc" x="10" y="154">Capacidades que o modelo</text>
+            <text class="ndesc" x="10" y="166">invoca via function calling.</text>
+          </g>
+        </g>
+
+        <!-- ══ NODE: Monitoring ══ -->
+        <g class="arch-node" data-node="monitoring" data-exph="188" transform="translate(378, 448)">
+          <rect class="nbg" width="165" height="50" rx="5"/>
+          <path d="M8,24 Q20,14 32,24 Q20,34 8,24 Z" fill="none" stroke="#666" stroke-width="1.2"/>
+          <circle cx="20" cy="24" r="5" fill="none" stroke="#666" stroke-width="1.2"/>
+          <circle cx="20" cy="24" r="2" fill="#555"/>
+          <text class="ntitle" x="40" y="27">Monitoring</text>
+          <text class="nplus" x="153" y="27">+</text>
+          <g class="ndetails">
+            <line class="nsep" x1="10" y1="56" x2="155" y2="56"/>
+            <text class="nitem" x="16" y="72">Logs (Loki / ELK)</text>
+            <text class="nitem" x="16" y="88">Metrics (Prometheus)</text>
+            <text class="nitem" x="16" y="104">Tracing (Jaeger)</text>
+            <text class="nitem" x="16" y="120">Alertas (PagerDuty)</text>
+            <text class="nitem" x="16" y="136">Dashboards (Grafana)</text>
+            <text class="ndesc" x="10" y="156">Ciclo contínuo de análise —</text>
+            <text class="ndesc" x="10" y="168">realimenta evolução de prompts.</text>
+          </g>
+        </g>
+
+        <!-- ══ LEGEND ══ -->
+        <g transform="translate(22, 576)">
+          <line x1="0" y1="0" x2="20" y2="0" stroke="#e8960a" stroke-width="1.5"/>
+          <text x="24" y="4" class="lgtxt">Fluxo principal</text>
+          <line x1="118" y1="0" x2="138" y2="0" stroke="#5bbfef" stroke-width="1.2" stroke-dasharray="4,3"/>
+          <text x="142" y="4" class="lgtxt">Contexto / Ferramentas</text>
+          <line x1="288" y1="0" x2="308" y2="0" stroke="#555" stroke-width="1.2" stroke-dasharray="4,3"/>
+          <text x="312" y="4" class="lgtxt">Observabilidade</text>
+          <line x1="418" y1="0" x2="438" y2="0" stroke="#a3cfff" stroke-width="1.2" stroke-dasharray="4,3"/>
+          <text x="442" y="4" class="lgtxt">Prompt Evolution</text>
+        </g>
+
+      </svg>
+
+      <!-- ══ TUNNEL MODAL ══ -->
+      <div id="tunnelModal" class="tunnel-modal" aria-hidden="true">
+        <button class="tmodal-close" id="tunnelClose">×</button>
+        <div class="tmodal-inner">
+          <div class="tmodal-icon">⌁</div>
+          <div class="tmodal-content">
+            <h4 class="tmodal-title">Túnel de Comunicação</h4>
+            <p class="tmodal-desc">
+              Camada responsável por <strong>receber, validar e enfileirar</strong> todas as mensagens antes de chegarem ao motor de IA.
+              Internamente combina um <em>API Gateway</em> — que autentica, roteia e protege a entrada — com uma <em>Event Queue</em> assíncrona,
+              que desacopla a ingestão do processamento e garante entrega confiável mesmo sob alta carga.
+            </p>
+            <div class="tmodal-tags">
+              <span class="tmodal-tag">API Gateway</span>
+              <span class="tmodal-tag">Event Queue</span>
+              <span class="tmodal-tag">Auth & Rate Limit</span>
+              <span class="tmodal-tag">Retry Logic</span>
+              <span class="tmodal-tag">Dead Letter Queue</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /arch-wrapper -->
+  </div>
+</section>
+
+<style>
+.arch-section { padding: var(--section-gap) 0; }
+
+.arch-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+}
+.arch-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3.5vw, 3rem);
+  font-weight: 300;
+  color: var(--text-1);
+  margin-top: 0.4rem;
+}
+.arch-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  letter-spacing: 0.02em;
+}
+
+.arch-wrapper { position: relative; }
+#archSvg { display: block; width: 100%; height: auto; }
+
+/* ── Animated flow lines ── */
+@keyframes flow-dash {
+  to { stroke-dashoffset: -18; }
+}
+@keyframes flow-dash-rev {
+  to { stroke-dashoffset: 18; }
+}
+@keyframes flow-solid {
+  0%   { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -24; }
+}
+
+.flow-or {
+  animation: flow-solid 1.4s linear infinite;
+  stroke-dasharray: 8 4;
+  stroke-dashoffset: 0;
+}
+/* Solid lines don't need dasharray normally but the animation above requires it.
+   Override for the two solid main-flow segments: */
+line.flow-or {
+  stroke-dasharray: none;
+  animation: none;
+}
+
+.flow-or-resp {
+  animation: flow-dash 1.8s linear infinite;
+}
+.flow-bl {
+  animation: flow-dash 2s linear infinite;
+}
+.flow-gy {
+  animation: flow-dash 3s linear infinite;
+}
+.flow-ev {
+  animation: flow-dash-rev 2.5s linear infinite;
+}
+
+/* ── AI Engine pulse ring ── */
+@keyframes pulse-ring {
+  0%   { r: 26; opacity: 0.18; }
+  70%  { r: 38; opacity: 0; }
+  100% { r: 38; opacity: 0; }
+}
+.ai-pulse-ring {
+  animation: pulse-ring 2.4s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* ── Tunnel labels ── */
+.tunnel-lbl {
+  font-size: 8.5px;
+  fill: rgba(255,255,255,0.18);
+  font-family: var(--font-body);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-anchor: middle;
+  pointer-events: none;
+}
+.tunnel-main-lbl {
+  font-size: 11px;
+  fill: rgba(255,255,255,0.3);
+  font-family: var(--font-body);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-anchor: middle;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.tunnel-sub-lbl {
+  font-size: 8px;
+  fill: rgba(255,255,255,0.18);
+  font-family: var(--font-body);
+  letter-spacing: 0.05em;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+/* Tunnel hover */
+.tunnel-node { transition: opacity 0.2s; }
+.tunnel-node:hover ellipse { stroke: rgba(255,255,255,0.28); }
+.tunnel-node:hover .tunnel-main-lbl { fill: rgba(255,255,255,0.55); }
+.tunnel-node.active ellipse { stroke: rgba(255,255,255,0.3); }
+
+/* ── Edge labels ── */
+.elbl {
+  font-size: 8px;
+  font-family: var(--font-body);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  letter-spacing: 0.03em;
+  pointer-events: none;
+}
+.elbl.or  { fill: #e8960a; }
+.elbl.bl  { fill: #5bbfef; }
+.elbl.gy  { fill: #888; }
+.elbl.ev  { fill: #a3cfff; }
+
+/* ── Node backgrounds ── */
+.nbg {
+  fill: var(--bg);
+  stroke: var(--border);
+  stroke-width: 1;
+  transition: height 0.4s cubic-bezier(0.16,1,0.3,1), stroke 0.2s, filter 0.2s;
+}
+.nbg-ai { fill: #0d0d0d; stroke: rgba(255,255,255,0.1); }
+
+.cyl-lid  {
+  fill: #111;
+  stroke: var(--border);
+  stroke-width: 1;
+  transition: stroke 0.2s, filter 0.2s;
+}
+.cyl-body {
+  fill: var(--bg);
+  stroke: var(--border);
+  stroke-width: 1;
+  transition: height 0.4s cubic-bezier(0.16,1,0.3,1), stroke 0.2s;
+}
+.cyl-arc  { stroke: var(--border); stroke-width: 1; transition: opacity 0.2s; }
+
+.arch-node { cursor: pointer; }
+
+/* hover: brighten border */
+.arch-node:hover .nbg,
+.arch-node:hover .cyl-body,
+.arch-node:hover .cyl-lid { stroke: var(--border-hover); }
+
+/* open: glow + brighter border */
+.arch-node.open .nbg,
+.arch-node.open .cyl-body,
+.arch-node.open .cyl-lid {
+  stroke: rgba(255,255,255,0.22);
+  filter: drop-shadow(0 0 8px rgba(255,255,255,0.06));
+}
+.arch-node.open.node-ai .nbg {
+  stroke: rgba(232,150,10,0.35);
+  filter: drop-shadow(0 0 12px rgba(232,150,10,0.12));
+}
+
+.ntitle {
+  font-size: 11px;
+  fill: var(--text-1);
+  font-family: var(--font-body);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+.ntitle-ai { fill: #e8e8e8; }
+.nplus {
+  font-size: 15px;
+  fill: var(--text-2);
+  font-family: var(--font-body);
+  dominant-baseline: middle;
+  transition: fill 0.2s;
+  pointer-events: none;
+}
+.arch-node:hover .nplus,
+.arch-node.open .nplus { fill: var(--text-1); }
+
+.ndetails { opacity: 0; transition: opacity 0.25s ease 0.12s; pointer-events: none; }
+.arch-node.open .ndetails { opacity: 1; pointer-events: auto; }
+
+.nsep { stroke: rgba(255,255,255,0.06); stroke-width: 0.5; }
+.nitem {
+  font-size: 9.5px;
+  fill: #888;
+  font-family: var(--font-body);
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+.ndesc {
+  font-size: 8.5px;
+  fill: #555;
+  font-family: var(--font-body);
+  font-style: italic;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.lgtxt {
+  font-size: 8.5px;
+  fill: #555;
+  font-family: var(--font-body);
+  dominant-baseline: middle;
+}
+
+/* ══ TUNNEL MODAL ══ */
+.tunnel-modal {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, 0) scale(0.96);
+  width: min(480px, 90%);
+  background: var(--bg);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 1.5rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
+  z-index: 10;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.7);
+}
+.tunnel-modal.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.tmodal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s;
+}
+.tmodal-close:hover { color: var(--text-1); }
+
+.tmodal-inner {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.tmodal-icon {
+  font-size: 2rem;
+  color: rgba(255,255,255,0.15);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  line-height: 1;
+}
+
+.tmodal-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 400;
+  color: var(--text-1);
+  margin-bottom: 0.6rem;
+  line-height: 1.1;
+}
+
+.tmodal-desc {
+  font-size: 0.75rem;
+  color: var(--text-2);
+  line-height: 1.7;
+  margin-bottom: 1rem;
+}
+.tmodal-desc strong { color: var(--text-1); font-weight: 500; }
+.tmodal-desc em { color: #a3cfff; font-style: normal; }
+
+.tmodal-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tmodal-tag {
+  font-size: 0.65rem;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0.15rem 0.55rem;
+  letter-spacing: 0.04em;
+}
+
+/* ── Light mode adjustments ── */
+:root:not(.dark) .nitem { fill: #666; }
+:root:not(.dark) .ndesc { fill: #999; }
+:root:not(.dark) .lgtxt { fill: #999; }
+:root:not(.dark) .elbl.gy { fill: #aaa; }
+</style>
+
+<script>
+  /* ── Expandable nodes ── */
+  function closeAllNodes() {
+    document.querySelectorAll('.arch-node.open').forEach(n => {
+      n.classList.remove('open');
+      const bg  = n.querySelector('.nbg');
+      const cyl = n.querySelector('.cyl-body');
+      const arc = n.querySelector('.cyl-arc');
+      const pl  = n.querySelector('.nplus');
+      if (bg)  bg.style.height  = n.dataset.node === 'knowledge' ? '40px' : '50px';
+      if (cyl) cyl.style.height = '40px';
+      if (arc) arc.style.opacity = '1';
+      if (pl)  pl.textContent = '+';
+    });
+  }
+
+  document.querySelectorAll('.arch-node').forEach(node => {
+    node.addEventListener('click', e => {
+      e.stopPropagation();
+      const key  = node.dataset.node;
+      const open = node.classList.contains('open');
+      closeAllNodes();
+      closeTunnelModal();
+      if (open) return;
+
+      node.classList.add('open');
+      const pl = node.querySelector('.nplus');
+      if (pl) pl.textContent = '×';
+
+      if (key === 'knowledge') {
+        const cyl = node.querySelector('.cyl-body');
+        const arc = node.querySelector('.cyl-arc');
+        if (cyl) cyl.style.height = (parseInt(node.dataset.exph) - 14) + 'px';
+        if (arc) arc.style.opacity = '0';
+      } else {
+        const bg = node.querySelector('.nbg');
+        if (bg) bg.style.height = node.dataset.exph + 'px';
+      }
+    });
+  });
+
+  /* ── Tunnel modal ── */
+  const tunnelNode  = document.getElementById('tunnelNode');
+  const tunnelModal = document.getElementById('tunnelModal');
+  const tunnelClose = document.getElementById('tunnelClose');
+
+  function closeTunnelModal() {
+    tunnelModal.classList.remove('open');
+    tunnelModal.setAttribute('aria-hidden', 'true');
+    tunnelNode.classList.remove('active');
+  }
+
+  tunnelNode.addEventListener('click', e => {
+    e.stopPropagation();
+    const isOpen = tunnelModal.classList.contains('open');
+    closeAllNodes();
+    if (isOpen) { closeTunnelModal(); return; }
+    tunnelModal.classList.add('open');
+    tunnelModal.setAttribute('aria-hidden', 'false');
+    tunnelNode.classList.add('active');
+  });
+
+  tunnelClose.addEventListener('click', e => { e.stopPropagation(); closeTunnelModal(); });
+
+  document.getElementById('archSvg').addEventListener('click', () => {
+    closeAllNodes();
+    closeTunnelModal();
+  });
+
+  /* ── Keyboard: Escape closes everything ── */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeAllNodes(); closeTunnelModal(); }
+  });
+</script>

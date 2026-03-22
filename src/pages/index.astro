@@ -4,6 +4,7 @@
 // Página principal — importa cada componente de seção
 import Nav     from '../components/Nav.astro';
 import Hero    from '../components/Hero.astro';
+import Architecture from '../components/Architecture.astro';
 import About   from '../components/About.astro';
 import Experience from '../components/Experience.astro';
 import Recognition from '../components/Recognition.astro';
@@ -32,6 +33,9 @@ import '../styles/global.css';
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Google Sans Display (Material / Workspace font) -->
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Display:wght@400;500&family=Google+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <!-- Cormorant Garamond for other sections + Outfit body -->
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
 </head>
 
@@ -44,6 +48,7 @@ import '../styles/global.css';
 
   <main>
     <Hero />
+    <Architecture />
     <About />
     <Experience />
     <Recognition />
