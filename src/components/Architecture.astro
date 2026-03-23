@@ -7,11 +7,10 @@
 
     <header class="section-header">
       <span class="section-index">01</span>
-      <h2 class="arch-title">Arquitetura Conversacional</h2>
+      <h2 class="arch-title" data-i18n="arch.title">Arquitetura Conversacional</h2>
     </header>
 
-    <p class="arch-tagline reveal">Projetando o futuro com IA Generativa e arquiteturas escaláveis.</p>
-
+    <p class="arch-tagline reveal" data-i18n="arch.tagline">Projetando o futuro com IA Generativa e arquiteturas escaláveis.</p>
     <div class="arch-wrapper reveal">
       <svg id="archSvg" viewBox="0 0 960 590" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
 
@@ -23,32 +22,10 @@
           <marker id="a-gr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#4ade80"/></marker>
           <marker id="a-ev" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#a3cfff"/></marker>
           <marker id="a-or-rev" markerWidth="7" markerHeight="7" refX="2" refY="3" orient="auto"><path d="M7,0 L7,6 L0,3z" fill="#e8960a"/></marker>
-
-          <!-- Envelope packets base -->
-          <g id="env-or">
-            <rect x="-9" y="-6" width="18" height="12" rx="2" fill="#1c1c1c" stroke="#e8960a" stroke-width="1"/>
-            <polyline points="-9,-6 0,0 9,-6" fill="none" stroke="#e8960a" stroke-width="1"/>
-          </g>
-          <g id="env-gr">
-            <rect x="-9" y="-6" width="18" height="12" rx="2" fill="#1c1c1c" stroke="#4ade80" stroke-width="1"/>
-            <polyline points="-9,-6 0,0 9,-6" fill="none" stroke="#4ade80" stroke-width="1"/>
-          </g>
-
-          <!-- Glow filters -->
-          <filter id="glow-or" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="2.5" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-          <filter id="glow-ai" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="6" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-          <clipPath id="tunnelClip">
-            <rect x="205" y="195" width="200" height="65" />
-          </clipPath>
         </defs>
 
-        <!-- ══ CONNECTIONS ══ -->
+        <g transform="translate(60, 0)">
+        <!-- ══ CONNECTIONS ══ -->��═ -->
         <path class="flow-or-req" d="M 154 222 L 455 222" stroke="#e8960a" stroke-width="1.2" stroke-dasharray="5,4" fill="none" marker-end="url(#a-or)"/>
         <text x="230" y="211" class="elbl or">Request</text>
         <text x="430" y="211" class="elbl or">Process</text>
@@ -80,15 +57,6 @@
           <line x1="205" y1="195" x2="405" y2="195" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
           <line x1="205" y1="260" x2="405" y2="260" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
           <rect class="tunnel-nbg" x="205" y="195" width="200" height="65" fill="rgba(255,255,255,0.01)" stroke="none" style="transition:fill 0.2s"/>
-          
-          <g class="sqs-msgs" opacity="0.9" clip-path="url(#tunnelClip)">
-            <use href="#env-or" class="pkt-in" y="222"/>
-            <use href="#env-or" class="pkt-in delay-1" y="222"/>
-            <use href="#env-or" class="pkt-in delay-2" y="222"/>
-            <use href="#env-gr" class="pkt-out" y="245"/>
-            <use href="#env-gr" class="pkt-out delay-1" y="245"/>
-            <use href="#env-gr" class="pkt-out delay-2" y="245"/>
-          </g>
 
           <text x="305" y="208" class="tunnel-main-lbl" style="font-size: 10px;">Queue</text>
           <text x="395" y="210" class="nplus">+</text>
@@ -187,6 +155,7 @@
           </g>
           <text class="nplus" x="160" y="108">+</text>
         </g>
+        </g>
       </svg>
 
       <!-- ══ DYNAMIC MODAL ══ -->
@@ -211,14 +180,18 @@
   padding: 8rem 0 6rem;
 }
 
+.arch-section .container {
+  max-width: 1300px;
+}
+
 .arch-tagline {
     font-family: var(--font-body);
     font-size: clamp(1rem, 1.5vw, 1.25rem);
     font-weight: 300;
     color: var(--text-2);
     line-height: 1.6;
-    max-width: 600px;
-    margin-bottom: 4rem;
+    max-width: 800px;
+    margin-bottom: 5rem;
 }
 
 .arch-title {
@@ -231,30 +204,22 @@
   letter-spacing: -0.02em;
 }
 
-.arch-wrapper { position: relative; }
-#archSvg { display: block; width: 100%; height: auto; }
+.arch-wrapper { 
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+#archSvg { 
+  display: block; 
+  width: 100%; 
+  max-width: 1100px;
+  height: auto; 
+}
 
 /* ── ANIMATIONS ── */
 @keyframes flow-dash { to { stroke-dashoffset: -18; } }
-@keyframes slide-right {
-  from { transform: translateX(-20px); opacity: 0; }
-  20% { opacity: 1; }
-  80% { opacity: 1; }
-  to { transform: translateX(220px); opacity: 0; }
-}
-@keyframes slide-left {
-  from { transform: translateX(220px); opacity: 0; }
-  20% { opacity: 1; }
-  80% { opacity: 1; }
-  to { transform: translateX(-20px); opacity: 0; }
-}
-
 .flow-or-req, .flow-gr-resp, .flow-bl, .flow-gy, .flow-ev { animation: flow-dash 2s linear infinite; }
-
-.pkt-in { animation: slide-right 2.2s linear infinite; }
-.pkt-out { animation: slide-left 2.2s linear infinite; }
-.delay-1 { animation-delay: -0.7s; }
-.delay-2 { animation-delay: -1.4s; }
 
 /* AI Engine pulse ring */
 @keyframes pulse-ring {
@@ -273,14 +238,19 @@
   transition: stroke 0.2s, filter 0.2s;
 }
 .nbg-ai { fill: #0d0d0d; stroke: rgba(255,255,255,0.1); }
-.cyl-lid { fill: #111; stroke: var(--border); stroke-width: 1; transition: stroke 0.2s; }
+.cyl-lid { fill: #111; stroke: var(--border); stroke-width: 1; transition: stroke 0.2s, fill 0.2s; }
 .doc-fold { fill: none; stroke: var(--border); stroke-width: 1; transition: stroke 0.2s; }
 
 .arch-node:hover .nbg, .arch-node:hover .cyl-lid, .arch-node:hover .doc-fold { stroke: var(--border-hover); }
-.arch-node.open .nbg, .arch-node.open .cyl-lid, .arch-node.open .doc-fold { 
-  stroke: rgba(255,255,255,0.3);
-  filter: drop-shadow(0 0 8px rgba(255,255,255,0.1));
+.arch-node.open .nbg, .arch-node.open .cyl-lid, .arch-node.open .doc-fold {
+  stroke: var(--accent);
+  filter: drop-shadow(0 0 8px rgba(201,169,110,0.15));
 }
+
+/* Light mode overrides */
+[data-theme="light"] .cyl-lid { fill: #2a2a2a; }
+[data-theme="light"] .tunnel-main-lbl { fill: rgba(0,0,0,0.35); }
+[data-theme="light"] .elbl.gy { fill: #666; }
 
 .ntitle {
   font-size: 11px;

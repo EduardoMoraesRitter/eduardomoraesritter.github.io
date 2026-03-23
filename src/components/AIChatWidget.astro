@@ -1,6 +1,11 @@
 ---
 // src/components/AIChatWidget.astro
-import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
+import SYSTEM_PROMPT_PT from '../content/ai-system-prompt.md?raw';
+import SYSTEM_PROMPT_EN from '../content/ai-system-prompt-en.md?raw';
+import ptJSON from '../i18n/pt.json';
+import enJSON from '../i18n/en.json';
+const SUGGESTIONS_PT = ptJSON['ai.suggestions'];
+const SUGGESTIONS_EN = enJSON['ai.suggestions'];
 ---
 
 <div class="ai-widget" id="aiWidget">
@@ -12,9 +17,9 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
         <div class="ai-chat-title">
           <div class="ai-status-dot"></div>
           <span class="ai-name">Edu Agent</span>
-          <span class="ai-sub">Portfólio Assistant</span>
+          <span class="ai-sub" data-i18n="ai.sub">Portfólio Assistant</span>
         </div>
-        <button class="ai-close-btn" id="aiModalClose" aria-label="Fechar chat">
+        <button class="ai-close-btn" id="aiModalClose" data-i18n-aria="ai.close.aria" aria-label="Fechar chat">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 6 6 18M6 6l12 12"/>
           </svg>
@@ -24,7 +29,7 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
       <div class="ai-messages" id="aiMessages">
         <div class="ai-msg ai-msg--bot">
           <div class="ai-avatar">ER</div>
-          <div class="ai-bubble">
+          <div class="ai-bubble" data-i18n="ai.welcome">
             Olá! Sou o Edu Agent, a IA do portfólio do Eduardo Ritter. Posso te contar sobre sua trajetória, habilidades, projetos e muito mais. O que você gostaria de saber?
           </div>
         </div>
@@ -38,8 +43,12 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
       </div>
 
       <div class="ai-chat-input-row">
-        <input id="aiModalInput" type="text" class="ai-chat-input" placeholder="Digite sua mensagem..." autocomplete="off" />
-        <button class="ai-send-btn" id="aiModalSend" aria-label="Enviar">
+        <input id="aiModalInput" type="text" class="ai-chat-input"
+          placeholder="Digite sua mensagem..."
+          data-i18n-placeholder="ai.input.placeholder"
+          autocomplete="off" />
+        <button class="ai-send-btn" id="aiModalSend"
+          data-i18n-aria="ai.send.aria" aria-label="Enviar">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M5 12h14M13 6l6 6-6 6"/>
           </svg>
@@ -59,43 +68,24 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
           <path d="M6 16C6 16 6 18.25 4 18.5C6 18.75 6 21 6 21C6 21 6 18.75 8 18.5C6 18.25 6 16 6 16Z"/>
         </svg>
       </div>
-      <!-- Área de texto com frases animadas -->
       <div class="ai-input-area" id="aiInputArea">
         <div class="ai-phrase-overlay" id="aiPhraseOverlay" aria-hidden="true">
-          <span id="aiPhraseText">Pergunte algo sobre o Eduardo...</span>
+          <span id="aiPhraseText" data-i18n="ai.phrase">Pergunte algo sobre o Eduardo...</span>
         </div>
-        <input id="aiHeroInput" type="text" class="ai-hero-input" placeholder="" autocomplete="off" aria-label="Iniciar conversa com IA" />
+        <input id="aiHeroInput" type="text" class="ai-hero-input" placeholder=""
+          autocomplete="off"
+          data-i18n-aria="ai.hero.aria" aria-label="Iniciar conversa com IA" />
       </div>
-      <button id="aiHeroSend" class="ai-send-btn" aria-label="Enviar">
+      <button id="aiHeroSend" class="ai-send-btn"
+        data-i18n-aria="ai.send.aria" aria-label="Enviar">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M5 12h14M13 6l6 6-6 6"/>
         </svg>
       </button>
     </div>
     <div class="ai-suggestions-wrapper">
-      <div class="ai-suggestions">
-        <button class="ai-suggestion" data-msg="Como você desenha arquitetura de Agentes Autônomos?">Como você desenha arquitetura de Agentes Autônomos?</button>
-        <button class="ai-suggestion" data-msg="Como você escala LLMs e RAG em produção?">Como você escala LLMs e RAG em produção?</button>
-        <button class="ai-suggestion" data-msg="Qual seu projeto de maior impacto na Contabilizei?">Qual seu projeto de maior impacto na Contabilizei?</button>
-        <button class="ai-suggestion" data-msg="Como você liga IA Generativa a negócios?">Como você liga IA Generativa a negócios?</button>
-        <button class="ai-suggestion" data-msg="Como escolhe entre LLMs open-source e proprietários?">Como escolhe entre LLMs open-source e proprietários?</button>
-        <button class="ai-suggestion" data-msg="Como resolve problemas de latência em IA?">Como resolve problemas de latência em IA?</button>
-        <button class="ai-suggestion" data-msg="Qual o desafio de engenharia no prêmio da NASA?">Qual o desafio de engenharia no prêmio da NASA?</button>
-        <button class="ai-suggestion" data-msg="Explique sua abordagem para liderar times.">Explique sua abordagem para liderar times.</button>
-        <button class="ai-suggestion" data-msg="Fale sobre seu domínio em Python e Cloud.">Fale sobre seu domínio em Python e Cloud.</button>
-        <button class="ai-suggestion" data-msg="Quais são seus desafios como Staff AI Engineer?">Quais são seus desafios como Staff AI Engineer?</button>
-        <!-- Clone para scroll infinito -->
-        <button class="ai-suggestion" data-msg="Como você desenha arquitetura de Agentes Autônomos?">Como você desenha arquitetura de Agentes Autônomos?</button>
-        <button class="ai-suggestion" data-msg="Como você escala LLMs e RAG em produção?">Como você escala LLMs e RAG em produção?</button>
-        <button class="ai-suggestion" data-msg="Qual seu projeto de maior impacto na Contabilizei?">Qual seu projeto de maior impacto na Contabilizei?</button>
-        <button class="ai-suggestion" data-msg="Como você liga IA Generativa a negócios?">Como você liga IA Generativa a negócios?</button>
-        <button class="ai-suggestion" data-msg="Como escolhe entre LLMs open-source e proprietários?">Como escolhe entre LLMs open-source e proprietários?</button>
-        <button class="ai-suggestion" data-msg="Como resolve problemas de latência em IA?">Como resolve problemas de latência em IA?</button>
-        <button class="ai-suggestion" data-msg="Qual o desafio de engenharia no prêmio da NASA?">Qual o desafio de engenharia no prêmio da NASA?</button>
-        <button class="ai-suggestion" data-msg="Explique sua abordagem para liderar times.">Explique sua abordagem para liderar times.</button>
-        <button class="ai-suggestion" data-msg="Fale sobre seu domínio em Python e Cloud.">Fale sobre seu domínio em Python e Cloud.</button>
-        <button class="ai-suggestion" data-msg="Quais são seus desafios como Staff AI Engineer?">Quais são seus desafios como Staff AI Engineer?</button>
-      </div>
+      <!-- Gerado via JS em renderSuggestions() para suportar troca de idioma -->
+      <div class="ai-suggestions" id="aiSuggestions"></div>
     </div>
   </div>
 </div>
@@ -224,7 +214,6 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.06);
     color: rgba(240, 237, 232, 0.55);
-    cursor: none;
     flex-shrink: 0;
     transition: all 0.25s var(--ease);
   }
@@ -373,7 +362,6 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
     outline: none;
     caret-color: var(--accent);
     transition: border-color 0.25s;
-    cursor: none;
   }
 
   .ai-chat-input::placeholder { color: rgba(240,237,232,0.25); }
@@ -390,7 +378,6 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
     background: var(--accent);
     border: none;
     color: #080808;
-    cursor: none;
     flex-shrink: 0;
     transition: transform 0.2s var(--ease), background 0.2s, opacity 0.2s;
   }
@@ -445,7 +432,6 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
     position: relative;
     height: 22px;
     overflow: hidden;
-    cursor: none;
   }
 
   /* Overlay de frases que sobe ao focar */
@@ -491,7 +477,6 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
     font-size: 0.88rem;
     font-weight: 300;
     caret-color: var(--accent);
-    cursor: none;
     opacity: 0;
     transition: opacity 0.25s ease 0.1s;
     padding: 0;
@@ -520,7 +505,7 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
     flex-direction: row;
     gap: 8px;
     width: max-content;
-    animation: aiCarousel 120s linear infinite;
+    animation: aiCarousel 300s linear infinite;
   }
 
   .ai-suggestions:hover,
@@ -541,7 +526,6 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
     font-family: var(--font-body);
     font-size: 0.76rem;
     font-weight: 300;
-    cursor: none;
     padding: 8px 14px;
     border-radius: 20px;
     line-height: 1.2;
@@ -558,10 +542,68 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
   }
 
   /* ─── Light mode ─── */
-  [data-theme="light"] .ai-widget { background: rgba(250,249,247,0.95); border-color: rgba(201,169,110,0.25); }
-  [data-theme="light"] .ai-hero-input { color: #0d0c0a; }
-  [data-theme="light"] .ai-hero-input::placeholder { color: rgba(13,12,10,0.35); }
+  [data-theme="light"] .ai-widget {
+    background: rgba(250,249,247,0.97);
+    border-color: rgba(201,169,110,0.25);
+    box-shadow: 0 0 40px rgba(201,169,110,0.06), 0 8px 32px rgba(0,0,0,0.08);
+  }
+  [data-theme="light"] .ai-widget:hover,
+  [data-theme="light"] .ai-widget:focus-within {
+    box-shadow: 0 0 60px rgba(201,169,110,0.1), 0 8px 40px rgba(0,0,0,0.12);
+  }
+  [data-theme="light"] .ai-chat-header {
+    background: linear-gradient(180deg, rgba(201,169,110,0.06) 0%, transparent 100%);
+    border-bottom-color: rgba(201,169,110,0.12);
+    box-shadow: none;
+  }
+  [data-theme="light"] .ai-name { color: var(--text-1); }
+  [data-theme="light"] .ai-close-btn {
+    background: rgba(0,0,0,0.03);
+    border-color: rgba(0,0,0,0.08);
+    color: rgba(13,12,10,0.45);
+  }
+  [data-theme="light"] .ai-close-btn:hover { background: rgba(201,169,110,0.12); color: var(--text-1); }
+  [data-theme="light"] .ai-messages::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); }
+  [data-theme="light"] .ai-msg--bot .ai-bubble {
+    background: rgba(0,0,0,0.04);
+    border-color: rgba(0,0,0,0.07);
+    color: var(--text-1);
+  }
+  [data-theme="light"] .ai-msg--user .ai-bubble { color: var(--text-1); }
+  [data-theme="light"] .ai-msg--user .ai-avatar {
+    background: linear-gradient(135deg, rgba(201,169,110,0.15), rgba(201,169,110,0.05));
+    border-color: rgba(201,169,110,0.2);
+    color: var(--accent);
+  }
+  [data-theme="light"] .ai-typing-dots {
+    background: rgba(0,0,0,0.04);
+    border-color: rgba(0,0,0,0.07);
+  }
+  [data-theme="light"] .ai-chat-input-row {
+    border-top-color: rgba(0,0,0,0.06);
+    background: transparent;
+  }
+  [data-theme="light"] .ai-chat-input {
+    background: rgba(0,0,0,0.04);
+    border-color: rgba(0,0,0,0.08);
+    color: var(--text-1);
+  }
+  [data-theme="light"] .ai-chat-input::placeholder { color: rgba(13,12,10,0.3); }
+  [data-theme="light"] .ai-chat-input:focus { border-color: rgba(201,169,110,0.4); }
   [data-theme="light"] .ai-input-row { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.08); }
+  [data-theme="light"] .ai-hero-input { color: var(--text-1); }
+  [data-theme="light"] .ai-hero-input::placeholder { color: rgba(13,12,10,0.35); }
+  [data-theme="light"] .ai-phrase-overlay span { color: rgba(13,12,10,0.38); }
+  [data-theme="light"] .ai-suggestion {
+    background: rgba(0,0,0,0.03);
+    border-color: rgba(0,0,0,0.06);
+    color: rgba(13,12,10,0.55);
+  }
+  [data-theme="light"] .ai-suggestion:hover {
+    color: var(--text-1);
+    background: rgba(0,0,0,0.05);
+    border-color: rgba(201,169,110,0.3);
+  }
   [data-theme="light"] .ai-binary-bg { color: rgba(201,169,110,0.1); }
 
   /* ─── Responsive ─── */
@@ -569,7 +611,7 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
     .ai-messages { height: 250px; }
 
     /* Garante que o container renderiza corretamente em mobile */
-    .ai-widget {
+    [data-theme="dark"] .ai-widget {
       background: rgba(8, 8, 8, 0.92) !important;
       border: 1px solid rgba(201, 169, 110, 0.2) !important;
       border-radius: 16px !important;
@@ -580,11 +622,19 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
       display: flex !important;
       flex-direction: row !important;
       align-items: center !important;
-      background: rgba(255,255,255,0.03) !important;
-      border: 1px solid rgba(255,255,255,0.08) !important;
       border-radius: 10px !important;
       padding: 10px 12px !important;
       flex-wrap: nowrap !important;
+    }
+
+    [data-theme="dark"] .ai-input-row {
+      background: rgba(255,255,255,0.03) !important;
+      border: 1px solid rgba(255,255,255,0.08) !important;
+    }
+
+    [data-theme="light"] .ai-input-row {
+      background: rgba(0,0,0,0.03) !important;
+      border: 1px solid rgba(0,0,0,0.08) !important;
     }
 
     .ai-hero-input {
@@ -594,11 +644,23 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
   }
 </style>
 
-<script define:vars={{ SYSTEM_PROMPT }}>
+<script define:vars={{ SYSTEM_PROMPT_PT, SYSTEM_PROMPT_EN, SUGGESTIONS_PT, SUGGESTIONS_EN }}>
   (() => {
     const API_BASE = 'https://qwen-chat-478866638874.us-central1.run.app';
     const API_URL = `${API_BASE}/chat`;
     const HEALTH_URL = `${API_BASE}/health`;
+
+    function getLang() {
+      return document.documentElement.getAttribute('data-lang') || 'pt';
+    }
+
+    function getSystemPrompt() {
+      return getLang() === 'en' ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_PT;
+    }
+
+    function getSuggestions() {
+      return getLang() === 'en' ? SUGGESTIONS_EN : SUGGESTIONS_PT;
+    }
 
     // ─── State e Conexão ───
     let chatHistory = [];
@@ -606,15 +668,32 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
     let isApiReady = false;
     const STORAGE_KEY = 'eduAgentChatHistory';
 
-    const widget     = document.getElementById('aiWidget');
-    const heroInput  = document.getElementById('aiHeroInput');
-    const heroSend   = document.getElementById('aiHeroSend');
-    const chatInput  = document.getElementById('aiModalInput');
-    const chatSend   = document.getElementById('aiModalSend');
-    const messagesEl = document.getElementById('aiMessages');
-    const typingEl   = document.getElementById('aiTyping');
-    const closeBtn   = document.getElementById('aiModalClose');
-    const chips      = document.querySelectorAll('.ai-suggestion');
+    const widget       = document.getElementById('aiWidget');
+    const heroInput    = document.getElementById('aiHeroInput');
+    const heroSend     = document.getElementById('aiHeroSend');
+    const chatInput    = document.getElementById('aiModalInput');
+    const chatSend     = document.getElementById('aiModalSend');
+    const messagesEl   = document.getElementById('aiMessages');
+    const typingEl     = document.getElementById('aiTyping');
+    const closeBtn     = document.getElementById('aiModalClose');
+    const suggestionsEl = document.getElementById('aiSuggestions');
+
+    // ─── Suggestions: render + re-render on lang change ───
+    function renderSuggestions() {
+      if (!suggestionsEl) return;
+      const items = getSuggestions();
+      const doubled = [...items, ...items]; // clone para scroll infinito
+      suggestionsEl.innerHTML = doubled
+        .map(msg => `<button class="ai-suggestion" data-msg="${msg.replace(/"/g, '&quot;')}">${msg}</button>`)
+        .join('');
+      suggestionsEl.querySelectorAll('.ai-suggestion').forEach(btn => {
+        btn.addEventListener('click', () => openChat(btn.dataset.msg));
+      });
+    }
+
+    // Observa mudança de data-lang no <html>
+    new MutationObserver(() => renderSuggestions())
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['data-lang'] });
 
 
 
@@ -701,12 +780,12 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
     async function checkHealth() {
       // Atualiza painel interno (se houver)
       if (statusDot) statusDot.classList.add('is-connecting');
-      if (statusText) statusText.textContent = 'Conectando...';
+      if (statusText) statusText.textContent = getLang() === 'en' ? 'Connecting...' : 'Conectando...';
 
       // Atualiza o texto dentro do input box (Hero)
       if (!isApiReady) {
         if (phraseSpan) {
-          phraseSpan.textContent = 'Conectando ao servidor de IA...';
+          phraseSpan.textContent = getLang() === 'en' ? 'Connecting to AI server...' : 'Conectando ao servidor de IA...';
           phraseSpan.style.color = '#facc15';
           phraseSpan.style.opacity = '1';
         }
@@ -721,13 +800,15 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
           // Atualiza painel interno
           if (statusDot) statusDot.classList.remove('is-connecting');
           if (statusText) {
-            statusText.textContent = 'Portfólio Assistant';
+            statusText.textContent = getLang() === 'en' ? 'Portfolio Assistant' : 'Portfólio Assistant';
             statusText.style.color = 'rgba(74, 222, 128, 0.8)';
             setTimeout(() => { if (statusText) statusText.style.color = ''; }, 2000);
           }
-          
+
           // Atualiza o texto visual do input
-          phraseSpan.textContent = 'Conectado! Pergunte qualquer coisa sobre o Eduardo.';
+          phraseSpan.textContent = getLang() === 'en'
+            ? 'Connected! Ask anything about Eduardo.'
+            : 'Conectado! Pergunte qualquer coisa sobre o Eduardo.';
           phraseSpan.style.color = '#4ade80';
 
           return true;
@@ -761,8 +842,9 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
         showTyping(true);
         setTimeout(() => {
           showTyping(false);
-          appendMessage('bot', 'Aguardando estabilizar conexão com o servidor... Ele pode levar alguns segundos para ' + 
-                               'ligar a primeira vez hoje. Vou te avisar quando estiver pronto!');
+          appendMessage('bot', getLang() === 'en'
+            ? 'Waiting for the server to stabilize... It may take a few seconds to start up for the first time today. I\'ll let you know when it\'s ready!'
+            : 'Aguardando estabilizar conexão com o servidor... Ele pode levar alguns segundos para ligar a primeira vez hoje. Vou te avisar quando estiver pronto!');
           chatHistory.pop(); // tira a mensagem do usuário do history para ele tentar novamente
           saveChat();
           isLoading = false;
@@ -779,13 +861,13 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: text,
-            history: [{ role: 'system', content: SYSTEM_PROMPT }, ...chatHistory.slice(0, -1)],
+            history: [{ role: 'system', content: getSystemPrompt() }, ...chatHistory.slice(0, -1)],
           }),
         });
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data  = await res.json();
-        const reply = data.resposta || 'Não consegui responder agora. Tente novamente.';
+        const reply = data.resposta || (getLang() === 'en' ? 'Could not respond right now. Please try again.' : 'Não consegui responder agora. Tente novamente.');
 
         chatHistory.push({ role: 'assistant', content: reply });
         saveChat();
@@ -795,7 +877,7 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
       } catch (err) {
         console.error('AI Chat error:', err);
         showTyping(false);
-        appendMessage('bot', 'Ops! Tive um problema de conexão. Tente novamente em instantes.');
+        appendMessage('bot', getLang() === 'en' ? 'Oops! I had a connection issue. Please try again in a moment.' : 'Ops! Tive um problema de conexão. Tente novamente em instantes.');
         chatHistory.pop();
         saveChat();
       } finally {
@@ -815,7 +897,7 @@ import SYSTEM_PROMPT from '../content/ai-system-prompt.md?raw';
       openChat(msg || null);
     });
 
-    chips.forEach(c => c.addEventListener('click', () => openChat(c.dataset.msg)));
+    renderSuggestions();
 
     chatInput?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(chatInput.value.trim()); }

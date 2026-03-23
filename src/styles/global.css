@@ -113,7 +113,6 @@ body {
     overflow-x: hidden;
     transition: background-color 0.6s var(--ease),
         color 0.6s var(--ease);
-    cursor: none;
 }
 
 a {
@@ -175,62 +174,6 @@ body::before {
     pointer-events: none;
 }
 
-
-/* ============================================================
-   05. CUSTOM CURSOR
-   ============================================================ */
-
-.cursor-dot {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 6px;
-    height: 6px;
-    background: var(--accent);
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 99999;
-    transform: translate(-50%, -50%);
-    transition: transform 0.1s var(--ease), width 0.3s var(--ease), height 0.3s var(--ease), background 0.3s var(--ease);
-    mix-blend-mode: normal;
-}
-
-.cursor-ring {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 36px;
-    height: 36px;
-    border: 1px solid rgba(201, 169, 110, 0.4);
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 99998;
-    transform: translate(-50%, -50%);
-    transition: width 0.4s var(--ease), height 0.4s var(--ease), border-color 0.3s var(--ease), transform 0.12s linear;
-    will-change: transform;
-}
-
-body.cursor-hover .cursor-dot {
-    width: 10px;
-    height: 10px;
-    background: var(--text-1);
-}
-
-body.cursor-hover .cursor-ring {
-    width: 60px;
-    height: 60px;
-    border-color: rgba(201, 169, 110, 0.6);
-}
-
-body.cursor-click .cursor-dot {
-    width: 14px;
-    height: 14px;
-}
-
-@media (hover: none) {
-    .cursor-dot, .cursor-ring { display: none; }
-    body { cursor: auto; }
-}
 
 
 /* ============================================================
@@ -433,7 +376,6 @@ header {
     transition: border-color var(--dur) var(--ease),
         color var(--dur) var(--ease),
         background var(--dur) var(--ease);
-    cursor: none;
 }
 
 .btn-control:hover {
@@ -485,7 +427,6 @@ header {
     height: 40px;
     background: transparent;
     border: none;
-    cursor: none;
     flex-shrink: 0;
     z-index: 1100;
     padding: 0;
@@ -584,7 +525,7 @@ header {
     font-weight: 400;
     line-height: 1;
     letter-spacing: -0.04em;
-    color: #ffffff;
+    color: var(--text-1);
     text-wrap: balance;
     margin-top: auto;
     margin-bottom: auto;
@@ -645,7 +586,6 @@ header {
     transition: color var(--dur) var(--ease),
         border-color var(--dur) var(--ease);
     white-space: nowrap;
-    cursor: none;
 }
 
 .btn-outline::before {
