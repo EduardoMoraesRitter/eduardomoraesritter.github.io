@@ -5,15 +5,23 @@ async (page) => {
   for(const tab of page.context().pages())if(tab!==page)await tab.close();
   await page.goto(base);
   const receiver=await page.context().newPage();
+  await receiver.setViewportSize({width:390,height:844});
   await receiver.addInitScript(()=>{
-    const canvas=document.createElement('canvas');canvas.width=canvas.height=900;
+    const canvas=document.createElement('canvas');canvas.width=canvas.height=900;canvas.getContext('2d').fillRect(0,0,900,900);
     window.__cameraFrame=async url=>{const image=new Image();image.src=url;await image.decode();const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,900,900);ctx.imageSmoothingEnabled=false;ctx.drawImage(image,50,50,800,800);};
-    navigator.mediaDevices.getUserMedia=async()=>canvas.captureStream(12);
+    navigator.mediaDevices.getUserMedia=async()=>{const stream=canvas.captureStream(12);setInterval(()=>{canvas.getContext('2d').fillRect(0,0,1,1);stream.getVideoTracks()[0].requestFrame();},80);return stream;};
   });
-  await receiver.goto(base);await receiver.getByRole('button',{name:'Receber arquivo',exact:true}).click();
+  await receiver.goto(base);
+  await receiver.waitForFunction(()=>document.getElementById('receiveMode').getAttribute('aria-pressed')==='true');
   await receiver.waitForTimeout(400);receiver.on('dialog',dialog=>dialog.accept());
   if(await receiver.getByRole('button',{name:'Descartar recepção'}).isEnabled())await receiver.getByRole('button',{name:'Descartar recepção'}).click();
-  await receiver.getByRole('button',{name:'Ligar câmera',exact:true}).click();
+  await receiver.getByRole('button',{name:'Ligar câmera e escanear',exact:true}).click();
+  await receiver.waitForFunction(()=>!document.getElementById('zoom').disabled);
+  if(!await receiver.getByRole('slider',{name:'Zoom da câmera'}).isEnabled())throw Error('Digital zoom unavailable');
+  await receiver.getByRole('slider',{name:'Zoom da câmera'}).fill('1.2');
+  await receiver.waitForFunction(()=>document.getElementById('video').style.transform==='scale(1.2)');
+  await receiver.getByRole('slider',{name:'Zoom da câmera'}).fill('1');
+  await receiver.getByLabel('Ajustar zoom automaticamente').check();
   await page.getByLabel('Arquivo · até 32 MiB').setInputFiles('output/playwright/farol4-source.bin');
   await page.getByRole('button',{name:'Transmitir',exact:true}).waitFor({state:'visible'});
   await page.waitForFunction(()=>!document.getElementById('play').disabled);
@@ -30,8 +38,12 @@ async (page) => {
   const missing=await receiver.locator('#missingList').inputValue();if(missing!=='4-8')throw Error('Missing list incorrect: '+missing);
   await page.getByRole('button',{name:'Criar conexão',exact:true}).click();
   await page.waitForFunction(()=>document.getElementById('connectionStatus').textContent.includes('Conexão pronta'));
-  const code=await page.getByLabel('Código de conexão').inputValue();
-  await receiver.getByLabel('Código de conexão').fill(code);await receiver.getByRole('button',{name:'Entrar na conexão',exact:true}).click();
+  await transferFrame(); // Read the pairing QR: no manual code or connection button on receiver.
+  await page.waitForFunction(()=>document.getElementById('play').textContent==='Pausar');
+  // A manual pause must not be undone by repeated ready messages.
+  await page.getByRole('button',{name:'Pausar',exact:true}).click();
+  await page.waitForTimeout(3500);
+  if(await page.getByRole('button',{name:'Pausar',exact:true}).count())throw Error('Ready message resumed a manual pause');
   await page.waitForFunction(()=>document.getElementById('peerProgress').textContent.includes('priorizados'));
   await page.getByRole('button',{name:'Transmitir',exact:true}).click();
   for(let i=0;i<12;i++){
@@ -51,5 +63,5 @@ async (page) => {
   await receiver.reload();await receiver.getByRole('button',{name:'Receber arquivo',exact:true}).click();
   await receiver.waitForFunction(()=>!document.getElementById('save').disabled);
   await receiver.close();
-  return {missingBeforeRecovery:missing,blocks:8,verified:true,automaticStop:true,restored:true};
+  return {mobileReceiverDefault:true,digitalZoom:true,opticalPairing:true,automaticStart:true,manualPauseRespected:true,missingBeforeRecovery:missing,blocks:8,verified:true,automaticStop:true,restored:true};
 }

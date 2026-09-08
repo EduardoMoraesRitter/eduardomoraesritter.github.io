@@ -1,10 +1,14 @@
 import {Sender,Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from './protocol.mjs';
 import {ReturnChannel} from './realtime.mjs';
+import {analyzeFrame,autoZoom} from './camera.mjs';
+import {pairPacket,readPair} from './pairing.mjs';
 const $=id=>document.getElementById(id);
 const notice=text=>{$('notice').textContent=text;};
 let mode='send',sender=null,receiver=null,file=null,timer=null,frame=0,stream=null,raf=0;
 let loadGeneration=0,verification=null,dirty=false,db=null,storageReady=false,storageTouched=false;
 let peerLastSeen=0,feedbackPeer=null;
+let autoArmed=false,pairDisplayPending=false,pairTarget=null,lastPairCode='',zoom=1,digitalZoom=1,hardwareZoom=null,zoomBusy=false;
+let lastGuidance=0,lastAutoZoom=0,lastDecoded=0;
 const rgb=$('rgbCanvas'),rgbCtx=rgb.getContext('2d');
 const scan=document.createElement('canvas'),scanCtx=scan.getContext('2d',{willReadFrequently:true});
 const CELL=6,QUIET=4;
@@ -21,7 +25,7 @@ function render(texts) {
   }
   rgbCtx.putImageData(pixels,0,0);rgb.style.display='block';$('sendPlaceholder').hidden=true;
 }
-function stop(){if(timer)clearInterval(timer);timer=null;$('play').textContent='Transmitir';}
+function stop(){if(timer)clearInterval(timer);timer=null;autoArmed=false;$('play').textContent='Transmitir';}
 function nextFrame(){
   if(!sender)return;
   try{
@@ -33,6 +37,14 @@ function nextFrame(){
 }
 function play(){if(!sender||timer)return;frame=0;nextFrame();timer=setInterval(nextFrame,1000/Number($('fps').value));$('play').textContent='Pausar';}
 $('play').onclick=()=>timer?stop():play();
+$('autoStart').onchange=()=>{if(!$('autoStart').checked)autoArmed=false;};
+function showPair(){
+  if(!sender||!connection.ready){notice('Escolha um arquivo e crie uma conexão primeiro.');return;}
+  stop();autoArmed=$('autoStart').checked;
+  render([pairPacket({...config,code:$('pairCode').value.trim(),file:sender.meta.id})]);
+  notice(autoArmed?'No celular, ligue a câmera e leia este QR. A transmissão inicia após a confirmação.':'Leia este QR para conectar o receptor. Depois clique em Transmitir.');
+}
+$('showPair').onclick=showPair;
 $('fps').oninput=()=>{$('fpsValue').textContent=$('fps').value;if(timer){stop();play();}};
 $('startBlock').onchange=()=>{
   if(!sender)return;const n=Number($('startBlock').value);
@@ -45,7 +57,7 @@ $('repair').onclick=()=>{
 };
 async function prepare(){
   const generation=++loadGeneration;stop();sender=null;feedbackPeer=null;
-  for(const id of ['play','restart','repair'])$(id).disabled=true;
+  for(const id of ['play','restart','repair','showPair'])$(id).disabled=true;
   if(!file)return;
   if(file.size>MAX_BYTES){notice('Escolha um arquivo de até 32 MiB.');return;}
   notice('Preparando arquivo e calculando sua identificação…');
@@ -57,6 +69,7 @@ async function prepare(){
     $('peerProgress').textContent='Aguardando confirmação do receptor.';
     for(const id of ['play','restart','repair'])$(id).disabled=false;
     render([sender.metadata()]);notice('Pronto. Ligue a câmera no receptor e clique em Transmitir.');
+    $('showPair').disabled=!connection.ready;if(connection.ready)showPair();
   }catch(e){notice('Falha ao preparar: '+e.message);}
 }
 $('file').onchange=()=>{file=$('file').files[0];prepare();};$('blockSize').onchange=prepare;
@@ -89,10 +102,21 @@ async function verifyReceiver(){
 }
 function receivePacket(packet){
   if(mode!=='receive')return;
+  const pair=readPair(packet);
+  if(pair){
+    if(receiver&&receiver.meta.id!==pair.file){notice('Descarte a recepção anterior antes de receber outro arquivo.');return;}
+    // Optical data cannot silently redirect the browser to another Supabase project.
+    if(pair.url!==config.url||pair.key!==config.key){notice('O QR usa outro projeto. Confira a configuração antes de conectar.');return;}
+    pairTarget=pair.file;
+    if(lastPairCode!==pair.code&&!connecting){lastPairCode=pair.code;$('pairCode').value=pair.code;connect(false);notice('QR de conexão lido. Avisando o transmissor…');}
+    else if(connection.ready)announceReady();
+    return;
+  }
   const meta=readMeta(packet);
   if(meta){
     if(receiver&&receiver.meta.id!==meta.id){notice('Outro arquivo detectado. Descarte a recepção atual antes de trocar.');return;}
     if(!receiver){receiver=new Receiver(meta);storageTouched=true;dirty=true;updateReceiver();notice('Arquivo reconhecido. Recebendo blocos RGB.');feedback();}
+    pairTarget=meta.id;
     return;
   }
   if(receiver&&!receiver.verified){
@@ -103,8 +127,28 @@ function stopCamera(){
   cancelAnimationFrame(raf);raf=0;
   if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;
   $('video').srcObject=null;$('video').style.display='none';$('receivePlaceholder').hidden=false;
-  $('camera').textContent='Ligar câmera';$('zoomWrap').hidden=true;
+  $('camera').textContent='Ligar câmera e escanear';$('zoom').disabled=true;
+  $('cameraQuality').textContent='Câmera desligada.';
 }
+async function applyZoom(value){
+  if(!stream||zoomBusy)return;zoomBusy=true;
+  const track=stream.getVideoTracks()[0];
+  try{
+    if(hardwareZoom){
+      const step=hardwareZoom.step||.1;
+      const requested=Math.max(hardwareZoom.min,Math.min(hardwareZoom.max,hardwareZoom.min+Math.round((value-hardwareZoom.min)/step)*step));
+      await track.applyConstraints({advanced:[{zoom:requested}]});
+      if(!stream||stream.getVideoTracks()[0]!==track)return;
+      zoom=track.getSettings().zoom??requested;digitalZoom=1;
+    }else{zoom=Math.max(1,Math.min(3,value));digitalZoom=zoom;}
+    $('zoom').value=zoom;$('zoomValue').textContent=zoom.toFixed(1)+'×';
+    $('video').style.transform=`scale(${digitalZoom})`;
+  }catch{
+    hardwareZoom=null;zoom=1;digitalZoom=1;$('zoom').min='1';$('zoom').max='3';$('zoom').step='.1';$('zoom').value='1';$('zoomValue').textContent='1.0×';$('video').style.transform='';
+    $('zoomKind').textContent='Zoom digital · o controle da câmera não respondeu.';
+  }finally{zoomBusy=false;}
+}
+$('zoom').oninput=()=>{$('autoZoom').checked=false;applyZoom(Number($('zoom').value));};
 let cameraStarting=false;
 $('camera').onclick=async()=>{
   if(cameraStarting)return;if(stream){stopCamera();return;}
@@ -116,8 +160,14 @@ $('camera').onclick=async()=>{
     stream=candidate;$('video').srcObject=stream;await $('video').play();
     $('video').style.display='block';$('receivePlaceholder').hidden=true;$('camera').textContent='Parar câmera';
     const track=stream.getVideoTracks()[0],caps=track.getCapabilities?.()||{};
-    if(caps.zoom){$('zoomWrap').hidden=false;$('zoom').min=caps.zoom.min;$('zoom').max=caps.zoom.max;$('zoom').step=caps.zoom.step||0.1;$('zoom').value=track.getSettings().zoom||caps.zoom.min;
-      $('zoom').oninput=()=>{const z=Number($('zoom').value);$('zoomValue').textContent=z.toFixed(1)+'×';track.applyConstraints({advanced:[{zoom:z}]}).catch(()=>notice('Zoom não disponível nesta câmera.'));};}
+    hardwareZoom=caps.zoom&&caps.zoom.max>caps.zoom.min?caps.zoom:null;
+    zoom=hardwareZoom?(track.getSettings().zoom||hardwareZoom.min):1;digitalZoom=1;
+    $('video').style.transform='';$('zoom').min=hardwareZoom?.min||1;$('zoom').max=hardwareZoom?.max||3;$('zoom').step=hardwareZoom?.step||.1;$('zoom').value=zoom;$('zoom').disabled=false;$('zoomValue').textContent=zoom.toFixed(1)+'×';
+    $('zoomKind').textContent=hardwareZoom?'Zoom da câmera · ajuste automático após reconhecer o QR.':'Zoom digital · aproxima a imagem, mas não recupera detalhes fora de foco.';
+    const supported=['focusMode','exposureMode','whiteBalanceMode'].filter(name=>caps[name]?.includes('continuous'));
+    for(const name of supported)track.applyConstraints({advanced:[{[name]:'continuous'}]}).catch(()=>{});
+    $('cameraLimits').textContent=supported.length?'Ajustes contínuos solicitados à câmera. Iluminação e nitidez ainda dependem do ambiente.':'Este navegador não oferece controle contínuo de foco/exposição. Ajuste a distância se necessário.';
+    lastDecoded=0;lastGuidance=0;lastAutoZoom=0;announceReady();
     raf=requestAnimationFrame(scanFrame);
   }catch(e){stopCamera();notice('Não foi possível ligar a câmera: '+e.message);}finally{cameraStarting=false;}
 };
@@ -127,12 +177,25 @@ function scanFrame(time){
   try{
     const video=$('video');
     if(time-lastScan>100&&video.readyState>=2&&video.videoWidth){
-      lastScan=time;const scale=Math.min(1,1100/video.videoWidth);scan.width=Math.round(video.videoWidth*scale);scan.height=Math.round(video.videoHeight*scale);
-      scanCtx.drawImage(video,0,0,scan.width,scan.height);const img=scanCtx.getImageData(0,0,scan.width,scan.height);
+      lastScan=time;const vw=video.videoWidth,vh=video.videoHeight;
+      const sw=vw/digitalZoom,sh=vh/digitalZoom,scale=Math.min(1,1100/sw);
+      scan.width=Math.round(sw*scale);scan.height=Math.round(sh*scale);
+      scanCtx.drawImage(video,(vw-sw)/2,(vh-sh)/2,sw,sh,0,0,scan.width,scan.height);const img=scanCtx.getImageData(0,0,scan.width,scan.height);
+      let location=null,validRead=false;
       for(let ch=0;ch<3;ch++){
         const pixels=new Uint8ClampedArray(img.data.length);
         for(let i=0;i<pixels.length;i+=4){pixels[i]=pixels[i+1]=pixels[i+2]=img.data[i+ch];pixels[i+3]=255;}
-        const qr=window.jsQR(pixels,scan.width,scan.height,{inversionAttempts:'attemptBoth'});if(qr)receivePacket(qr.data);
+        const qr=window.jsQR(pixels,scan.width,scan.height,{inversionAttempts:'attemptBoth'});if(qr&&qr.data.startsWith('F4|')){location=qr.location;validRead=true;receivePacket(qr.data);}
+      }
+      if(validRead)lastDecoded=time;
+      if(time-lastGuidance>900&&stream){
+        lastGuidance=time;const info=analyzeFrame(img.data,scan.width,scan.height,location);
+        $('cameraQuality').textContent=info.message;
+        if(lastDecoded&&time-lastDecoded>4000)$('cameraQuality').textContent+=' Sem leitura recente; estabilize e ajuste a distância.';
+        if($('autoZoom').checked&&location&&time-lastAutoZoom>1800){
+          const target=autoZoom(zoom,Number($('zoom').min),Math.min(Number($('zoom').max),3),info);
+          if(Math.abs(target-zoom)>.05){lastAutoZoom=time;applyZoom(target);}
+        }
       }
     }
   }catch(e){notice('Leitura interrompida: '+e.message);stopCamera();return;}
@@ -172,6 +235,12 @@ setInterval(persist,2500);document.addEventListener('visibilitychange',()=>{if(d
 
 const connection=new ReturnChannel(onControl,onConnectionState,(...args)=>window.supabase.createClient(...args));
 let config={url:'',key:''},connecting=false,feedbackBusy=false;
+let lastReadySent=0;
+function announceReady(){
+  const id=pairTarget||receiver?.meta.id;
+  if(mode!=='receive'||!stream||!connection.ready||!id||receiver?.verified||Date.now()-lastReadySent<1500)return;
+  lastReadySent=Date.now();connection.send({type:'ready',role:'receive',file:id});
+}
 function publicConfig(){
   const url=$('supabaseUrl').value.trim().replace(/\/$/,''),key=$('supabaseKey').value.trim();
   if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url))throw Error('Informe a URL HTTPS do projeto Supabase.');
@@ -184,13 +253,23 @@ function publicConfig(){
 function onConnectionState(state){
   const labels={SUBSCRIBED:'Conexão pronta · aguardando o outro aparelho',CHANNEL_ERROR:'Falha na conexão · confira a configuração e tente novamente',TIMED_OUT:'Tempo esgotado · tentando reconectar',CLOSED:'Desconectado · transmissão óptica continua disponível'};
   $('connectionStatus').textContent=labels[state]||state;
-  if(state==='SUBSCRIBED'){connection.send({type:'hello',role:mode});feedback();}
+  $('showPair').disabled=!connection.ready||!sender;
+  if(state==='SUBSCRIBED'){
+    connection.send({type:'hello',role:mode});feedback();announceReady();
+    if(pairDisplayPending&&mode==='send'&&sender&&!timer)showPair();
+    pairDisplayPending=false;
+  }
 }
 function onControl(m){
   if(m.role===mode)return;
   if(m.type==='hello'){peerLastSeen=Date.now();$('connectionStatus').textContent='Outro aparelho conectado';feedback();return;}
   if(mode!=='send'||!sender||m.role!=='receive'||m.file!==sender.meta.id)return;
   if(feedbackPeer&&feedbackPeer!==m.from)return;
+  if(m.type==='ready'){
+    peerLastSeen=Date.now();$('connectionStatus').textContent='Câmera do receptor pronta · QR reconhecido';
+    if(autoArmed&&$('autoStart').checked&&!timer){autoArmed=false;feedbackPeer=m.from;play();notice('Receptor reconheceu o QR. Transmissão iniciada automaticamente.');}
+    return;
+  }
   if(!Number.isInteger(m.count)||m.count<0||m.count>sender.meta.total)return;
   if(m.type==='missing'){
     if(m.count===sender.meta.total||!sender.request(m.indices))return;
@@ -205,25 +284,26 @@ async function feedback(){
   feedbackBusy=true;
   try{await connection.send(receiver.verified?{type:'done',role:mode,file:receiver.meta.id,count:receiver.count,hash:receiver.meta.hash}:{type:'missing',role:mode,file:receiver.meta.id,count:receiver.count,indices:receiver.missing()});}finally{feedbackBusy=false;}
 }
-setInterval(()=>{feedback();if(connection.ready&&peerLastSeen&&Date.now()-peerLastSeen>12000)$('connectionStatus').textContent='Sem confirmação recente · QR continua; aguardando receptor';},3000);
+setInterval(()=>{feedback();announceReady();if(connection.ready&&peerLastSeen&&Date.now()-peerLastSeen>12000)$('connectionStatus').textContent='Sem confirmação recente · QR continua; aguardando receptor';},3000);
 setInterval(()=>{if(connection.ready)connection.send({type:'hello',role:mode});},10000);
 async function connect(create){
   if(connecting)return;connecting=true;
   try{
     config=publicConfig();const code=create?newPairCode():$('pairCode').value.trim().toLowerCase();
-    $('pairCode').value=code;feedbackPeer=null;peerLastSeen=0;
+    $('pairCode').value=code;feedbackPeer=null;peerLastSeen=0;lastReadySent=0;pairDisplayPending=mode==='send';
     $('connectionStatus').textContent='Conectando…';await connection.connect(config.url,config.key,code);
     try{localStorage.setItem('farol4-config',JSON.stringify(config));}catch{}
     $('copyPair').disabled=false;$('disconnect').disabled=false;
   }catch(e){$('connectionStatus').textContent=e.message;$('configuration').open=true;}finally{connecting=false;}
 }
 $('createPair').onclick=()=>connect(true);$('joinPair').onclick=()=>connect(false);
-$('disconnect').onclick=async()=>{await connection.close();$('disconnect').disabled=true;$('copyPair').disabled=true;$('connectionStatus').textContent='Modo óptico · sem conexão de retorno';feedbackPeer=null;};
+$('disconnect').onclick=async()=>{autoArmed=false;pairDisplayPending=false;await connection.close();$('disconnect').disabled=true;$('copyPair').disabled=true;$('showPair').disabled=true;$('connectionStatus').textContent='Modo óptico · sem conexão de retorno';feedbackPeer=null;};
 $('copyPair').onclick=async()=>{
   const url=new URL(location.href);url.hash=new URLSearchParams({...config,code:$('pairCode').value,mode:mode==='send'?'receive':'send'}).toString();
   try{await navigator.clipboard.writeText(url.href);notice('Convite copiado. Abra no outro aparelho e clique em Entrar na conexão.');}catch{notice('Não foi possível copiar. Copie o código de conexão manualmente.');}
 };
 async function initialize(){
+  if(matchMedia('(max-width: 720px), (pointer: coarse)').matches||/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent))setMode('receive');
   try{config=JSON.parse(localStorage.getItem('farol4-config')||'null')||config;}catch{}
   if(!config.url){try{const res=await fetch('./config.json');if(res.ok)config=await res.json();}catch{}}
   const fragment=new URLSearchParams(location.hash.slice(1));

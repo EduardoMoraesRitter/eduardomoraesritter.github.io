@@ -7,18 +7,19 @@ integridade. Farol 1, 2 e 3 permanecem separados.
 
 ## Usar
 
-1. Abra `/farol4/` nos dois aparelhos.
-2. No transmissor, escolha um arquivo e o tamanho dos blocos.
-3. Para recuperação automática, clique em **Criar conexão** e depois em
-   **Copiar convite para o outro aparelho**.
-4. Abra o convite no receptor e clique em **Entrar na conexão**. O convite
-   seleciona o modo receptor e preenche a configuração. Também é possível
-   copiar apenas o código para o campo correspondente do outro aparelho.
-5. No receptor, ligue a câmera. No transmissor, clique em **Transmitir**.
-6. O receptor solicita lotes de até 512 faltantes a cada três segundos.
-   Pedidos repetidos compensam desconexões e mensagens perdidas.
-7. Após receber todos os blocos, ele verifica o SHA-256 e libera **Salvar arquivo
-   verificado**. A confirmação via internet para o transmissor automaticamente.
+1. Abra `/farol4/` nos dois aparelhos. No celular, o modo receptor é selecionado automaticamente; você ainda pode trocar para enviar.
+2. No transmissor, escolha um arquivo e clique em **Criar conexão**. Aparece um QR de conexão.
+3. No receptor, toque em **Ligar câmera e escanear**, permita a câmera e aponte para esse QR.
+4. O receptor conecta ao Supabase e confirma que está pronto. O transmissor inicia automaticamente, se a opção correspondente estiver marcada. Uma pausa manual é respeitada; use **Transmitir** para continuar.
+5. Para parear novamente, use **Mostrar QR de conexão**. O convite por link e a entrada manual do código continuam disponíveis.
+6. O receptor solicita lotes de até 512 faltantes a cada três segundos. Pedidos repetidos compensam desconexões e mensagens perdidas.
+7. Após receber todos os blocos, verifica o SHA-256 e libera **Salvar arquivo verificado**. A confirmação via internet para o transmissor automaticamente.
+
+## Câmera, zoom e iluminação
+
+O controle de zoom usa a câmera quando o navegador oferece esse recurso; caso contrário, usa aproximação digital de até 3×, aplicada também à leitura. O zoom digital não recupera detalhes fora de foco. Mexer no controle desativa o ajuste automático; a caixa permite reativá-lo.
+
+O ajuste automático faz pequenos passos após reconhecer um QR centralizado. Os avisos estimam luminosidade, contraste e enquadramento; não são uma medição calibrada nem garantem foco. Foco, exposição e balanço de branco contínuos são solicitados somente quando suportados pela câmera. A permissão para ligar a câmera ainda exige uma ação no aparelho.
 
 Só a conexão de retorno precisa de internet durante a transferência. As páginas
 e bibliotecas precisam estar carregadas; esta versão não instala um service worker
@@ -39,6 +40,7 @@ recarregar. O código de pareamento não é salvo automaticamente.
 
 ## Protocolo
 
+- `F4|P|<base64(JSON)>`: configuração pública, segredo de pareamento e ID do arquivo. O receptor só conecta automaticamente ao projeto configurado.
 - `F4|M|<base64(JSON)>`: versão, nome, tamanho, tamanho de bloco, total,
   SHA-256 do arquivo e ID derivado de hash + tamanho de bloco.
 - `F4|B|<ID>|<índice zero-based>|<CRC32>|<base64(bytes)>`: bloco direto.
@@ -141,6 +143,6 @@ npx --yes --package @playwright/cli playwright-cli -s=farol4 run-code --filename
 O roteiro usa duas páginas e uma câmera sintética para exercitar os QR reais,
 o scanner e o canal Supabase real. Em 8 de setembro de 2026, recebeu inicialmente
 3/8 blocos, pediu 4–8, reconstruiu, verificou, baixou arquivo idêntico e confirmou
-parada automática. Também verificou restauração e ausência de overflow em 390px.
+parada automática. Também verificou restauração, modo receptor no celular, zoom digital, pareamento óptico, início automático, respeito à pausa manual e ausência de overflow em 390px.
 Isso não substitui um teste físico entre dois aparelhos; esse teste permanece
 pendente.

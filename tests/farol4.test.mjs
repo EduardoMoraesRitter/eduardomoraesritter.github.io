@@ -2,9 +2,30 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Sender,Receiver,readMeta,ranges,parseRanges,newPairCode,controlKey,seal,open} from '../public/farol4/protocol.mjs';
 import {ReturnChannel} from '../public/farol4/realtime.mjs';
+import {analyzeFrame,autoZoom} from '../public/farol4/camera.mjs';
+import {pairPacket,readPair} from '../public/farol4/pairing.mjs';
 import {readFile} from 'node:fs/promises';
 
 const sample=()=>Uint8Array.from({length:123456},(_,i)=>(i*17+i%7)%256);
+test('pairing QR roundtrip and rejection of invalid codes/projects',()=>{
+  const p={url:'https://example.supabase.co',key:'public-key',code:newPairCode(),file:'a'.repeat(64)+':400'};
+  assert.deepEqual(readPair(pairPacket(p)),p);
+  assert.equal(readPair(pairPacket({...p,code:'1234'})),null);
+  assert.equal(readPair(pairPacket({...p,url:'https://untrusted.example'})),null);
+  assert.equal(readPair('F4|P|invalid'),null);
+});
+test('camera guidance handles dark/bright/low contrast and zoom only uses centered QR',()=>{
+  const flat=v=>new Uint8ClampedArray(100*100*4).fill(v);
+  assert.match(analyzeFrame(flat(15),100,100).message,/escura/);
+  assert.match(analyzeFrame(flat(250),100,100).message,/clara/);
+  assert.match(analyzeFrame(flat(120),100,100).message,/contraste/);
+  assert.equal(autoZoom(1,1,3,{coverage:0,centered:false}),1);
+  assert.equal(autoZoom(2,1,3,{coverage:.2,centered:false}),2);
+  assert.ok(autoZoom(1,1,3,{coverage:.3,centered:true})>1);
+  assert.ok(autoZoom(2,1,3,{coverage:.9,centered:true})<2);
+  assert.equal(autoZoom(3,1,3,{coverage:.3,centered:true}),3);
+  assert.equal(autoZoom(2,1,3,{coverage:.6,centered:true}),2);
+});
 test('RGB: out-of-order blocks, duplicates, targeted recovery and SHA-256',async()=>{
   const s=await Sender.create(sample(),'teste.bin',400),r=new Receiver(readMeta(s.metadata()));
   for(let i=s.meta.total-1;i>=0;i--)if(i%7!==0){assert.ok(r.accept(s.packet(i)));assert.equal(r.accept(s.packet(i)),false);}

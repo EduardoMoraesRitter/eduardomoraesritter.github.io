@@ -23,6 +23,8 @@
   <label class="field"><span class="lab">Começar no bloco</span><input id="startBlock" type="number" min="1" value="1" step="1"></label>
   <button class="btn" id="play" disabled>Transmitir</button>
   <button class="btn ghost spaced" id="restart" disabled>Recomeçar do bloco 1</button>
+  <label class="check spaced"><input id="autoStart" type="checkbox" checked> Iniciar quando o receptor ler o QR de conexão</label>
+  <button class="btn ghost spaced" id="showPair" disabled>Mostrar QR de conexão</button>
   <details class="spaced"><summary>Recuperação manual</summary>
    <label class="field spaced"><span class="lab">Cole a lista do receptor</span><textarea id="repairInput" rows="3" placeholder="12, 45, 800-820"></textarea></label>
    <button class="btn ghost" id="repair" disabled>Priorizar estes blocos</button>
@@ -40,14 +42,20 @@
 <section class="grid" id="receiveView" hidden aria-label="Receptor">
  <div class="panel panel-pad">
   <p class="eyebrow">01 · Ler e recuperar</p>
-  <button class="btn" id="camera">Ligar câmera</button>
-  <label class="field spaced" id="zoomWrap" hidden><span class="lab">Zoom <span id="zoomValue">1×</span></span><input type="range" id="zoom" min="1" max="5" step="0.1" value="1"></label>
   <button class="btn ok spaced" id="save" disabled>Salvar arquivo verificado</button>
   <button class="btn ghost spaced" id="discard" disabled>Descartar recepção</button>
   <p class="hint">Aponte para o Farol 4. Outras versões não são compatíveis. Mantenha a câmera estável e ajuste a distância para ler as três cores.</p>
  </div>
  <div class="panel panel-pad stagePanel">
+  <button class="btn cameraStart" id="camera">Ligar câmera e escanear</button>
   <div class="stage"><video id="video" playsinline muted autoplay></video><div id="receivePlaceholder" class="ph">Ligue a câmera para receber</div></div>
+  <div class="cameraTools" id="cameraTools">
+   <label class="field spaced" id="zoomWrap"><span class="lab">Zoom <span id="zoomValue">1×</span></span><input aria-label="Zoom da câmera" type="range" id="zoom" min="1" max="3" step="0.1" value="1" disabled></label>
+   <label class="check"><input type="checkbox" id="autoZoom" checked> Ajustar zoom automaticamente</label>
+   <p class="progsub" id="zoomKind">Zoom disponível ao ligar a câmera.</p>
+   <p id="cameraQuality" class="quality" role="status">Ligue a câmera e aponte para o QR de conexão ou de arquivo.</p>
+   <p class="progsub" id="cameraLimits">As orientações são estimativas da imagem. Foco e exposição dependem do aparelho.</p>
+  </div>
   <p class="filelabel" id="receiveName">Aguardando arquivo</p>
   <div class="progtop spaced"><span id="received">0 blocos</span><strong id="percent">0%</strong></div>
   <progress id="progress" max="100" value="0" aria-label="Blocos recebidos"></progress>
