@@ -101,6 +101,27 @@ progress{width:100%;height:18px;accent-color:var(--ok)}h2{font-size:1.25rem;marg
 @media(max-width:720px){.actions{flex-direction:column}.intro{font-size:.9rem}.meter .v{font-size:.95rem}.connection{margin-top:18px}}
 .check{display:flex;gap:9px;align-items:flex-start;font-size:.85rem;color:var(--muted)}.check input[type=checkbox]{width:auto;flex:none;margin-top:4px;accent-color:var(--accent)}.quality{border-left:3px solid var(--accent);padding:10px 12px;background:var(--surface-2);border-radius:5px;font-size:.86rem}.cameraTools{margin-top:12px}#video{object-fit:contain;transform-origin:center}
 .cameraStart{margin-bottom:12px}
+/* The live camera uses the available screen, preserving the source proportions. */
+@media(max-width:720px), (max-width:950px) and (max-height:500px){
+ body.camera-active{padding:6px 8px;background:#080c10;--surface:#fff;--surface-2:#e4e9ed;--text:#141a20;--muted:#394652;--accent:#e11d48;--accent-ink:#fff;--ok:#15803d}
+ .camera-active .receiverPanel .stage{position:fixed;inset:0 0 70px;height:auto;max-height:none;aspect-ratio:auto;border-radius:0;background:#080c10;z-index:0}
+ .camera-active #video{object-fit:contain;width:100%;height:100%}
+ .camera-active header,.camera-active .modes,.camera-active .linkStatus,.camera-active .notice,.camera-active .receiveProgress{position:relative;z-index:2}
+ .camera-active header{margin:0 0 3px;color:white}.camera-active header a{color:#fff}.camera-active h1{font-size:1rem}
+ .camera-active .modes{margin:0 0 4px;display:flex;width:100%;padding:2px}.camera-active .modes button{padding:5px;min-height:36px;font-size:.78rem}
+ .camera-active .linkStatus{margin-bottom:4px;padding:4px 7px;font-size:.7rem;background:rgba(255,255,255,.94);color:#141a20}
+ .camera-active .linkStatus>div:first-child{flex-direction:row;align-items:center}.camera-active .statusButton{min-height:28px;font-size:.7rem}
+ .camera-active .notice{padding:4px 7px;margin:0 0 4px;font-size:.7rem;background:rgba(255,255,255,.94);color:#141a20}
+ .camera-active .receiverPanel{display:block;padding:0;background:none;border:0;box-shadow:none}
+ .camera-active .receiveProgress{padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.9);color:#141a20}
+ .camera-active .receiveProgress .filelabel{font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}
+ .camera-active .progtop{font-size:.75rem;margin:0}.camera-active .transferStats{margin:3px 0 0;gap:4px}
+ .camera-active .transferStats>div{display:block}.camera-active .transferStats span{font-size:.6rem;color:#394652}.camera-active .transferStats strong{font-size:.7rem}
+ .camera-active .cameraTools{position:fixed;z-index:3;bottom:calc(78px + env(safe-area-inset-bottom));left:8px;right:8px;margin:0;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.94);color:#141a20}
+ .camera-active .cameraTools .check{color:#394652;min-height:32px}.camera-active .cameraTools .lab{color:#394652}.camera-active .quality{margin:2px 0 0;padding:4px 7px;font-size:.72rem;background:#e4e9ed;color:#141a20}
+ .camera-active .cameraHelp,.camera-active .recoveryDetails,.camera-active .connection,.camera-active footer{display:none}
+ .camera-active .receiverActions{z-index:4}
+}
 .linkStatus{border:1px solid var(--border);border-left:4px solid var(--muted);background:var(--surface);border-radius:9px;padding:8px 10px;margin-bottom:10px;font-size:.78rem}
 .linkStatus>div{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .linkStatus [id=roomLabel]{font-family:var(--mono);font-size:.72rem;white-space:nowrap}
@@ -145,4 +166,12 @@ summary{min-height:44px;align-content:center;overflow-wrap:anywhere}
  .receiverPanel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 16px}
  .receiveProgress{grid-column:2;grid-row:1}.receiverPanel .stage{grid-column:1;grid-row:1 / span 3;height:min(190px,36svh)}
  .cameraTools,.recoveryDetails{grid-column:2}.transferStats{margin-bottom:0}
+}
+@media(max-width:950px) and (max-height:500px) and (orientation:landscape){
+ .camera-active header{display:none}
+ .camera-active .modes{position:fixed;top:6px;left:8px;width:44%}
+ .camera-active .linkStatus{position:fixed;top:6px;right:8px;width:44%}
+ .camera-active .notice{position:fixed;top:58px;left:8px;width:44%}
+ .camera-active .receiveProgress{position:fixed;top:72px;right:8px;width:32%}
+ .camera-active .cameraTools{left:8px;right:auto;width:44%}
 }

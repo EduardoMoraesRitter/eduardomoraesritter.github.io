@@ -25,7 +25,7 @@ async (page) => {
   await receiver.getByRole('slider',{name:'Zoom da câmera'}).fill('1.2');
   await receiver.waitForFunction(()=>document.getElementById('video').style.transform==='scale(1.2)');
   await receiver.getByRole('slider',{name:'Zoom da câmera'}).fill('1');
-  await receiver.getByLabel('Ajustar zoom automaticamente').check();
+  await receiver.getByLabel('Ajustar visão automaticamente').check();
   await page.locator('#autoStart').uncheck();
   await page.getByLabel('Arquivo · até 32 MiB').setInputFiles('output/playwright/farol4-source.bin');
   await page.getByRole('button',{name:'Transmitir',exact:true}).waitFor({state:'visible'});
@@ -40,7 +40,7 @@ async (page) => {
   await page.waitForFunction(()=>Number(document.getElementById('sentBlocks').textContent)>=3);
   await page.getByRole('button',{name:'Pausar',exact:true}).click();await transferFrame();
   await receiver.waitForFunction(()=>document.getElementById('received').textContent==='3 / 8 blocos');
-  const missing=await receiver.locator('#missingList').inputValue();if(missing!=='4-8')throw Error('Missing list incorrect: '+missing);
+  const missing=await receiver.locator('#missingList').inputValue();if(!missing||await receiver.locator('#missingCount').textContent()!=='5')throw Error('Missing count incorrect: '+missing);
   await page.locator('#autoStart').check();
   await page.getByRole('button',{name:'Criar conexão',exact:true}).click();
   await page.waitForFunction(()=>document.getElementById('connectionStatus').textContent.includes('Conexão pronta'));

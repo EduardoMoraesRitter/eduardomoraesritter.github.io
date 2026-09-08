@@ -152,6 +152,7 @@ function receivePacket(packet){
   }
 }
 function stopCamera(){
+  document.body.classList.remove('camera-active');
   cancelAnimationFrame(raf);raf=0;
   if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;
   $('video').srcObject=null;$('video').style.display='none';$('receivePlaceholder').hidden=false;
@@ -188,6 +189,7 @@ $('camera').onclick=async()=>{
     if(mode!=='receive'){candidate.getTracks().forEach(t=>t.stop());return;}
     stream=candidate;$('video').srcObject=stream;await $('video').play();
     $('video').style.display='block';$('receivePlaceholder').hidden=true;$('camera').textContent='Parar câmera';
+    document.body.classList.add('camera-active');$('autoZoom').checked=true;window.scrollTo(0,0);
     const track=stream.getVideoTracks()[0],caps=track.getCapabilities?.()||{};
     hardwareZoom=caps.zoom&&caps.zoom.max>caps.zoom.min?caps.zoom:null;
     zoom=hardwareZoom?(track.getSettings().zoom||hardwareZoom.min):1;digitalZoom=1;

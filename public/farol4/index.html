@@ -54,13 +54,13 @@
   <div class="stage"><video id="video" playsinline muted autoplay></video><div id="receivePlaceholder" class="ph">Ligue a câmera para receber</div></div>
   <div class="cameraTools" id="cameraTools">
    <label class="field spaced" id="zoomWrap"><span class="lab">Zoom <span id="zoomValue">1×</span></span><input aria-label="Zoom da câmera" type="range" id="zoom" min="1" max="3" step="0.1" value="1" disabled></label>
-   <label class="check"><input type="checkbox" id="autoZoom" checked> Ajustar zoom automaticamente</label>
+   <label class="check"><input type="checkbox" id="autoZoom" checked> Ajustar visão automaticamente</label>
    <p id="cameraQuality" class="quality" role="status">Ligue a câmera e aponte para o QR de conexão ou de arquivo.</p>
+  </div>
    <details class="cameraHelp"><summary>Sobre os ajustes da câmera</summary>
    <p class="progsub" id="zoomKind">Zoom disponível ao ligar a câmera.</p>
    <p class="progsub" id="cameraLimits">As orientações são estimativas da imagem. Foco e exposição dependem do aparelho.</p>
    </details>
-  </div>
   <div class="receiverActions"><button class="btn" id="camera">Ligar câmera e escanear</button><button class="btn ok" id="save" disabled>Salvar arquivo verificado</button></div>
   <details class="recoveryDetails"><summary>Blocos faltantes e recuperação manual</summary>
   <p class="progsub" id="integrity">O arquivo completo será conferido com SHA-256.</p>
