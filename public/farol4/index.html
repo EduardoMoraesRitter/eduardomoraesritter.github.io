@@ -13,6 +13,10 @@
 <header><div class="brand"><span class="beacon"></span><h1>Farol 4</h1><span class="rgbTag" aria-label="RGB"><i class="r"></i><i class="g"></i><i class="b"></i></span></div><a href="../farol3/">Farol 3</a></header>
 <p class="intro">O arquivo vai pela luz. O receptor diz o que falta.</p>
 <div class="modes" aria-label="Modo"><button id="sendMode" aria-pressed="true">Enviar arquivo</button><button id="receiveMode" aria-pressed="false">Receber arquivo</button></div>
+<div class="linkStatus" id="linkStatus" role="status">
+ <div><strong id="serviceStatus">Supabase · não conectado</strong><span id="roomLabel">Sala: —</span></div>
+ <div><span id="peerStatus">Leia o QR de conexão para parear.</span><button id="retryConnection" class="statusButton" disabled>Reconectar</button></div>
+</div>
 <p id="notice" role="status" class="notice">Escolha um arquivo ou ligue a câmera no outro aparelho.</p>
 <section class="grid" id="sendView" aria-label="Transmissor">
  <div class="panel panel-pad">
@@ -23,7 +27,7 @@
   <label class="field"><span class="lab">Começar no bloco</span><input id="startBlock" type="number" min="1" value="1" step="1"></label>
   <button class="btn" id="play" disabled>Transmitir</button>
   <button class="btn ghost spaced" id="restart" disabled>Recomeçar do bloco 1</button>
-  <label class="check spaced"><input id="autoStart" type="checkbox" checked> Iniciar quando o receptor ler o QR de conexão</label>
+  <label class="check spaced"><input id="autoStart" type="checkbox" checked> Criar sala e iniciar quando o receptor ler o QR de conexão</label>
   <button class="btn ghost spaced" id="showPair" disabled>Mostrar QR de conexão</button>
   <details class="spaced"><summary>Recuperação manual</summary>
    <label class="field spaced"><span class="lab">Cole a lista do receptor</span><textarea id="repairInput" rows="3" placeholder="12, 45, 800-820"></textarea></label>

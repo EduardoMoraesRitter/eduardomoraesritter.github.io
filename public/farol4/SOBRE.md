@@ -8,14 +8,22 @@ integridade. Farol 1, 2 e 3 permanecem separados.
 ## Usar
 
 1. Abra `/farol4/` nos dois aparelhos. No celular, o modo receptor é selecionado automaticamente; você ainda pode trocar para enviar.
-2. No transmissor, escolha um arquivo e clique em **Criar conexão**. Aparece um QR de conexão.
+2. No transmissor, escolha um arquivo. Com a opção automática marcada, a sala é criada e o primeiro QR é o de conexão. **Criar conexão** continua disponível para criar outra sala manualmente.
 3. No receptor, toque em **Ligar câmera e escanear**, permita a câmera e aponte para esse QR.
 4. O receptor conecta ao Supabase e confirma que está pronto. O transmissor inicia automaticamente, se a opção correspondente estiver marcada. Uma pausa manual é respeitada; use **Transmitir** para continuar.
 5. Para parear novamente, use **Mostrar QR de conexão**. O convite por link e a entrada manual do código continuam disponíveis.
 6. O receptor solicita lotes de até 512 faltantes a cada três segundos. Pedidos repetidos compensam desconexões e mensagens perdidas.
 7. Após receber todos os blocos, verifica o SHA-256 e libera **Salvar arquivo verificado**. A confirmação via internet para o transmissor automaticamente.
 
-## Câmera, zoom e iluminação
+## Status da sala
+
+A faixa no topo separa **Supabase conectado** de **outro aparelho confirmado**. O ID curto da sala deve ser igual nos dois aparelhos; ele é derivado do tópico, não é o segredo de pareamento. Uma confirmação exige mensagens autenticadas entre aparelhos em modos opostos. Após 12 segundos sem resposta, a faixa informa a ausência de confirmação recente. **Reconectar** usa o mesmo código de sala. Desconectar manualmente impede que a câmera reconecte sozinha ao mesmo QR.
+
+O primeiro QR carrega o projeto, o segredo aleatório da sala e a identificação do arquivo. A chave pública já vem da configuração do site, tornando o QR menor. Depois da confirmação, chegam os metadados completos e os blocos RGB. O receptor aceita também o formato anterior do QR. Atualize a página nos dois aparelhos para usar este fluxo.
+
+O teste `tests/farol4-pairing-browser.js` verifica pareamento antes dos metadados, IDs iguais, confirmação nos dois sentidos e reconexão à mesma sala, com o Supabase real e câmera sintética.
+
+## Câmera e uso no celular
 
 No celular, o progresso fica acima da câmera, e os botões de câmera e salvar ficam fixos no rodapé. Os detalhes de recuperação, conexão e ajustes ficam recolhidos. A velocidade útil conta apenas bytes novos aceitos; repetições não aceleram a estimativa. O tempo restante usa uma janela recente de aproximadamente 20 segundos, após pelo menos 3 segundos de amostragem. Após 8 segundos sem novos blocos, mostra uma interrupção da leitura. Ao recarregar ou religar a câmera, a estimativa é calculada novamente a partir do progresso restaurado.
 

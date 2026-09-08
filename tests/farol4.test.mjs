@@ -23,6 +23,9 @@ const sample=()=>Uint8Array.from({length:123456},(_,i)=>(i*17+i%7)%256);
 test('pairing QR roundtrip and rejection of invalid codes/projects',()=>{
   const p={url:'https://example.supabase.co',key:'public-key',code:newPairCode(),file:'a'.repeat(64)+':400'};
   assert.deepEqual(readPair(pairPacket(p)),p);
+  const {key,...compact}=p;
+  assert.deepEqual(readPair(pairPacket(compact)),compact);
+  assert.ok(pairPacket(compact).length<pairPacket(p).length);
   assert.equal(readPair(pairPacket({...p,code:'1234'})),null);
   assert.equal(readPair(pairPacket({...p,url:'https://untrusted.example'})),null);
   assert.equal(readPair('F4|P|invalid'),null);

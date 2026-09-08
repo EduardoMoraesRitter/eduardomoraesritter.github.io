@@ -11,8 +11,10 @@ export class ReturnChannel {
   async connect(url,key,code) {
     await this.close(); const generation=this.generation;
     this.key=await controlKey(code);
-    const topic='farol4:'+await digest(new TextEncoder().encode(code));
+    const hash=await digest(new TextEncoder().encode(code));
+    const topic='farol4:'+hash;
     if(generation!==this.generation)return;
+    this.roomId=hash.slice(0,12).toUpperCase().match(/.{4}/g).join('-');this.onState('CONNECTING');
     this.client=this.createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
     this.channel=this.client.channel(topic,{config:{broadcast:{ack:true,self:false}}});
     this.channel.on('broadcast',{event:'control'},async ({payload})=>{
@@ -21,7 +23,7 @@ export class ReturnChannel {
         const m=await open(this.key,payload);
         if(generation!==this.generation||m.v!==4||typeof m.from!=='string'||m.from.length>64||m.from===this.identity||
           !Number.isSafeInteger(m.seq)||m.seq<=0||!Number.isFinite(m.time)||Math.abs(Date.now()-m.time)>60000||
-          !['missing','done','hello','ready'].includes(m.type))return;
+          !['missing','done','hello','hello_ack','ready'].includes(m.type))return;
         if(m.seq<=(this.peers.get(m.from)||0))return;
         if(this.peers.size>32&&!this.peers.has(m.from))return;
         this.peers.set(m.from,m.seq);this.onMessage(m);

@@ -8,6 +8,7 @@ const notice=text=>{$('notice').textContent=text;};
 let mode='send',sender=null,receiver=null,file=null,timer=null,frame=0,stream=null,raf=0;
 let loadGeneration=0,verification=null,dirty=false,db=null,storageReady=false,storageTouched=false;
 let peerLastSeen=0,feedbackPeer=null;
+let connectionState='IDLE',opticalBlocked=false,lastPairAttempt=0,sameRole=false;
 let autoArmed=false,pairDisplayPending=false,pairTarget=null,lastPairCode='',zoom=1,digitalZoom=1,hardwareZoom=null,zoomBusy=false;
 let lastGuidance=0,lastAutoZoom=0,lastDecoded=0;
 const rgb=$('rgbCanvas'),rgbCtx=rgb.getContext('2d');
@@ -42,7 +43,7 @@ $('autoStart').onchange=()=>{if(!$('autoStart').checked)autoArmed=false;};
 function showPair(){
   if(!sender||!connection.ready){notice('Escolha um arquivo e crie uma conexão primeiro.');return;}
   stop();autoArmed=$('autoStart').checked;
-  render([pairPacket({...config,code:$('pairCode').value.trim(),file:sender.meta.id})]);
+  render([pairPacket({url:config.url,code:$('pairCode').value.trim(),file:sender.meta.id})]);
   notice(autoArmed?'No celular, ligue a câmera e leia este QR. A transmissão inicia após a confirmação.':'Leia este QR para conectar o receptor. Depois clique em Transmitir.');
 }
 $('showPair').onclick=showPair;
@@ -70,7 +71,11 @@ async function prepare(){
     $('peerProgress').textContent='Aguardando confirmação do receptor.';
     for(const id of ['play','restart','repair'])$(id).disabled=false;
     render([sender.metadata()]);notice('Pronto. Ligue a câmera no receptor e clique em Transmitir.');
-    $('showPair').disabled=!connection.ready;if(connection.ready)showPair();
+    $('showPair').disabled=!connection.ready;
+    await initialization;
+    if(generation!==loadGeneration)return;
+    if(connection.ready)showPair();
+    else if($('autoStart').checked){notice('Criando sala. O primeiro QR conecta os aparelhos.');await connect(!$('pairCode').value.trim());}
   }catch(e){notice('Falha ao preparar: '+e.message);}
 }
 $('file').onchange=()=>{file=$('file').files[0];prepare();};$('blockSize').onchange=prepare;
@@ -127,9 +132,11 @@ function receivePacket(packet){
   if(pair){
     if(receiver&&receiver.meta.id!==pair.file){notice('Descarte a recepção anterior antes de receber outro arquivo.');return;}
     // Optical data cannot silently redirect the browser to another Supabase project.
-    if(pair.url!==config.url||pair.key!==config.key){notice('O QR usa outro projeto. Confira a configuração antes de conectar.');return;}
+    if(pair.url!==config.url){notice('O QR usa outro projeto. Confira a configuração antes de conectar.');return;}
     pairTarget=pair.file;
-    if(lastPairCode!==pair.code&&!connecting){lastPairCode=pair.code;$('pairCode').value=pair.code;connect(false);notice('QR de conexão lido. Avisando o transmissor…');}
+    const different=lastPairCode!==pair.code;
+    const retry=!opticalBlocked&&!connection.ready&&['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(connectionState)&&Date.now()-lastPairAttempt>8000;
+    if((different||retry)&&!connecting){lastPairCode=pair.code;lastPairAttempt=Date.now();opticalBlocked=false;$('pairCode').value=pair.code;connect(false);notice('QR de conexão lido. Avisando o transmissor…');}
     else if(connection.ready)announceReady();
     return;
   }
@@ -273,7 +280,17 @@ function publicConfig(){
   }
   return {url,key};
 }
+function updateLinkStatus(){
+  const live=connection.ready&&peerLastSeen&&Date.now()-peerLastSeen<12000;
+  const errors=['CHANNEL_ERROR','TIMED_OUT','CLOSED','ERROR'];
+  $('serviceStatus').textContent=connection.ready?'Supabase · conectado':connectionState==='CONNECTING'?'Supabase · conectando…':errors.includes(connectionState)?'Supabase · conexão interrompida':'Supabase · não conectado';
+  $('roomLabel').textContent='Sala: '+(connection.roomId||'—');
+  $('peerStatus').textContent=sameRole?'Os dois aparelhos estão no mesmo modo. Troque um deles.':live?(mode==='send'?'Receptor confirmado nesta sala':'Transmissor confirmado nesta sala'):connection.ready?(peerLastSeen?'Outro aparelho sem resposta recente':'Aguardando o outro aparelho nesta sala'):connection.roomId?'Reconecte para confirmar o outro aparelho.':mode==='send'?'Escolha um arquivo para criar a sala.':'Ligue a câmera e leia o QR de conexão.';
+  $('linkStatus').dataset.state=live?'paired':connection.ready?'waiting':errors.includes(connectionState)?'error':'offline';
+  $('retryConnection').disabled=connecting||! /^[a-f0-9]{64}$/i.test($('pairCode').value.trim());
+}
 function onConnectionState(state){
+  connectionState=state;if(state!=='SUBSCRIBED'){peerLastSeen=0;sameRole=false;}updateLinkStatus();
   const labels={SUBSCRIBED:'Conexão pronta · aguardando o outro aparelho',CHANNEL_ERROR:'Falha na conexão · confira a configuração e tente novamente',TIMED_OUT:'Tempo esgotado · tentando reconectar',CLOSED:'Desconectado · transmissão óptica continua disponível'};
   $('connectionStatus').textContent=labels[state]||state;
   $('showPair').disabled=!connection.ready||!sender;
@@ -284,19 +301,25 @@ function onConnectionState(state){
   }
 }
 function onControl(m){
-  if(m.role===mode)return;
-  if(m.type==='hello'){peerLastSeen=Date.now();$('connectionStatus').textContent='Outro aparelho conectado';feedback();return;}
+  if(!['send','receive'].includes(m.role))return;
+  if(m.role===mode){sameRole=true;updateLinkStatus();return;}
+  sameRole=false;
+  if(m.type==='hello'||m.type==='hello_ack'){
+    peerLastSeen=Date.now();updateLinkStatus();$('connectionStatus').textContent='Outro aparelho conectado';
+    if(m.type==='hello')connection.send({type:'hello_ack',role:mode});
+    feedback();announceReady();return;
+  }
   if(mode!=='send'||!sender||m.role!=='receive'||m.file!==sender.meta.id)return;
   if(feedbackPeer&&feedbackPeer!==m.from)return;
   if(m.type==='ready'){
-    peerLastSeen=Date.now();$('connectionStatus').textContent='Câmera do receptor pronta · QR reconhecido';
+    peerLastSeen=Date.now();updateLinkStatus();$('connectionStatus').textContent='Câmera do receptor pronta · QR reconhecido';
     if(autoArmed&&$('autoStart').checked&&!timer){autoArmed=false;feedbackPeer=m.from;play();notice('Receptor reconheceu o QR. Transmissão iniciada automaticamente.');}
     return;
   }
   if(!Number.isInteger(m.count)||m.count<0||m.count>sender.meta.total)return;
   if(m.type==='missing'){
     if(m.count===sender.meta.total||!sender.request(m.indices))return;
-    feedbackPeer=m.from;peerLastSeen=Date.now();$('connectionStatus').textContent='Receptor conectado · recuperação automática ativa';
+    feedbackPeer=m.from;peerLastSeen=Date.now();updateLinkStatus();$('connectionStatus').textContent='Receptor conectado · recuperação automática ativa';
     $('peerProgress').textContent=`Receptor: ${m.count} / ${sender.meta.total} blocos · ${sender.repairs.length} priorizados neste lote.`;
   }else if(m.type==='done'&&m.count===sender.meta.total&&m.hash===sender.meta.hash){
     feedbackPeer=m.from;peerLastSeen=Date.now();stop();$('peerProgress').textContent='Receptor confirmou arquivo completo e SHA-256 correto.';notice('Transferência concluída. Transmissão parada automaticamente.');
@@ -308,19 +331,21 @@ async function feedback(){
   try{await connection.send(receiver.verified?{type:'done',role:mode,file:receiver.meta.id,count:receiver.count,hash:receiver.meta.hash}:{type:'missing',role:mode,file:receiver.meta.id,count:receiver.count,indices:receiver.missing()});}finally{feedbackBusy=false;}
 }
 setInterval(()=>{feedback();announceReady();if(connection.ready&&peerLastSeen&&Date.now()-peerLastSeen>12000)$('connectionStatus').textContent='Sem confirmação recente · QR continua; aguardando receptor';},3000);
-setInterval(()=>{if(connection.ready)connection.send({type:'hello',role:mode});},10000);
+setInterval(()=>{updateLinkStatus();if(connection.ready)connection.send({type:'hello',role:mode});},3000);
 async function connect(create){
   if(connecting)return;connecting=true;
+  opticalBlocked=false;
   try{
     config=publicConfig();const code=create?newPairCode():$('pairCode').value.trim().toLowerCase();
     $('pairCode').value=code;feedbackPeer=null;peerLastSeen=0;lastReadySent=0;pairDisplayPending=mode==='send';
     $('connectionStatus').textContent='Conectando…';await connection.connect(config.url,config.key,code);
     try{localStorage.setItem('farol4-config',JSON.stringify(config));}catch{}
     $('copyPair').disabled=false;$('disconnect').disabled=false;
-  }catch(e){$('connectionStatus').textContent=e.message;$('configuration').open=true;}finally{connecting=false;}
+  }catch(e){connectionState='ERROR';$('connectionStatus').textContent=e.message;$('configuration').open=true;$('connectionDetails').open=true;notice('Não foi possível conectar: '+e.message);}finally{connecting=false;updateLinkStatus();}
 }
 $('createPair').onclick=()=>connect(true);$('joinPair').onclick=()=>connect(false);
-$('disconnect').onclick=async()=>{autoArmed=false;pairDisplayPending=false;await connection.close();$('disconnect').disabled=true;$('copyPair').disabled=true;$('showPair').disabled=true;$('connectionStatus').textContent='Modo óptico · sem conexão de retorno';feedbackPeer=null;};
+$('retryConnection').onclick=()=>connect(false);
+$('disconnect').onclick=async()=>{opticalBlocked=true;autoArmed=false;pairDisplayPending=false;await connection.close();connectionState='CLOSED';peerLastSeen=0;updateLinkStatus();$('disconnect').disabled=true;$('copyPair').disabled=true;$('showPair').disabled=true;$('connectionStatus').textContent='Modo óptico · sem conexão de retorno';feedbackPeer=null;};
 $('copyPair').onclick=async()=>{
   const url=new URL(location.href);url.hash=new URLSearchParams({...config,code:$('pairCode').value,mode:mode==='send'?'receive':'send'}).toString();
   try{await navigator.clipboard.writeText(url.href);notice('Convite copiado. Abra no outro aparelho e clique em Entrar na conexão.');}catch{notice('Não foi possível copiar. Copie o código de conexão manualmente.');}
@@ -339,4 +364,4 @@ async function initialize(){
     if(!config.url){$('configuration').open=true;$('connectionDetails').open=true;}
   await restore();
 }
-initialize();
+const initialization=initialize();

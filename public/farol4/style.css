@@ -101,6 +101,14 @@ progress{width:100%;height:18px;accent-color:var(--ok)}h2{font-size:1.25rem;marg
 @media(max-width:720px){.actions{flex-direction:column}.intro{font-size:.9rem}.meter .v{font-size:.95rem}.connection{margin-top:18px}}
 .check{display:flex;gap:9px;align-items:flex-start;font-size:.85rem;color:var(--muted)}.check input[type=checkbox]{width:auto;flex:none;margin-top:4px;accent-color:var(--accent)}.quality{border-left:3px solid var(--accent);padding:10px 12px;background:var(--surface-2);border-radius:5px;font-size:.86rem}.cameraTools{margin-top:12px}#video{object-fit:contain;transform-origin:center}
 .cameraStart{margin-bottom:12px}
+.linkStatus{border:1px solid var(--border);border-left:4px solid var(--muted);background:var(--surface);border-radius:9px;padding:8px 10px;margin-bottom:10px;font-size:.78rem}
+.linkStatus>div{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.linkStatus [id=roomLabel]{font-family:var(--mono);font-size:.72rem;white-space:nowrap}
+.linkStatus [id=peerStatus]{color:var(--muted);overflow-wrap:anywhere}
+.linkStatus[data-state=paired]{border-left-color:var(--ok)}.linkStatus[data-state=paired] strong{color:var(--ok)}
+.linkStatus[data-state=error]{border-left-color:var(--miss)}
+.statusButton{font:inherit;background:transparent;color:var(--accent);border:0;min-height:44px;cursor:pointer;padding:4px;flex:none}.statusButton:disabled{display:none}
+@media(max-width:380px){.linkStatus>div:first-child{align-items:flex-start;flex-direction:column;gap:1px}}
 /* Receiver: progress and camera together, secondary controls folded away. */
 #receiveView{grid-template-columns:1fr;max-width:680px;margin-inline:auto}
 .receiveProgress .filelabel{margin:0 0 4px;font-size:.9rem}
@@ -133,6 +141,7 @@ summary{min-height:44px;align-content:center;overflow-wrap:anywhere}
  #sendView .stagePanel{order:0}
 }
 @media(max-height:500px) and (orientation:landscape){
+ header{display:inline-flex;width:26%;vertical-align:middle}header>a{display:none}.modes{width:72%;vertical-align:middle;margin-bottom:6px}.modes button{flex:1;justify-content:center;padding:8px}
  .receiverPanel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 16px}
  .receiveProgress{grid-column:2;grid-row:1}.receiverPanel .stage{grid-column:1;grid-row:1 / span 3;height:min(190px,36svh)}
  .cameraTools,.recoveryDetails{grid-column:2}.transferStats{margin-bottom:0}
