@@ -17,6 +17,10 @@ integridade. Farol 1, 2 e 3 permanecem separados.
 
 ## Câmera, zoom e iluminação
 
+No celular, o progresso fica acima da câmera, e os botões de câmera e salvar ficam fixos no rodapé. Os detalhes de recuperação, conexão e ajustes ficam recolhidos. A velocidade útil conta apenas bytes novos aceitos; repetições não aceleram a estimativa. O tempo restante usa uma janela recente de aproximadamente 20 segundos, após pelo menos 3 segundos de amostragem. Após 8 segundos sem novos blocos, mostra uma interrupção da leitura. Ao recarregar ou religar a câmera, a estimativa é calculada novamente a partir do progresso restaurado.
+
+O layout foi testado em navegador com telas de 320×568, 360×640, 390×844, 430×932 e 844×390, incluindo controles fixos durante a rolagem. Execute `tests/farol4-mobile.js` com o mesmo comando `playwright-cli run-code --filename` usado abaixo para repetir esses testes.
+
 O controle de zoom usa a câmera quando o navegador oferece esse recurso; caso contrário, usa aproximação digital de até 3×, aplicada também à leitura. O zoom digital não recupera detalhes fora de foco. Mexer no controle desativa o ajuste automático; a caixa permite reativá-lo.
 
 O ajuste automático faz pequenos passos após reconhecer um QR centralizado. Os avisos estimam luminosidade, contraste e enquadramento; não são uma medição calibrada nem garantem foco. Foco, exposição e balanço de branco contínuos são solicitados somente quando suportados pela câmera. A permissão para ligar a câmera ainda exige uma ação no aparelho.

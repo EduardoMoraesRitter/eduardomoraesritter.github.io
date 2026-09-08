@@ -14,7 +14,11 @@ async (page) => {
   await receiver.goto(base);
   await receiver.waitForFunction(()=>document.getElementById('receiveMode').getAttribute('aria-pressed')==='true');
   await receiver.waitForTimeout(400);receiver.on('dialog',dialog=>dialog.accept());
-  if(await receiver.getByRole('button',{name:'Descartar recepção'}).isEnabled())await receiver.getByRole('button',{name:'Descartar recepção'}).click();
+  if(await receiver.locator('#discard').isEnabled()){
+    await receiver.getByText('Blocos faltantes e recuperação manual',{exact:true}).click();
+    await receiver.getByRole('button',{name:'Descartar recepção'}).click();
+    await receiver.getByText('Blocos faltantes e recuperação manual',{exact:true}).click();
+  }
   await receiver.getByRole('button',{name:'Ligar câmera e escanear',exact:true}).click();
   await receiver.waitForFunction(()=>!document.getElementById('zoom').disabled);
   if(!await receiver.getByRole('slider',{name:'Zoom da câmera'}).isEnabled())throw Error('Digital zoom unavailable');
@@ -43,6 +47,7 @@ async (page) => {
   // A manual pause must not be undone by repeated ready messages.
   await page.getByRole('button',{name:'Pausar',exact:true}).click();
   await page.waitForTimeout(3500);
+  await receiver.waitForFunction(()=>document.getElementById('receiveRate').textContent!=='—');
   if(await page.getByRole('button',{name:'Pausar',exact:true}).count())throw Error('Ready message resumed a manual pause');
   await page.waitForFunction(()=>document.getElementById('peerProgress').textContent.includes('priorizados'));
   await page.getByRole('button',{name:'Transmitir',exact:true}).click();
@@ -52,6 +57,7 @@ async (page) => {
     await page.waitForTimeout(650);
   }
   await receiver.waitForFunction(()=>!document.getElementById('save').disabled);
+  await receiver.waitForFunction(()=>document.getElementById('remainingTime').textContent==='Concluído');
   await page.waitForFunction(()=>document.getElementById('peerProgress').textContent.includes('SHA-256 correto'));
   if(await page.getByRole('button',{name:'Pausar',exact:true}).count())throw Error('Sender did not stop');
   const downloadPromise=receiver.waitForEvent('download');await receiver.getByRole('button',{name:'Salvar arquivo verificado'}).click();const download=await downloadPromise;

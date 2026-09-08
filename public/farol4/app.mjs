@@ -2,6 +2,7 @@ import {Sender,Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from 
 import {ReturnChannel} from './realtime.mjs';
 import {analyzeFrame,autoZoom} from './camera.mjs';
 import {pairPacket,readPair} from './pairing.mjs';
+import {TransferRate,duration} from './transfer-rate.mjs';
 const $=id=>document.getElementById(id);
 const notice=text=>{$('notice').textContent=text;};
 let mode='send',sender=null,receiver=null,file=null,timer=null,frame=0,stream=null,raf=0;
@@ -73,8 +74,27 @@ async function prepare(){
   }catch(e){notice('Falha ao preparar: '+e.message);}
 }
 $('file').onchange=()=>{file=$('file').files[0];prepare();};$('blockSize').onchange=prepare;
-function setMode(value){mode=value;stop();stopCamera();$('sendView').hidden=value!=='send';$('receiveView').hidden=value!=='receive';$('sendMode').setAttribute('aria-pressed',String(value==='send'));$('receiveMode').setAttribute('aria-pressed',String(value==='receive'));feedback();}
+function setMode(value){mode=value;stop();stopCamera();$('sendView').hidden=value!=='send';$('receiveView').hidden=value!=='receive';$('connectionDetails').open=value==='send';$('sendMode').setAttribute('aria-pressed',String(value==='send'));$('receiveMode').setAttribute('aria-pressed',String(value==='receive'));feedback();}
 $('sendMode').onclick=()=>setMode('send');$('receiveMode').onclick=()=>setMode('receive');
+
+let rateMeter=new TransferRate(),rateReceiver=null,rateStream=null;
+function updateTiming(){
+  if(rateReceiver!==receiver||rateStream!==stream){rateMeter=new TransferRate();rateReceiver=receiver;rateStream=stream;}
+  let text='Aguardando blocos',speed='—';
+  if(receiver?.verified)text='Concluído';
+  else if(receiver&&receiver.count===receiver.meta.total)text='Verificando arquivo';
+  else if(receiver&&!stream)text='Câmera pausada';
+  else if(receiver){
+    const {meta,flags,count}=receiver;
+    const bytes=count*meta.bs-(flags[meta.total-1]?meta.total*meta.bs-meta.size:0);
+    const {rate,stalled}=rateMeter.observe(bytes,performance.now());
+    text=stalled?'Sem novos blocos':rate>0?duration((meta.size-bytes)/rate):'Calculando…';
+    if(rate>0)speed=rate>=1024?`${(rate/1024).toFixed(1)} KiB/s`:`${Math.round(rate)} B/s`;
+    else if(stalled)speed='0 B/s';
+  }
+  $('remainingTime').textContent=text;$('receiveRate').textContent=speed;
+}
+setInterval(updateTiming,1000);
 
 function updateReceiver(){
   if(!receiver)return;const r=receiver;
@@ -83,6 +103,7 @@ function updateReceiver(){
   $('missingCount').textContent=r.meta.total-r.count;$('missingList').value=ranges(r.missing());
   $('copyMissing').disabled=r.count===r.meta.total;$('discard').disabled=false;$('save').disabled=!r.verified;
   if(!r.verified)$('integrity').textContent=`${r.duplicates} repetidos ignorados · ${r.corrupt} inválidos descartados. SHA-256 será conferido ao completar.`;
+  updateTiming();
 }
 async function verifyReceiver(){
   if(!receiver||receiver.count!==receiver.meta.total||verification)return;
@@ -129,6 +150,7 @@ function stopCamera(){
   $('video').srcObject=null;$('video').style.display='none';$('receivePlaceholder').hidden=false;
   $('camera').textContent='Ligar câmera e escanear';$('zoom').disabled=true;
   $('cameraQuality').textContent='Câmera desligada.';
+  updateTiming();
 }
 async function applyZoom(value){
   if(!stream||zoomBusy)return;zoomBusy=true;
@@ -212,6 +234,7 @@ $('discard').onclick=async()=>{
   $('receiveName').textContent='Aguardando arquivo';$('received').textContent='0 blocos';$('percent').textContent='0%';$('progress').value=0;$('missingCount').textContent='—';$('missingList').value='';
   $('receivePlaceholder').textContent='Ligue a câmera para receber';$('integrity').textContent='O arquivo completo será conferido com SHA-256.';
   for(const id of ['save','discard','copyMissing'])$(id).disabled=true;notice('Recepção descartada.');
+  updateTiming();
 };
 async function openStore(){
   return new Promise(resolve=>{
@@ -313,7 +336,7 @@ async function initialize(){
     notice('Convite recebido. Clique em Entrar na conexão para parear os aparelhos.');
   }
   $('supabaseUrl').value=config.url||'';$('supabaseKey').value=config.key||'';
-  if(!config.url)$('configuration').open=true;
+    if(!config.url){$('configuration').open=true;$('connectionDetails').open=true;}
   await restore();
 }
 initialize();

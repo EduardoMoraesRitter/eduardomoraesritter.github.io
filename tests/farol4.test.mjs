@@ -5,6 +5,19 @@ import {ReturnChannel} from '../public/farol4/realtime.mjs';
 import {analyzeFrame,autoZoom} from '../public/farol4/camera.mjs';
 import {pairPacket,readPair} from '../public/farol4/pairing.mjs';
 import {readFile} from 'node:fs/promises';
+import {TransferRate,duration} from '../public/farol4/transfer-rate.mjs';
+
+test('ETA counts new bytes only, handles stalls and restored baselines',()=>{
+  const meter=new TransferRate();
+  assert.equal(meter.observe(4000,0).rate,0);
+  assert.equal(meter.observe(5200,3000).rate,400);
+  assert.equal(meter.observe(5200,6000).rate,200);
+  assert.equal(meter.observe(5200,11000).stalled,true);
+  assert.equal(meter.observe(5200,11000).rate,0);
+  assert.ok(meter.observe(5600,12000).rate>0);
+  assert.equal(new TransferRate().observe(5600,13000).rate,0);
+  assert.equal(duration(80),'~2 min');
+});
 
 const sample=()=>Uint8Array.from({length:123456},(_,i)=>(i*17+i%7)%256);
 test('pairing QR roundtrip and rejection of invalid codes/projects',()=>{

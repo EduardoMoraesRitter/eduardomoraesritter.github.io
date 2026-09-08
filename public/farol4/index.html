@@ -40,36 +40,37 @@
  </div>
 </section>
 <section class="grid" id="receiveView" hidden aria-label="Receptor">
- <div class="panel panel-pad">
-  <p class="eyebrow">01 · Ler e recuperar</p>
-  <button class="btn ok spaced" id="save" disabled>Salvar arquivo verificado</button>
-  <button class="btn ghost spaced" id="discard" disabled>Descartar recepção</button>
-  <p class="hint">Aponte para o Farol 4. Outras versões não são compatíveis. Mantenha a câmera estável e ajuste a distância para ler as três cores.</p>
- </div>
- <div class="panel panel-pad stagePanel">
-  <button class="btn cameraStart" id="camera">Ligar câmera e escanear</button>
+ <div class="panel panel-pad stagePanel receiverPanel">
+  <div class="receiveProgress">
+   <p class="filelabel" id="receiveName">Aguardando arquivo</p>
+   <div class="progtop"><span id="received">0 blocos</span><strong id="percent">0%</strong></div>
+   <progress id="progress" max="100" value="0" aria-label="Blocos recebidos"></progress>
+   <div class="transferStats"><div><span>Tempo restante estimado</span><strong id="remainingTime">Aguardando blocos</strong></div><div><span>Velocidade útil</span><strong id="receiveRate">—</strong></div></div>
+  </div>
   <div class="stage"><video id="video" playsinline muted autoplay></video><div id="receivePlaceholder" class="ph">Ligue a câmera para receber</div></div>
   <div class="cameraTools" id="cameraTools">
    <label class="field spaced" id="zoomWrap"><span class="lab">Zoom <span id="zoomValue">1×</span></span><input aria-label="Zoom da câmera" type="range" id="zoom" min="1" max="3" step="0.1" value="1" disabled></label>
    <label class="check"><input type="checkbox" id="autoZoom" checked> Ajustar zoom automaticamente</label>
-   <p class="progsub" id="zoomKind">Zoom disponível ao ligar a câmera.</p>
    <p id="cameraQuality" class="quality" role="status">Ligue a câmera e aponte para o QR de conexão ou de arquivo.</p>
+   <details class="cameraHelp"><summary>Sobre os ajustes da câmera</summary>
+   <p class="progsub" id="zoomKind">Zoom disponível ao ligar a câmera.</p>
    <p class="progsub" id="cameraLimits">As orientações são estimativas da imagem. Foco e exposição dependem do aparelho.</p>
+   </details>
   </div>
-  <p class="filelabel" id="receiveName">Aguardando arquivo</p>
-  <div class="progtop spaced"><span id="received">0 blocos</span><strong id="percent">0%</strong></div>
-  <progress id="progress" max="100" value="0" aria-label="Blocos recebidos"></progress>
+  <div class="receiverActions"><button class="btn" id="camera">Ligar câmera e escanear</button><button class="btn ok" id="save" disabled>Salvar arquivo verificado</button></div>
+  <details class="recoveryDetails"><summary>Blocos faltantes e recuperação manual</summary>
   <p class="progsub" id="integrity">O arquivo completo será conferido com SHA-256.</p>
   <label class="field spaced"><span class="lab">Blocos faltantes <span id="missingCount">—</span></span><textarea id="missingList" rows="3" readonly placeholder="A lista aparece ao reconhecer o arquivo"></textarea></label>
   <button class="btn ghost" id="copyMissing" disabled>Copiar lote de faltantes</button>
   <p class="hint">Mostramos até 512 faltantes por lote. Com a conexão automática ativa, os lotes são pedidos novamente até completar. Sem ela, copie a lista para o transmissor.</p>
+  <button class="btn ghost" id="discard" disabled>Descartar recepção</button>
+  </details>
  </div>
 </section>
 <section class="panel panel-pad spaced connection" aria-label="Recuperação automática">
- <p class="eyebrow">02 · Recuperação automática · opcional</p>
- <h2>Conecte os dois aparelhos</h2>
- <p>O Supabase leva somente pedidos e confirmações criptografados. Os bytes do arquivo continuam nos QR. Ambos os aparelhos precisam de internet neste modo.</p>
  <p id="connectionStatus" role="status">Modo óptico · sem conexão de retorno</p>
+ <details id="connectionDetails" open><summary>Conexão entre os aparelhos</summary>
+ <p>O Supabase leva somente pedidos e confirmações criptografados. Os bytes do arquivo continuam nos QR. Ambos os aparelhos precisam de internet neste modo.</p>
  <details id="configuration"><summary>Configurar Supabase</summary>
   <label class="field spaced"><span class="lab">URL do projeto</span><input id="supabaseUrl" type="url" placeholder="https://seu-projeto.supabase.co" autocomplete="off"></label>
   <label class="field"><span class="lab">Chave pública (publishable ou anon)</span><input id="supabaseKey" type="text" autocomplete="off" spellcheck="false"></label>
@@ -79,6 +80,7 @@
  <label class="field spaced"><span class="lab">Código de conexão · cole o mesmo nos dois aparelhos</span><input id="pairCode" type="text" autocomplete="off" spellcheck="false"></label>
  <button class="btn ghost" id="copyPair" disabled>Copiar convite para o outro aparelho</button>
  <p class="hint">O convite permite participar desta conexão. Compartilhe apenas com o outro aparelho. A conexão não envia o arquivo nem salva seu conteúdo no Supabase.</p>
+ </details>
 </section>
 <footer>Farol 4 · RGB + recuperação direcionada · <a href="./SOBRE.md">Como funciona</a></footer>
 </main></body></html>
