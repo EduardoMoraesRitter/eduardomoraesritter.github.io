@@ -126,6 +126,13 @@
         <label class="field"><span class="lab">Quadros por segundo <span class="val" id="fpsVal">6</span></span><input type="range" id="fps" min="2" max="12" step="1" value="6"></label>
       </div>
       <button class="btn" id="playBtn" disabled><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span id="playLbl">Transmitir</span></button>
+      <div id="resumeControls" hidden style="margin-top:16px">
+        <label class="field"><span class="lab">Transmitir a partir da gota nº</span><input id="startSeed" type="number" min="0" max="4294967293" step="1" value="0" inputmode="numeric" aria-describedby="resumeHint resumeError" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:inherit"></label>
+        <button class="btn" id="applySeed" type="button">Usar esta posição</button>
+        <button class="btn" id="resetSeed" type="button" style="margin-top:8px">Recomeçar do zero</button>
+        <p id="resumeError" role="alert" hidden class="hint"></p>
+        <p class="hint" id="resumeHint">A numeração começa em <b>0</b>. Anote a próxima gota para retomar depois com o <b>mesmo arquivo e os mesmos bytes por bloco</b>. Gotas não são blocos reconstruídos. Aplicar uma posição pausa a transmissão; clique em Transmitir para continuar.</p>
+      </div>
       <p class="hint">Cada frame carrega <b>3 gotas</b> (R, G, B). A câmera precisa captar as <b>cores com nitidez</b> — mantenha boa iluminação e tela limpa. Brilho da tela no máximo ajuda.</p>
     </div>
     <div class="panel panel-pad stagePanel">
@@ -134,6 +141,7 @@
         <div class="meter state" id="sStateM"><div class="k">Estado</div><div class="v small" id="sState">Parado</div></div>
         <div class="meter"><div class="k">Blocos (K)</div><div class="v" id="sK">—</div></div>
         <div class="meter"><div class="k">Gotas enviadas</div><div class="v" id="sDrops">0</div></div>
+        <div class="meter"><div class="k">Próxima gota</div><div class="v" id="sNextSeed">0</div></div>
       </div>
     </div>
   </section>
@@ -339,7 +347,7 @@
 
   /* ===================== SENDER ===================== */
   var packed=null, blocks=null, K=0, blockSize=400, fileName='', fileType='', origSize=0, cdf=null;
-  var playTimer=null, seed=0, sendDrops=0;
+  var playTimer=null, seed=0, sendDrops=0, sendFrames=0;
   var chunkEl=$('chunk'), fpsEl=$('fps');
   chunkEl.oninput=function(){ $('chunkVal').textContent=chunkEl.value; if(packed) prepare(); };
   fpsEl.oninput=function(){ $('fpsVal').textContent=fpsEl.value; if(playTimer){ stopPlay(true); startPlay(); } };
@@ -352,6 +360,7 @@
   fileInput.onchange=function(e){ if(e.target.files[0]) loadFile(e.target.files[0]); };
 
   function loadFile(f){
+    stopPlay();
     fileName=f.name; fileType=f.type||'';
     var rd=new FileReader();
     rd.onload=function(ev){
@@ -365,23 +374,41 @@
     rd.readAsArrayBuffer(f);
   }
   function prepare(){
+    stopPlay();
     blockSize=parseInt(chunkEl.value,10);
     K=Math.max(1,Math.ceil(packed.length/blockSize));
     blocks=new Array(K);
     for(var i=0;i<K;i++){ var b=new Uint8Array(blockSize); b.set(packed.subarray(i*blockSize, Math.min((i+1)*blockSize, packed.length))); blocks[i]=b; }
     cdf=makeSoliton(K);
-    $('sK').textContent=K; seed=0; sendDrops=0; $('sDrops').textContent='0';
+    $('sK').textContent=K; setPosition(0); $('resumeControls').hidden=false;
   }
+  function setPosition(value){
+    stopPlay(); seed=value; sendDrops=0; sendFrames=0;
+    $('startSeed').value=String(value); $('sNextSeed').textContent=String(value);
+    $('sDrops').textContent='0'; $('resumeError').hidden=true;
+    $('startSeed').removeAttribute('aria-invalid');
+  }
+  $('applySeed').onclick=function(){
+    var text=$('startSeed').value.trim(), value=Number(text);
+    if(!text || !Number.isInteger(value) || value<0 || value>4294967293){
+      $('resumeError').textContent='Digite um número inteiro de 0 a 4294967293.';
+      $('resumeError').hidden=false; $('startSeed').setAttribute('aria-invalid','true'); return;
+    }
+    if(blocks){ setPosition(value); renderMono(metaText(),225,29,72); }
+  };
+  $('resetSeed').onclick=function(){ if(blocks){ setPosition(0); renderMono(metaText(),225,29,72); } };
   function metaJSON(){ return JSON.stringify({name:fileName,type:fileType,size:packed.length,orig:origSize,gz:(packed.length<origSize?1:0),K:K,bs:blockSize,rgb:1}); }
   function metaText(){ return 'M|'+b64enc(new TextEncoder().encode(metaJSON())); }
   function showSync(){ renderMono('FAROL3-SYNC',225,29,72); rgbCanvas.style.display='block'; $('sendPh').style.display='none'; setSendState('rx','Sincronizando'); }
   function setSendState(cls,txt){ $('sStateM').className='meter state'+(cls?' '+cls:''); $('sState').textContent=txt; }
 
   function nextFrame(){
-    if(sendDrops%14===0){
+    if(sendFrames%14===0){
       // metadata: mono red QR
       renderMono(metaText(), 225, 29, 72);
     } else {
+      // Seeds are uint32. Stop before a frame would wrap and repeat old droplets.
+      if(seed>4294967293){ stopPlay(); setSendState('','Fim da sequência'); return; }
       // 3 droplets in R, G, B
       var dR=makeDroplet(seed, blocks, K, blockSize, cdf); seed++;
       var dG=makeDroplet(seed, blocks, K, blockSize, cdf); seed++;
@@ -390,11 +417,12 @@
       var tG=(seed-2)+'|'+b64enc(dG);
       var tB=(seed-1)+'|'+b64enc(dB);
       renderRGB(tR, tG, tB);
-      sendDrops+=2; // +2 extra (total 3 per frame counted below)
+      sendDrops+=3;
     }
-    sendDrops++; $('sDrops').textContent=sendDrops;
+    sendFrames++; $('sDrops').textContent=sendDrops;
+    $('sNextSeed').textContent=String(seed);
   }
-  function startPlay(){ if(!blocks) return; var iv=1000/parseInt(fpsEl.value,10); playTimer=setInterval(nextFrame,iv); $('playLbl').textContent='Parar'; $('playBtn').querySelector('svg').innerHTML='<rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/>'; setSendState('tx','Transmitindo RGB'); }
+  function startPlay(){ if(!blocks || playTimer) return; sendFrames=0; var iv=1000/parseInt(fpsEl.value,10); playTimer=setInterval(nextFrame,iv); $('playLbl').textContent='Parar'; $('playBtn').querySelector('svg').innerHTML='<rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/>'; setSendState('tx','Transmitindo RGB'); }
   function stopPlay(keep){ if(playTimer){clearInterval(playTimer);playTimer=null;} $('playLbl').textContent='Transmitir'; $('playBtn').querySelector('svg').innerHTML='<path d="M8 5v14l11-7z"/>'; if(!keep) setSendState('','Pronto'); }
   $('playBtn').onclick=function(){ if(playTimer) stopPlay(); else startPlay(); };
 
