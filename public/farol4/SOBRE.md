@@ -1,0 +1,146 @@
+# Farol 4 — RGB com recuperação direcionada
+
+O arquivo é transmitido por QR RGB, com até três blocos numerados por quadro.
+O receptor mostra o que falta e, opcionalmente, pede esses blocos pelo Supabase
+Realtime. O transmissor os prioriza e para quando recebe a confirmação de
+integridade. Farol 1, 2 e 3 permanecem separados.
+
+## Usar
+
+1. Abra `/farol4/` nos dois aparelhos.
+2. No transmissor, escolha um arquivo e o tamanho dos blocos.
+3. Para recuperação automática, clique em **Criar conexão** e depois em
+   **Copiar convite para o outro aparelho**.
+4. Abra o convite no receptor e clique em **Entrar na conexão**. O convite
+   seleciona o modo receptor e preenche a configuração. Também é possível
+   copiar apenas o código para o campo correspondente do outro aparelho.
+5. No receptor, ligue a câmera. No transmissor, clique em **Transmitir**.
+6. O receptor solicita lotes de até 512 faltantes a cada três segundos.
+   Pedidos repetidos compensam desconexões e mensagens perdidas.
+7. Após receber todos os blocos, ele verifica o SHA-256 e libera **Salvar arquivo
+   verificado**. A confirmação via internet para o transmissor automaticamente.
+
+Só a conexão de retorno precisa de internet durante a transferência. As páginas
+e bibliotecas precisam estar carregadas; esta versão não instala um service worker
+nem promete abrir novamente o site sem rede.
+
+## Recuperação manual
+
+Sem Realtime, a transmissão percorre os blocos em ciclos. O receptor mostra
+os faltantes, por exemplo `12, 45, 800-820`. Copie o lote e cole em **Recuperação
+manual** no transmissor. Clique em **Priorizar estes blocos**. A numeração visível
+começa em 1. Se pausado, clique em Transmitir.
+
+O ponto **Começar no bloco** permite retomar uma posição. Para restaurar uma
+recepção parcial, use exatamente o mesmo arquivo e tamanho de bloco. O IndexedDB
+salva periodicamente os blocos recebidos; fechar abruptamente pode perder os
+últimos segundos. O transmissor precisa selecionar o arquivo novamente após
+recarregar. O código de pareamento não é salvo automaticamente.
+
+## Protocolo
+
+- `F4|M|<base64(JSON)>`: versão, nome, tamanho, tamanho de bloco, total,
+  SHA-256 do arquivo e ID derivado de hash + tamanho de bloco.
+- `F4|B|<ID>|<índice zero-based>|<CRC32>|<base64(bytes)>`: bloco direto.
+- A cada 12 quadros, um quadro monocromático repete os metadados.
+- Cada outro quadro usa R, G e B para até três pacotes.
+- CRC32 rejeita blocos danificados; SHA-256 confere o arquivo completo antes
+  de salvar ou confirmar a conclusão.
+- O receptor ignora pacotes de outro arquivo, índices inválidos e duplicatas.
+- O receptor só troca de arquivo após descartar a recepção atual.
+- Se a verificação final falhar, a recepção reinicia e solicita os blocos novamente.
+
+Os fountain codes das versões 2/3 foram substituídos por blocos diretos nesta
+versão. Isso permite solicitar partes exatas e simplifica recuperação,
+deduplicação e validação. Os protocolos não são compatíveis entre versões.
+Sem conexão de retorno, ciclos completos podem ser menos eficientes que fountain
+codes sob perdas aleatórias. O objetivo da v4 é o reenvio direcionado.
+
+## Supabase
+
+Projeto dedicado: `farol4` (`jabjrarpaukcmouhqqrz`), região `sa-east-1`.
+O arquivo `config.json` contém apenas URL e chave pública. Não há tabela de
+arquivos, upload do conteúdo nem chave secret/service_role no frontend.
+
+Esta versão usa **Realtime Broadcast público como transporte**, protegido na
+aplicação por mensagens AES-256-GCM com chave aleatória de 256 bits por conexão.
+O tópico é derivado por SHA-256 do código de pareamento. O convite leva a chave
+no fragmento da URL, que não é enviado na requisição HTTP ao servidor do site.
+Ao abrir o convite, a aplicação retira o fragmento da barra de endereços.
+
+Quem recebe o convite participa da conexão. O payload de controle contém
+somente tipo de mensagem, ID do arquivo, índices faltantes, contagem, hash de
+conclusão, identificador de cliente, sequência e horário. Não contém os bytes
+do arquivo nem o nome. Mensagens inválidas, antigas ou repetidas são rejeitadas.
+Os relógios dos aparelhos devem estar razoavelmente sincronizados (tolerância
+de um minuto). Cada conexão suporta um transmissor e um receptor; crie outra
+conexão para outro par.
+
+Essa proteção no cliente **não é RLS nem autenticação Supabase**. Ela impede
+interpretar ou forjar controles sem o segredo, mas não impede abuso de quota
+com a chave pública. O serviço observa tópicos e tráfego, ainda que o payload
+esteja criptografado. Para operação pública de maior escala, acrescente Auth,
+canais privados e autorização de membros por sessão antes de ampliar o uso.
+
+Em outro projeto, habilite Realtime Broadcast e permita canais públicos para
+este cliente. Preencha a URL e a chave pública na seção de configuração. Não
+é necessário criar tabelas ou habilitar replicação Postgres para Broadcast.
+Uma falha de conexão não interrompe o envio óptico; a lista manual continua útil.
+Nenhum recebimento é confirmado apenas pelo ACK do servidor: a conclusão vem
+do receptor, depois do hash.
+
+Documentação consultada:
+- [Broadcast](https://supabase.com/docs/guides/realtime/broadcast)
+- [Autorização de canais](https://supabase.com/docs/guides/realtime/authorization)
+
+## Limites desta versão
+
+- Até 32 MiB, 256/400/600 bytes por bloco, sem compressão.
+- Câmera exige HTTPS ou localhost; leitura RGB depende de foco, exposição,
+  distância e reprodução de cores. Não há promessa de ganho fixo de velocidade.
+- Bibliotecas locais: qrcode-generator 1.4.4, jsQR 1.4.0 e supabase-js 2.91.0.
+  Licenças preservadas em `vendor/`.
+- O conteúdo óptico não é criptografado. SHA-256 verifica integridade, não
+  comprova a identidade de quem está mostrando o QR.
+- Estado local ocupa espaço aproximadamente proporcional ao arquivo; a
+  persistência pode falhar em navegação privada ou com armazenamento cheio.
+- Abas suspensas pelo sistema podem atrasar transmissão, câmera e mensagens.
+
+## Validação
+
+Da raiz do repositório:
+
+```powershell
+node --test tests/farol4.test.mjs
+$env:FAROL_LIVE='1'
+node --test tests/farol4.test.mjs
+Remove-Item Env:FAROL_LIVE
+npm run build
+```
+
+O teste com `FAROL_LIVE=1` usa o projeto real configurado, abre dois clientes
+efêmeros, troca pedidos de faltantes e confirma recuperação com SHA-256. O teste
+padrão cobre desordem, duplicatas, corrupção, identidade, limites, persistência,
+criptografia e rejeição de mensagens.
+
+Para repetir a verificação no navegador, inicie o servidor:
+
+```powershell
+node node_modules/astro/astro.js dev --host 127.0.0.1 --port 4322
+```
+
+Em outro terminal:
+
+```powershell
+New-Item -ItemType Directory -Path output/playwright -Force
+node -e "require('fs').writeFileSync('output/playwright/farol4-source.bin',Uint8Array.from({length:3200},(_,i)=>(i*13)%256))"
+npx --yes --package @playwright/cli playwright-cli -s=farol4 open http://127.0.0.1:4322/farol4/index.html
+npx --yes --package @playwright/cli playwright-cli -s=farol4 run-code --filename tests/farol4-browser.js
+```
+
+O roteiro usa duas páginas e uma câmera sintética para exercitar os QR reais,
+o scanner e o canal Supabase real. Em 8 de setembro de 2026, recebeu inicialmente
+3/8 blocos, pediu 4–8, reconstruiu, verificou, baixou arquivo idêntico e confirmou
+parada automática. Também verificou restauração e ausência de overflow em 390px.
+Isso não substitui um teste físico entre dois aparelhos; esse teste permanece
+pendente.
