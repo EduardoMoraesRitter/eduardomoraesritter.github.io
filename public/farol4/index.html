@@ -27,7 +27,7 @@
   <label class="field"><span class="lab">Começar no bloco</span><input id="startBlock" type="number" min="1" value="1" step="1"></label>
   <button class="btn" id="play" disabled>Transmitir</button>
   <button class="btn ghost spaced" id="restart" disabled>Recomeçar do bloco 1</button>
-  <label class="check spaced"><input id="autoStart" type="checkbox" checked> Criar sala e iniciar quando o receptor ler o QR de conexão</label>
+  <label class="check spaced"><input id="autoStart" type="checkbox" checked> Iniciar o envio quando o receptor ler o QR da sala</label>
   <button class="btn ghost spaced" id="showPair" disabled>Mostrar QR de conexão</button>
   <details class="spaced"><summary>Recuperação manual</summary>
    <label class="field spaced"><span class="lab">Cole a lista do receptor</span><textarea id="repairInput" rows="3" placeholder="12, 45, 800-820"></textarea></label>
@@ -80,7 +80,7 @@
   <label class="field"><span class="lab">Chave pública (publishable ou anon)</span><input id="supabaseKey" type="text" autocomplete="off" spellcheck="false"></label>
   <p class="hint">Use somente chave pública. Esta configuração fica neste navegador e no convite de pareamento. <a href="./SOBRE.md">Instruções de configuração</a>.</p>
  </details>
- <div class="actions spaced"><button class="btn" id="createPair">Criar conexão</button><button class="btn ghost" id="joinPair">Entrar na conexão</button><button class="btn ghost" id="disconnect" disabled>Desconectar</button></div>
+ <div class="actions spaced"><button class="btn" id="createPair">Criar conexão</button><button class="btn ghost" id="joinPair" hidden>Entrar na conexão</button><button class="btn ghost" id="disconnect" disabled>Desconectar</button></div>
  <label class="field spaced"><span class="lab">Código de conexão · cole o mesmo nos dois aparelhos</span><input id="pairCode" type="text" autocomplete="off" spellcheck="false"></label>
  <button class="btn ghost" id="copyPair" disabled>Copiar convite para o outro aparelho</button>
  <p class="hint">O convite permite participar desta conexão. Compartilhe apenas com o outro aparelho. A conexão não envia o arquivo nem salva seu conteúdo no Supabase.</p>

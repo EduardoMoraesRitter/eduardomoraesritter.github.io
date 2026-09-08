@@ -19,12 +19,17 @@ async page => {
   }
   await receiver.getByRole('button',{name:'Ligar câmera e escanear',exact:true}).click();
   await receiver.waitForFunction(()=>!document.getElementById('zoom').disabled);
+  await page.locator('#autoStart').uncheck();
   await page.getByLabel('Arquivo · até 32 MiB').setInputFiles('output/playwright/farol4-source.bin');
   await page.waitForFunction(()=>!document.getElementById('showPair').disabled);
   if(await page.locator('#play').textContent()!=='Transmitir')throw Error('Started before receiver was ready');
   if(await page.locator('#linkStatus').getAttribute('data-state')!=='waiting')throw Error('False peer confirmation');
   const frame=await page.locator('#rgbCanvas').evaluate(c=>c.toDataURL());
   await receiver.evaluate(url=>window.__cameraFrame(url),frame);
+  await receiver.waitForFunction(()=>document.getElementById('linkStatus').dataset.state==='paired');
+  if(await page.locator('#play').textContent()!=='Transmitir')throw Error('Manual start option ignored');
+  await page.locator('#autoStart').check();
+  await page.getByRole('button',{name:'Mostrar QR de conexão',exact:true}).click();
   await page.waitForFunction(()=>document.getElementById('play').textContent==='Pausar');
   await receiver.waitForFunction(()=>document.getElementById('linkStatus').dataset.state==='paired');
   const room=await page.locator('#roomLabel').textContent();
@@ -32,6 +37,7 @@ async page => {
   // Only the pairing image reached the camera; metadata has not arrived yet.
   if(await receiver.locator('#received').textContent()!=='0 blocos')throw Error('Unexpected preexisting metadata');
   await page.getByRole('button',{name:'Pausar',exact:true}).click();
+  await receiver.getByRole('button',{name:'Parar câmera',exact:true}).click();
   await receiver.getByText('Conexão entre os aparelhos',{exact:true}).click();
   await receiver.getByRole('button',{name:'Desconectar',exact:true}).click();
   await receiver.waitForTimeout(1200);

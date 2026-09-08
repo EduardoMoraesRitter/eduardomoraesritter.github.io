@@ -30,6 +30,10 @@ async (page) => {
   await page.getByLabel('Arquivo · até 32 MiB').setInputFiles('output/playwright/farol4-source.bin');
   await page.getByRole('button',{name:'Transmitir',exact:true}).waitFor({state:'visible'});
   await page.waitForFunction(()=>!document.getElementById('play').disabled);
+  await page.waitForFunction(()=>!document.getElementById('showPair').disabled);
+  // Explicit manual positioning exposes metadata for the partial-recovery scenario.
+  await page.locator('#startBlock').fill('2');await page.locator('#startBlock').press('Tab');
+  await page.locator('#startBlock').fill('1');await page.locator('#startBlock').press('Tab');
   const transferFrame=async()=>{
     const data=await page.locator('#rgbCanvas').evaluate(c=>c.toDataURL());
     await receiver.evaluate(url=>window.__cameraFrame(url),data);

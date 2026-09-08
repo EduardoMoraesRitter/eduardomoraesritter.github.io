@@ -74,12 +74,11 @@ async function prepare(){
     $('showPair').disabled=!connection.ready;
     await initialization;
     if(generation!==loadGeneration)return;
-    if(connection.ready)showPair();
-    else if($('autoStart').checked){notice('Criando sala. O primeiro QR conecta os aparelhos.');await connect(!$('pairCode').value.trim());}
+    notice('Criando sala. O primeiro QR conecta os aparelhos.');await connect(true);
   }catch(e){notice('Falha ao preparar: '+e.message);}
 }
 $('file').onchange=()=>{file=$('file').files[0];prepare();};$('blockSize').onchange=prepare;
-function setMode(value){mode=value;stop();stopCamera();$('sendView').hidden=value!=='send';$('receiveView').hidden=value!=='receive';$('connectionDetails').open=value==='send';$('sendMode').setAttribute('aria-pressed',String(value==='send'));$('receiveMode').setAttribute('aria-pressed',String(value==='receive'));feedback();}
+function setMode(value){mode=value;stop();stopCamera();$('sendView').hidden=value!=='send';$('receiveView').hidden=value!=='receive';$('createPair').hidden=value!=='send';$('joinPair').hidden=value!=='receive';$('connectionDetails').open=value==='send';$('sendMode').setAttribute('aria-pressed',String(value==='send'));$('receiveMode').setAttribute('aria-pressed',String(value==='receive'));feedback();}
 $('sendMode').onclick=()=>setMode('send');$('receiveMode').onclick=()=>setMode('receive');
 
 let rateMeter=new TransferRate(),rateReceiver=null,rateStream=null;

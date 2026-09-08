@@ -8,7 +8,7 @@ integridade. Farol 1, 2 e 3 permanecem separados.
 ## Usar
 
 1. Abra `/farol4/` nos dois aparelhos. No celular, o modo receptor é selecionado automaticamente; você ainda pode trocar para enviar.
-2. No transmissor, escolha um arquivo. Com a opção automática marcada, a sala é criada e o primeiro QR é o de conexão. **Criar conexão** continua disponível para criar outra sala manualmente.
+2. No transmissor, escolha um arquivo. Ele sempre cria uma nova sala e mostra o QR de conexão. O receptor lê esse QR e entra na sala do transmissor. A opção automática controla apenas o início do envio; desmarcá-la não impede o pareamento. **Criar conexão** continua disponível no transmissor para criar outra sala manualmente.
 3. No receptor, toque em **Ligar câmera e escanear**, permita a câmera e aponte para esse QR.
 4. O receptor conecta ao Supabase e confirma que está pronto. O transmissor inicia automaticamente, se a opção correspondente estiver marcada. Uma pausa manual é respeitada; use **Transmitir** para continuar.
 5. Para parear novamente, use **Mostrar QR de conexão**. O convite por link e a entrada manual do código continuam disponíveis.
