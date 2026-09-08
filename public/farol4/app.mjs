@@ -3,14 +3,35 @@ import {ReturnChannel} from './realtime.mjs';
 import {analyzeFrame,autoZoom} from './camera.mjs';
 import {pairPacket,readPair} from './pairing.mjs';
 import {TransferRate,duration} from './transfer-rate.mjs';
+import {PauseState} from './pause-state.mjs';
 const $=id=>document.getElementById(id);
 const notice=text=>{$('notice').textContent=text;};
 let mode='send',sender=null,receiver=null,file=null,timer=null,frame=0,stream=null,raf=0;
 let loadGeneration=0,verification=null,dirty=false,db=null,storageReady=false,storageTouched=false;
 let peerLastSeen=0,feedbackPeer=null;
 let connectionState='IDLE',opticalBlocked=false,lastPairAttempt=0,sameRole=false;
-let autoArmed=false,pairDisplayPending=false,pairTarget=null,lastPairCode='',zoom=1,digitalZoom=1,hardwareZoom=null,zoomBusy=false;
+let transmissionDone=false,autoArmed=false,pairDisplayPending=false,pairTarget=null,lastPairCode='',zoom=1,digitalZoom=1,hardwareZoom=null,zoomBusy=false;
 let lastGuidance=0,lastAutoZoom=0,lastDecoded=0;
+const pauseState=new PauseState(crypto.randomUUID());let pauseConfirmed=false;
+function transferId(){return mode==='send'?sender?.meta.id:pairTarget||receiver?.meta.id;}
+function updatePauseUI(){
+  const paused=pauseState.value.paused;
+  $('transferState').textContent=paused?(pauseConfirmed?'Pausado nos dois aparelhos':'Pausado aqui · aguardando confirmação'):receiver?.verified&&mode==='receive'?'Arquivo verificado':mode==='send'&&transmissionDone?'Arquivo entregue':timer?'Transmitindo':mode==='receive'&&stream?'Lendo QR':'Pronto para conectar';
+  $('transferState').dataset.paused=String(paused);
+  $('pauseReceiver').textContent=paused?'Continuar recepção':'Pausar recepção';
+  $('pauseReceiver').hidden=!stream||receiver?.verified;
+  $('save').hidden=!receiver?.verified;
+  $('cameraTools').hidden=!stream;
+}
+function sendPauseState(){if(transferId()&&pauseState.value.revision)return connection.send({type:'pause_state',role:mode,file:transferId(),...pauseState.value});}
+function applyPause(){
+  if(pauseState.value.paused){stop();rateMeter=new TransferRate();}
+  else if(mode==='send'&&sender&&!timer)play();
+  updatePauseUI();updateTiming();
+}
+function setPaused(paused){pauseState.change(paused);pauseConfirmed=false;applyPause();sendPauseState();}
+$('pauseReceiver').onclick=()=>setPaused(!pauseState.value.paused);
+$('openSettings').onclick=()=>{ $('connectionDetails').open=!$('connectionDetails').open;if($('connectionDetails').open)$('connectionDetails').scrollIntoView({block:'nearest',behavior:'smooth'});};
 const rgb=$('rgbCanvas'),rgbCtx=rgb.getContext('2d');
 const scan=document.createElement('canvas'),scanCtx=scan.getContext('2d',{willReadFrequently:true});
 const CELL=6,QUIET=4;
@@ -37,8 +58,8 @@ function nextFrame(){
     $('nextBlock').textContent=(sender.repairs[0]??sender.cursor%sender.meta.total)+1;
   }catch(e){stop();notice('Não foi possível gerar o QR: '+e.message);}
 }
-function play(){if(!sender||timer)return;frame=0;nextFrame();timer=setInterval(nextFrame,1000/Number($('fps').value));$('play').textContent='Pausar';}
-$('play').onclick=()=>timer?stop():play();
+function play(){if(!sender||timer)return;transmissionDone=false;frame=0;nextFrame();timer=setInterval(nextFrame,1000/Number($('fps').value));$('play').textContent='Pausar';}
+$('play').onclick=()=>setPaused(!!timer);
 $('autoStart').onchange=()=>{if(!$('autoStart').checked)autoArmed=false;};
 function showPair(){
   if(!sender||!connection.ready){notice('Escolha um arquivo e crie uma conexão primeiro.');return;}
@@ -51,13 +72,14 @@ $('fps').oninput=()=>{$('fpsValue').textContent=$('fps').value;if(timer){stop();
 $('startBlock').onchange=()=>{
   if(!sender)return;const n=Number($('startBlock').value);
   if(!Number.isInteger(n)||n<1||n>sender.meta.total){notice(`Escolha um bloco de 1 a ${sender.meta.total}.`);return;}
-  stop();sender.cursor=n-1;sender.repairs=[];$('nextBlock').textContent=n;render([sender.metadata()]);notice(`Pronto para transmitir do bloco ${n}.`);
+  setPaused(true);sender.cursor=n-1;sender.repairs=[];$('nextBlock').textContent=n;render([sender.metadata()]);notice(`Pronto para transmitir do bloco ${n}.`);
 };
-$('restart').onclick=()=>{if(sender){stop();sender.cursor=0;sender.repairs=[];sender.sent=0;$('startBlock').value='1';$('sentBlocks').textContent='0';$('nextBlock').textContent='1';render([sender.metadata()]);notice('Pronto para recomeçar do bloco 1.');}};
+$('restart').onclick=()=>{if(sender){setPaused(true);sender.cursor=0;sender.repairs=[];sender.sent=0;$('startBlock').value='1';$('sentBlocks').textContent='0';$('nextBlock').textContent='1';render([sender.metadata()]);notice('Pronto para recomeçar do bloco 1.');}};
 $('repair').onclick=()=>{
   if(!sender)return;try{sender.request(parseRanges($('repairInput').value,sender.meta.total));notice(`${sender.repairs.length} blocos priorizados. Clique em Transmitir se estiver pausado.`);}catch(e){notice(e.message);}
 };
 async function prepare(){
+  pauseState.reset();pauseConfirmed=false;transmissionDone=false;
   const generation=++loadGeneration;stop();sender=null;feedbackPeer=null;
   for(const id of ['play','restart','repair','showPair'])$(id).disabled=true;
   if(!file)return;
@@ -78,7 +100,7 @@ async function prepare(){
   }catch(e){notice('Falha ao preparar: '+e.message);}
 }
 $('file').onchange=()=>{file=$('file').files[0];prepare();};$('blockSize').onchange=prepare;
-function setMode(value){mode=value;stop();stopCamera();$('sendView').hidden=value!=='send';$('receiveView').hidden=value!=='receive';$('createPair').hidden=value!=='send';$('joinPair').hidden=value!=='receive';$('connectionDetails').open=value==='send';$('sendMode').setAttribute('aria-pressed',String(value==='send'));$('receiveMode').setAttribute('aria-pressed',String(value==='receive'));feedback();}
+function setMode(value){if(mode!==value&&transferId())setPaused(true);mode=value;stop();stopCamera();$('sendView').hidden=value!=='send';$('receiveView').hidden=value!=='receive';$('createPair').hidden=value!=='send';$('joinPair').hidden=value!=='receive';$('connectionDetails').open=false;$('sendMode').setAttribute('aria-pressed',String(value==='send'));$('receiveMode').setAttribute('aria-pressed',String(value==='receive'));document.body.dataset.mode=value;feedback();updatePauseUI();}
 $('sendMode').onclick=()=>setMode('send');$('receiveMode').onclick=()=>setMode('receive');
 
 let rateMeter=new TransferRate(),rateReceiver=null,rateStream=null;
@@ -86,6 +108,7 @@ function updateTiming(){
   if(rateReceiver!==receiver||rateStream!==stream){rateMeter=new TransferRate();rateReceiver=receiver;rateStream=stream;}
   let text='Aguardando blocos',speed='—';
   if(receiver?.verified)text='Concluído';
+  else if(pauseState.value.paused)text='Pausado';
   else if(receiver&&receiver.count===receiver.meta.total)text='Verificando arquivo';
   else if(receiver&&!stream)text='Câmera pausada';
   else if(receiver){
@@ -105,25 +128,26 @@ function updateReceiver(){
   $('receiveName').textContent=r.meta.name;$('received').textContent=`${r.count} / ${r.meta.total} blocos`;
   $('percent').textContent=`${Math.floor(r.count/r.meta.total*100)}%`;$('progress').value=r.count/r.meta.total*100;
   $('missingCount').textContent=r.meta.total-r.count;$('missingList').value=ranges(r.missing());
-  $('copyMissing').disabled=r.count===r.meta.total;$('discard').disabled=false;$('save').disabled=!r.verified;
+  $('copyMissing').disabled=r.count===r.meta.total;$('discard').disabled=false;$('save').disabled=!r.verified||verification===r;
   if(!r.verified)$('integrity').textContent=`${r.duplicates} repetidos ignorados · ${r.corrupt} inválidos descartados. SHA-256 será conferido ao completar.`;
   updateTiming();
+  updatePauseUI();
 }
 async function verifyReceiver(){
   if(!receiver||receiver.count!==receiver.meta.total||verification)return;
   const r=receiver;verification=r;$('integrity').textContent='Conferindo SHA-256 do arquivo…';
   try{
     if(await r.verify()){
-      if(receiver!==r)return;stopCamera();$('save').disabled=false;
+      if(receiver!==r)return;dirty=true;await persist();if(receiver!==r)return;stopCamera();
       $('integrity').textContent='SHA-256 confirmado · arquivo íntegro.';
       $('receivePlaceholder').textContent='Arquivo verificado. Você já pode salvar.';
-      notice('Recepção completa e integridade confirmada.');dirty=true;feedback();
+      notice('Recepção completa e integridade confirmada.');feedback();
     }else if(receiver===r){
       // A complete but wrong file must not be saved or acknowledged. Ask for all blocks again.
       receiver=new Receiver(r.meta);updateReceiver();dirty=true;
       notice('A verificação falhou. Os blocos serão solicitados novamente; mantenha a câmera ligada.');
     }
-  }catch(e){notice('Não foi possível verificar: '+e.message);}finally{verification=null;}
+  }catch(e){notice('Não foi possível verificar: '+e.message);}finally{verification=null;if(receiver===r)updateReceiver();}
 }
 function receivePacket(packet){
   if(mode!=='receive')return;
@@ -134,6 +158,7 @@ function receivePacket(packet){
     if(pair.url!==config.url){notice('O QR usa outro projeto. Confira a configuração antes de conectar.');return;}
     pairTarget=pair.file;
     const different=lastPairCode!==pair.code;
+    if(different){pauseState.reset();pauseConfirmed=false;updatePauseUI();}
     const retry=!opticalBlocked&&!connection.ready&&['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(connectionState)&&Date.now()-lastPairAttempt>8000;
     if((different||retry)&&!connecting){lastPairCode=pair.code;lastPairAttempt=Date.now();opticalBlocked=false;$('pairCode').value=pair.code;connect(false);notice('QR de conexão lido. Avisando o transmissor…');}
     else if(connection.ready)announceReady();
@@ -146,7 +171,7 @@ function receivePacket(packet){
     pairTarget=meta.id;
     return;
   }
-  if(receiver&&!receiver.verified){
+  if(receiver&&!receiver.verified&&!pauseState.value.paused){
     if(receiver.accept(packet)){dirty=true;updateReceiver();if(receiver.count===receiver.meta.total)verifyReceiver();}
   }
 }
@@ -158,6 +183,7 @@ function stopCamera(){
   $('camera').textContent='Ligar câmera e escanear';$('zoom').disabled=true;
   $('cameraQuality').textContent='Câmera desligada.';
   updateTiming();
+  updatePauseUI();
 }
 async function applyZoom(value){
   if(!stream||zoomBusy)return;zoomBusy=true;
@@ -180,7 +206,7 @@ async function applyZoom(value){
 $('zoom').oninput=()=>{$('autoZoom').checked=false;applyZoom(Number($('zoom').value));};
 let cameraStarting=false;
 $('camera').onclick=async()=>{
-  if(cameraStarting)return;if(stream){stopCamera();return;}
+  if(cameraStarting)return;if(stream){if(transferId())setPaused(true);stopCamera();return;}
   if(!navigator.mediaDevices?.getUserMedia){notice('A câmera requer HTTPS ou localhost.');return;}
   cameraStarting=true;
   try{
@@ -188,7 +214,7 @@ $('camera').onclick=async()=>{
     if(mode!=='receive'){candidate.getTracks().forEach(t=>t.stop());return;}
     stream=candidate;$('video').srcObject=stream;await $('video').play();
     $('video').style.display='block';$('receivePlaceholder').hidden=true;$('camera').textContent='Parar câmera';
-    document.body.classList.add('camera-active');$('autoZoom').checked=true;window.scrollTo(0,0);
+    document.body.classList.add('camera-active');$('autoZoom').checked=true;window.scrollTo(0,0);updatePauseUI();
     const track=stream.getVideoTracks()[0],caps=track.getCapabilities?.()||{};
     hardwareZoom=caps.zoom&&caps.zoom.max>caps.zoom.min?caps.zoom:null;
     zoom=hardwareZoom?(track.getSettings().zoom||hardwareZoom.min):1;digitalZoom=1;
@@ -269,7 +295,7 @@ let config={url:'',key:''},connecting=false,feedbackBusy=false;
 let lastReadySent=0;
 function announceReady(){
   const id=pairTarget||receiver?.meta.id;
-  if(mode!=='receive'||!stream||!connection.ready||!id||receiver?.verified||Date.now()-lastReadySent<1500)return;
+  if(mode!=='receive'||!stream||!connection.ready||!id||receiver?.verified||pauseState.value.paused||Date.now()-lastReadySent<1500)return;
   lastReadySent=Date.now();connection.send({type:'ready',role:'receive',file:id});
 }
 function publicConfig(){
@@ -291,12 +317,12 @@ function updateLinkStatus(){
   $('retryConnection').disabled=connecting||! /^[a-f0-9]{64}$/i.test($('pairCode').value.trim());
 }
 function onConnectionState(state){
-  connectionState=state;if(state!=='SUBSCRIBED'){peerLastSeen=0;sameRole=false;}updateLinkStatus();
+  connectionState=state;if(state!=='SUBSCRIBED'){peerLastSeen=0;sameRole=false;pauseConfirmed=false;}updateLinkStatus();updatePauseUI();
   const labels={SUBSCRIBED:'Conexão pronta · aguardando o outro aparelho',CHANNEL_ERROR:'Falha na conexão · confira a configuração e tente novamente',TIMED_OUT:'Tempo esgotado · tentando reconectar',CLOSED:'Desconectado · transmissão óptica continua disponível'};
   $('connectionStatus').textContent=labels[state]||state;
   $('showPair').disabled=!connection.ready||!sender;
   if(state==='SUBSCRIBED'){
-    connection.send({type:'hello',role:mode});feedback();announceReady();
+    pauseConfirmed=false;sendPauseState();connection.send({type:'hello',role:mode});feedback();announceReady();
     if(pairDisplayPending&&mode==='send'&&sender&&!timer)showPair();
     pairDisplayPending=false;
   }
@@ -305,16 +331,24 @@ function onControl(m){
   if(!['send','receive'].includes(m.role))return;
   if(m.role===mode){sameRole=true;updateLinkStatus();return;}
   sameRole=false;
+  if(m.type==='pause_state'||m.type==='pause_ack'){
+    if(m.file!==transferId())return;
+    if(m.type==='pause_ack'){if(pauseState.matches(m)){pauseConfirmed=true;updatePauseUI();}return;}
+    if(pauseState.accept(m)){pauseConfirmed=true;applyPause();}
+    if(pauseState.matches(m))connection.send({type:'pause_ack',role:mode,file:transferId(),...pauseState.value});
+    else sendPauseState();
+    return;
+  }
   if(m.type==='hello'||m.type==='hello_ack'){
     peerLastSeen=Date.now();updateLinkStatus();$('connectionStatus').textContent='Outro aparelho conectado';
     if(m.type==='hello')connection.send({type:'hello_ack',role:mode});
-    feedback();announceReady();return;
+    sendPauseState();feedback();announceReady();return;
   }
   if(mode!=='send'||!sender||m.role!=='receive'||m.file!==sender.meta.id)return;
   if(feedbackPeer&&feedbackPeer!==m.from)return;
   if(m.type==='ready'){
     peerLastSeen=Date.now();updateLinkStatus();$('connectionStatus').textContent='Câmera do receptor pronta · QR reconhecido';
-    if(autoArmed&&$('autoStart').checked&&!timer){autoArmed=false;feedbackPeer=m.from;play();notice('Receptor reconheceu o QR. Transmissão iniciada automaticamente.');}
+    if(autoArmed&&$('autoStart').checked&&!timer&&!pauseState.value.paused){autoArmed=false;feedbackPeer=m.from;setPaused(false);notice('Receptor reconheceu o QR. Transmissão iniciada automaticamente.');}
     return;
   }
   if(!Number.isInteger(m.count)||m.count<0||m.count>sender.meta.total)return;
@@ -323,16 +357,16 @@ function onControl(m){
     feedbackPeer=m.from;peerLastSeen=Date.now();updateLinkStatus();$('connectionStatus').textContent='Receptor conectado · recuperação automática ativa';
     $('peerProgress').textContent=`Receptor: ${m.count} / ${sender.meta.total} blocos · ${sender.repairs.length} priorizados neste lote.`;
   }else if(m.type==='done'&&m.count===sender.meta.total&&m.hash===sender.meta.hash){
-    feedbackPeer=m.from;peerLastSeen=Date.now();stop();$('peerProgress').textContent='Receptor confirmou arquivo completo e SHA-256 correto.';notice('Transferência concluída. Transmissão parada automaticamente.');
+    feedbackPeer=m.from;peerLastSeen=Date.now();stop();transmissionDone=true;updatePauseUI();$('peerProgress').textContent='Receptor confirmou arquivo completo e SHA-256 correto.';notice('Transferência concluída. Transmissão parada automaticamente.');
   }
 }
 async function feedback(){
-  if(feedbackBusy||!connection.ready||mode!=='receive'||!receiver)return;
+  if(feedbackBusy||!connection.ready||mode!=='receive'||!receiver||(pauseState.value.paused&&!receiver.verified))return;
   feedbackBusy=true;
   try{await connection.send(receiver.verified?{type:'done',role:mode,file:receiver.meta.id,count:receiver.count,hash:receiver.meta.hash}:{type:'missing',role:mode,file:receiver.meta.id,count:receiver.count,indices:receiver.missing()});}finally{feedbackBusy=false;}
 }
 setInterval(()=>{feedback();announceReady();if(connection.ready&&peerLastSeen&&Date.now()-peerLastSeen>12000)$('connectionStatus').textContent='Sem confirmação recente · QR continua; aguardando receptor';},3000);
-setInterval(()=>{updateLinkStatus();if(connection.ready)connection.send({type:'hello',role:mode});},3000);
+setInterval(()=>{updateLinkStatus();updatePauseUI();if(connection.ready){sendPauseState();connection.send({type:'hello',role:mode});}},3000);
 async function connect(create){
   if(connecting)return;connecting=true;
   opticalBlocked=false;

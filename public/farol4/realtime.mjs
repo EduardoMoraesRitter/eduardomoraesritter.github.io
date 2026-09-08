@@ -23,7 +23,7 @@ export class ReturnChannel {
         const m=await open(this.key,payload);
         if(generation!==this.generation||m.v!==4||typeof m.from!=='string'||m.from.length>64||m.from===this.identity||
           !Number.isSafeInteger(m.seq)||m.seq<=0||!Number.isFinite(m.time)||Math.abs(Date.now()-m.time)>60000||
-          !['missing','done','hello','hello_ack','ready'].includes(m.type))return;
+          !['missing','done','hello','hello_ack','ready','pause_state','pause_ack'].includes(m.type))return;
         if(m.seq<=(this.peers.get(m.from)||0))return;
         if(this.peers.size>32&&!this.peers.has(m.from))return;
         this.peers.set(m.from,m.seq);this.onMessage(m);

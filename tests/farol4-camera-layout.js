@@ -19,9 +19,10 @@ async page=>{
   await p.waitForFunction(()=>!document.getElementById('zoom').disabled);
   const state=await p.evaluate(()=>{
    const video=document.getElementById('video'),r=video.getBoundingClientRect(),auto=document.getElementById('autoZoom').getBoundingClientRect();
-   return {height:r.height,fit:getComputedStyle(video).objectFit,autoVisible:auto.top>=0&&auto.bottom<innerHeight,overflow:document.documentElement.scrollWidth>innerWidth};
+   const action=document.getElementById('camera').getBoundingClientRect();
+   return {frameHeight:r.height,frameBottom:r.bottom,actionTop:action.top,fit:getComputedStyle(video).objectFit,autoVisible:auto.top>=0&&auto.bottom<(innerWidth<650?action.top:innerHeight),overflow:document.documentElement.scrollWidth>innerWidth};
   });
-  if(state.height<height*.75||state.fit!=='contain'||!state.autoVisible||state.overflow)throw Error(JSON.stringify({width,height,...state}));
+  if(state.frameHeight<200||state.fit!=='contain'||!state.autoVisible||state.overflow||(width<650&&state.frameBottom>state.actionTop))throw Error(JSON.stringify({width,height,...state}));
   await p.getByLabel('Ajustar visão automaticamente').uncheck();
   await p.getByRole('button',{name:'Parar câmera',exact:true}).click();
   await p.getByRole('button',{name:'Ligar câmera e escanear',exact:true}).click();

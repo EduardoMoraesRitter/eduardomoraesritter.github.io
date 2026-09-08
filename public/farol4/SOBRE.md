@@ -25,9 +25,17 @@ O teste `tests/farol4-pairing-browser.js` verifica pareamento antes dos metadado
 
 ## Câmera e uso no celular
 
-Ao ligar a câmera no celular, a imagem ocupa o fundo da tela, preservando sua proporção, com status e controles compactos sobrepostos. Na horizontal, os controles se distribuem pelas laterais. **Ajustar visão automaticamente** é ativado a cada abertura da câmera; mover o zoom continua desativando esse ajuste. Sem zoom digital, a prévia usa a imagem inteira, sem corte para preencher o painel. Os detalhes de recuperação e configuração reaparecem ao parar a câmera. `tests/farol4-camera-layout.js` testa câmeras sintéticas verticais e horizontais e a reabertura.
+A câmera mantém a proporção da imagem, sem barras sobrepostas. No desktop, os controles ficam ao lado; no celular em pé, ficam abaixo da imagem, com ações principais fixas no rodapé. **Ajustar visão automaticamente** é ativado a cada abertura. Zoom manual e orientação de luz ficam em **Zoom e qualidade**. Sem zoom digital, a prévia usa a imagem inteira. `tests/farol4-camera-layout.js` verifica proporção, controles acessíveis e reabertura em retrato e paisagem.
 
-No celular, o progresso fica acima da câmera, e os botões de câmera e salvar ficam fixos no rodapé. Os detalhes de recuperação, conexão e ajustes ficam recolhidos. A velocidade útil conta apenas bytes novos aceitos; repetições não aceleram a estimativa. O tempo restante usa uma janela recente de aproximadamente 20 segundos, após pelo menos 3 segundos de amostragem. Após 8 segundos sem novos blocos, mostra uma interrupção da leitura. Ao recarregar ou religar a câmera, a estimativa é calculada novamente a partir do progresso restaurado.
+O progresso e a estimativa ficam abaixo da câmera no celular. A velocidade útil conta apenas bytes novos; o tempo restante usa aproximadamente 20 segundos recentes, após pelo menos 3 segundos de amostragem. Após 8 segundos sem novos blocos, indica interrupção. Pausar mostra **Pausado** e reinicia a amostragem para a retomada. Ajustes e recuperação manual ficam recolhidos; salvar aparece após verificar a integridade.
+
+## Pausa compartilhada
+
+**Pausar** no transmissor e **Pausar recepção** no receptor enviam o estado pelo canal Supabase da sala. Ambos interrompem o processamento de blocos; a câmera permanece ligada. **Transmitir** ou **Continuar recepção** retoma os dois. A interface diferencia pausa local aguardando confirmação de pausa confirmada pelo outro aparelho. Sem rede, a sincronização não é imediata.
+
+Mensagens autenticadas incluem identificação do arquivo e revisão crescente. Repetições não alternam o estado; mensagens antigas são ignoradas. Em ações simultâneas da mesma revisão, a pausa prevalece. Reconectar à mesma sala reapresenta o estado atual. Isso cobre reconexão de rede; recarregar a página exige selecionar o arquivo e parear novamente.
+
+Ao concluir, o receptor tenta gravar imediatamente o estado completo no IndexedDB antes da confirmação ao transmissor. O teste de sessão inclui download e restauração logo após concluir. Armazenamento indisponível ainda é informado pela interface; a garantia depende do navegador permitir persistência.
 
 O layout foi testado em navegador com telas de 320×568, 360×640, 390×844, 430×932 e 844×390, incluindo controles fixos durante a rolagem. Execute `tests/farol4-mobile.js` com o mesmo comando `playwright-cli run-code --filename` usado abaixo para repetir esses testes.
 
@@ -151,10 +159,10 @@ Em outro terminal:
 New-Item -ItemType Directory -Path output/playwright -Force
 node -e "require('fs').writeFileSync('output/playwright/farol4-source.bin',Uint8Array.from({length:3200},(_,i)=>(i*13)%256))"
 npx --yes --package @playwright/cli playwright-cli -s=farol4 open http://127.0.0.1:4322/farol4/index.html
-npx --yes --package @playwright/cli playwright-cli -s=farol4 run-code --filename tests/farol4-browser.js
+npx --yes --package @playwright/cli playwright-cli -s=farol4 run-code --filename tests/farol4-session-browser.js
 ```
 
-O roteiro usa duas páginas e uma câmera sintética para exercitar os QR reais,
+O roteiro de sessão verifica pausa nos dois sentidos, retomada, reconexão, download e restauração imediata. Usa duas páginas e uma câmera sintética para exercitar os QR reais,
 o scanner e o canal Supabase real. Em 8 de setembro de 2026, recebeu inicialmente
 3/8 blocos, pediu 4–8, reconstruiu, verificou, baixou arquivo idêntico e confirmou
 parada automática. Também verificou restauração, modo receptor no celular, zoom digital, pareamento óptico, início automático, respeito à pausa manual e ausência de overflow em 390px.

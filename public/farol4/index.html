@@ -1,90 +1,33 @@
 <!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="referrer" content="no-referrer">
-<title>Farol 4 — RGB com recuperação</title>
-<meta name="description" content="Transferência óptica RGB com blocos numerados, lista de faltantes e recuperação automática opcional pelo Supabase.">
+<html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer"><meta name="color-scheme" content="light dark">
+<title>Farol 4 — Transferência por luz</title><meta name="description" content="Arquivos por QR RGB com recuperação de blocos e conexão entre aparelhos.">
 <link rel="icon" href="../favicon.svg"><link rel="stylesheet" href="./style.css">
-<script src="./vendor/qrcode.js" defer></script><script src="./vendor/jsQR.js" defer></script>
-<script src="./vendor/supabase.js" defer></script><script type="module" src="./app.mjs"></script>
-</head>
-<body><main class="wrap">
-<header><div class="brand"><span class="beacon"></span><h1>Farol 4</h1><span class="rgbTag" aria-label="RGB"><i class="r"></i><i class="g"></i><i class="b"></i></span></div><a href="../farol3/">Farol 3</a></header>
-<p class="intro">O arquivo vai pela luz. O receptor diz o que falta.</p>
-<div class="modes" aria-label="Modo"><button id="sendMode" aria-pressed="true">Enviar arquivo</button><button id="receiveMode" aria-pressed="false">Receber arquivo</button></div>
-<div class="linkStatus" id="linkStatus" role="status">
- <div><strong id="serviceStatus">Supabase · não conectado</strong><span id="roomLabel">Sala: —</span></div>
- <div><span id="peerStatus">Leia o QR de conexão para parear.</span><button id="retryConnection" class="statusButton" disabled>Reconectar</button></div>
-</div>
-<p id="notice" role="status" class="notice">Escolha um arquivo ou ligue a câmera no outro aparelho.</p>
-<section class="grid" id="sendView" aria-label="Transmissor">
- <div class="panel panel-pad">
-  <p class="eyebrow">01 · Preparar e transmitir</p>
-  <label class="field"><span class="lab">Arquivo · até 32 MiB</span><input id="file" type="file"></label>
-  <label class="field"><span class="lab">Bytes por bloco</span><select id="blockSize"><option value="256">256 · leitura mais fácil</option><option value="400" selected>400 · equilibrado</option><option value="600">600 · mais dados</option></select></label>
-  <label class="field"><span class="lab">Quadros por segundo <span id="fpsValue">6</span></span><input id="fps" type="range" min="1" max="12" value="6"></label>
-  <label class="field"><span class="lab">Começar no bloco</span><input id="startBlock" type="number" min="1" value="1" step="1"></label>
-  <button class="btn" id="play" disabled>Transmitir</button>
-  <button class="btn ghost spaced" id="restart" disabled>Recomeçar do bloco 1</button>
-  <label class="check spaced"><input id="autoStart" type="checkbox" checked> Iniciar o envio quando o receptor ler o QR da sala</label>
-  <button class="btn ghost spaced" id="showPair" disabled>Mostrar QR de conexão</button>
-  <details class="spaced"><summary>Recuperação manual</summary>
-   <label class="field spaced"><span class="lab">Cole a lista do receptor</span><textarea id="repairInput" rows="3" placeholder="12, 45, 800-820"></textarea></label>
-   <button class="btn ghost" id="repair" disabled>Priorizar estes blocos</button>
-   <p class="hint">Até 512 blocos por lote. A numeração começa em 1. Use o mesmo arquivo e tamanho de bloco.</p>
-  </details>
- </div>
- <div class="panel panel-pad stagePanel">
-  <div class="stage"><canvas id="rgbCanvas" aria-label="QR RGB de transmissão"></canvas><div id="sendPlaceholder" class="ph">Seu QR aparece aqui</div></div>
-  <p id="sendName" class="filelabel">Nenhum arquivo selecionado</p>
-  <div class="meters"><div class="meter"><div class="k">Total de blocos</div><div class="v" id="totalBlocks">—</div></div><div class="meter"><div class="k">Próximo bloco</div><div class="v" id="nextBlock">—</div></div><div class="meter"><div class="k">Enviados*</div><div class="v" id="sentBlocks">0</div></div></div>
-  <p class="progsub" id="peerProgress">Receptor ainda não confirmou progresso.</p>
-  <p class="hint">*Inclui repetições, não confirma recebimento. São até 3 blocos por quadro RGB. Aumente o brilho da tela; se a leitura estiver difícil, diminua os fps.</p>
- </div>
+<script src="./vendor/qrcode.js" defer></script><script src="./vendor/jsQR.js" defer></script><script src="./vendor/supabase.js" defer></script><script type="module" src="./app.mjs"></script>
+</head><body data-mode="send"><main class="wrap">
+<header class="appHeader"><a class="brand" href="../" aria-label="Farol 4 — início"><span class="beacon" aria-hidden="true"></span><h1>Farol <span>4</span></h1></a><nav class="modes" aria-label="Modo de transferência"><button id="sendMode" aria-pressed="true">Enviar arquivo</button><button id="receiveMode" aria-pressed="false">Receber arquivo</button></nav><button id="openSettings" class="textButton">Conexão e ajustes</button></header>
+<div class="linkStatus" id="linkStatus" role="status"><div class="roomLine"><strong id="serviceStatus">Supabase · não conectado</strong><span id="roomLabel">Sala: —</span><button id="retryConnection" class="textButton" disabled>Reconectar</button></div><span id="peerStatus">Escolha um arquivo para criar a sala.</span></div>
+<div class="flowLine"><span id="transferState" role="status">Pronto para conectar</span><p id="notice" role="status">Escolha o arquivo no transmissor. No outro aparelho, abra o receptor.</p></div>
+<section class="workspace sendWorkspace" id="sendView" aria-label="Transmissor">
+<div class="sendControls">
+<label class="filePicker"><span class="lab">Arquivo · até 32 MiB</span><input id="file" type="file"></label>
+<div class="senderActions actionBar"><button class="btn" id="play" disabled>Transmitir</button><button class="btn secondary" id="showPair" disabled>Mostrar QR de conexão</button></div>
+<div class="sendOptions"><label class="check"><input id="autoStart" type="checkbox" checked><span>Iniciar ao conectar o receptor</span></label>
+<details id="sendSettings"><summary>Ajustes de transmissão</summary>
+<label class="field"><span class="lab">Bytes por bloco</span><select id="blockSize"><option value="256">256 · leitura mais fácil</option><option value="400" selected>400 · equilibrado</option><option value="600">600 · mais dados</option></select></label>
+<label class="field"><span class="lab">Quadros por segundo <span id="fpsValue">6</span></span><input id="fps" type="range" min="1" max="12" value="6" aria-label="Quadros por segundo"></label>
+<label class="field"><span class="lab">Começar no bloco</span><input id="startBlock" type="number" min="1" value="1" step="1"></label><button class="btn secondary" id="restart" disabled>Recomeçar do bloco 1</button><p class="hint">Se a leitura estiver difícil, diminua os quadros por segundo ou o tamanho dos blocos.</p></details>
+<details><summary>Recuperação manual</summary><label class="field"><span class="lab">Cole a lista do receptor</span><textarea id="repairInput" rows="2" placeholder="12, 45, 800-820"></textarea></label><button class="btn secondary" id="repair" disabled>Priorizar estes blocos</button><p class="hint">Até 512 blocos por lote. A numeração começa em 1.</p></details></div></div>
+<div class="stagePanel sendStage"><div class="stage"><canvas id="rgbCanvas" aria-label="QR RGB de transmissão"></canvas><div id="sendPlaceholder" class="placeholder"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M6 24V6h18M40 6h18v18M58 40v18H40M24 58H6V40M20 20h8v8h-8zM36 20h8v8h-8zM20 36h8v8h-8zM36 36h8v8h-8z"/></svg><strong>Seu arquivo começa aqui</strong><span>Escolha um arquivo. O primeiro QR conecta os aparelhos.</span></div></div>
+<div class="fileSummary"><p id="sendName">Nenhum arquivo selecionado</p><div class="meters"><span>Total <b id="totalBlocks">—</b></span><span>Próximo <b id="nextBlock">—</b></span><span>Enviados* <b id="sentBlocks">0</b></span></div><p id="peerProgress">Aguardando o receptor.</p><small>*Inclui repetições.</small></div></div>
 </section>
-<section class="grid" id="receiveView" hidden aria-label="Receptor">
- <div class="panel panel-pad stagePanel receiverPanel">
-  <div class="receiveProgress">
-   <p class="filelabel" id="receiveName">Aguardando arquivo</p>
-   <div class="progtop"><span id="received">0 blocos</span><strong id="percent">0%</strong></div>
-   <progress id="progress" max="100" value="0" aria-label="Blocos recebidos"></progress>
-   <div class="transferStats"><div><span>Tempo restante estimado</span><strong id="remainingTime">Aguardando blocos</strong></div><div><span>Velocidade útil</span><strong id="receiveRate">—</strong></div></div>
-  </div>
-  <div class="stage"><video id="video" playsinline muted autoplay></video><div id="receivePlaceholder" class="ph">Ligue a câmera para receber</div></div>
-  <div class="cameraTools" id="cameraTools">
-   <label class="field spaced" id="zoomWrap"><span class="lab">Zoom <span id="zoomValue">1×</span></span><input aria-label="Zoom da câmera" type="range" id="zoom" min="1" max="3" step="0.1" value="1" disabled></label>
-   <label class="check"><input type="checkbox" id="autoZoom" checked> Ajustar visão automaticamente</label>
-   <p id="cameraQuality" class="quality" role="status">Ligue a câmera e aponte para o QR de conexão ou de arquivo.</p>
-  </div>
-   <details class="cameraHelp"><summary>Sobre os ajustes da câmera</summary>
-   <p class="progsub" id="zoomKind">Zoom disponível ao ligar a câmera.</p>
-   <p class="progsub" id="cameraLimits">As orientações são estimativas da imagem. Foco e exposição dependem do aparelho.</p>
-   </details>
-  <div class="receiverActions"><button class="btn" id="camera">Ligar câmera e escanear</button><button class="btn ok" id="save" disabled>Salvar arquivo verificado</button></div>
-  <details class="recoveryDetails"><summary>Blocos faltantes e recuperação manual</summary>
-  <p class="progsub" id="integrity">O arquivo completo será conferido com SHA-256.</p>
-  <label class="field spaced"><span class="lab">Blocos faltantes <span id="missingCount">—</span></span><textarea id="missingList" rows="3" readonly placeholder="A lista aparece ao reconhecer o arquivo"></textarea></label>
-  <button class="btn ghost" id="copyMissing" disabled>Copiar lote de faltantes</button>
-  <p class="hint">Mostramos até 512 faltantes por lote. Com a conexão automática ativa, os lotes são pedidos novamente até completar. Sem ela, copie a lista para o transmissor.</p>
-  <button class="btn ghost" id="discard" disabled>Descartar recepção</button>
-  </details>
- </div>
-</section>
-<section class="panel panel-pad spaced connection" aria-label="Recuperação automática">
- <p id="connectionStatus" role="status">Modo óptico · sem conexão de retorno</p>
- <details id="connectionDetails" open><summary>Conexão entre os aparelhos</summary>
- <p>O Supabase leva somente pedidos e confirmações criptografados. Os bytes do arquivo continuam nos QR. Ambos os aparelhos precisam de internet neste modo.</p>
- <details id="configuration"><summary>Configurar Supabase</summary>
-  <label class="field spaced"><span class="lab">URL do projeto</span><input id="supabaseUrl" type="url" placeholder="https://seu-projeto.supabase.co" autocomplete="off"></label>
-  <label class="field"><span class="lab">Chave pública (publishable ou anon)</span><input id="supabaseKey" type="text" autocomplete="off" spellcheck="false"></label>
-  <p class="hint">Use somente chave pública. Esta configuração fica neste navegador e no convite de pareamento. <a href="./SOBRE.md">Instruções de configuração</a>.</p>
- </details>
- <div class="actions spaced"><button class="btn" id="createPair">Criar conexão</button><button class="btn ghost" id="joinPair" hidden>Entrar na conexão</button><button class="btn ghost" id="disconnect" disabled>Desconectar</button></div>
- <label class="field spaced"><span class="lab">Código de conexão · cole o mesmo nos dois aparelhos</span><input id="pairCode" type="text" autocomplete="off" spellcheck="false"></label>
- <button class="btn ghost" id="copyPair" disabled>Copiar convite para o outro aparelho</button>
- <p class="hint">O convite permite participar desta conexão. Compartilhe apenas com o outro aparelho. A conexão não envia o arquivo nem salva seu conteúdo no Supabase.</p>
- </details>
-</section>
-<footer>Farol 4 · RGB + recuperação direcionada · <a href="./SOBRE.md">Como funciona</a></footer>
+<section class="workspace receiveWorkspace" id="receiveView" hidden aria-label="Receptor">
+<div class="stagePanel receiverPanel"><div class="stage"><video id="video" playsinline muted autoplay></video><div id="receivePlaceholder" class="placeholder"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M6 22V8h14M44 8h14v14M58 42v14H44M20 56H6V42M18 32h28"/></svg><strong>Aponte para o outro aparelho</strong><span>Ligue a câmera e leia o QR da sala para conectar.</span></div></div></div>
+<div class="receiveConsole"><div class="receiveProgress"><p id="receiveName">Aguardando arquivo</p><div class="progtop"><span id="received">0 blocos</span><strong id="percent">0%</strong></div><progress id="progress" max="100" value="0" aria-label="Blocos recebidos"></progress><div class="transferStats"><div><span>Tempo restante</span><strong id="remainingTime">Aguardando blocos</strong></div><div><span>Velocidade útil</span><strong id="receiveRate">—</strong></div></div></div>
+<div class="receiverActions actionBar"><button class="btn" id="camera">Ligar câmera e escanear</button><button class="btn secondary" id="pauseReceiver" hidden>Pausar recepção</button><button class="btn success" id="save" hidden disabled>Salvar arquivo verificado</button></div>
+<div class="cameraTools" id="cameraTools" hidden><label class="check"><input type="checkbox" id="autoZoom" checked><span>Ajustar visão automaticamente</span></label><details id="visionSettings"><summary>Zoom e orientação <span id="zoomValue">1×</span></summary><label class="field" id="zoomWrap"><span class="lab">Zoom da câmera</span><input aria-label="Zoom da câmera" type="range" id="zoom" min="1" max="3" step="0.1" value="1" disabled></label><p id="cameraQuality" class="hint" role="status">Aponte para o QR de conexão.</p><p class="hint" id="zoomKind">Zoom disponível ao ligar a câmera.</p><p class="hint" id="cameraLimits">Os ajustes dependem do aparelho.</p></details></div>
+<details class="recoveryDetails"><summary>Blocos faltantes e recuperação manual</summary><p class="hint" id="integrity">O arquivo completo será conferido com SHA-256.</p><label class="field"><span class="lab">Blocos faltantes <span id="missingCount">—</span></span><textarea id="missingList" rows="2" readonly placeholder="A lista aparece ao reconhecer o arquivo"></textarea></label><button class="btn secondary" id="copyMissing" disabled>Copiar lote de faltantes</button><p class="hint">Com a sala conectada, o receptor pede os blocos faltantes automaticamente.</p><button class="textButton danger" id="discard" disabled>Descartar recepção</button></details>
+</div></section>
+<details class="connection" id="connectionDetails"><summary>Conexão entre os aparelhos</summary><div class="connectionContent"><div><p id="connectionStatus" role="status">Modo óptico · sem conexão de retorno</p><p class="hint">A sala leva pedidos, pausas e confirmações. O arquivo continua passando pelos QR.</p><div class="actions"><button class="btn secondary" id="createPair">Criar conexão</button><button class="btn secondary" id="joinPair" hidden>Entrar na conexão</button><button class="textButton" id="disconnect" disabled>Desconectar</button></div><label class="field"><span class="lab">Código de conexão manual</span><input id="pairCode" type="text" autocomplete="off" spellcheck="false"></label><button class="textButton" id="copyPair" disabled>Copiar convite para o outro aparelho</button></div><details id="configuration"><summary>Configurar Supabase</summary><label class="field"><span class="lab">URL do projeto</span><input id="supabaseUrl" type="url" autocomplete="off" placeholder="https://seu-projeto.supabase.co"></label><label class="field"><span class="lab">Chave pública (publishable ou anon)</span><input id="supabaseKey" type="text" autocomplete="off" spellcheck="false"></label><p class="hint">Use somente chave pública. Nunca use secret ou service_role.</p></details></div></details>
+<footer><span>Farol 4 · Transferência por luz</span><a href="./SOBRE.md">Como funciona</a><a href="../farol3/">Farol 3</a></footer>
 </main></body></html>

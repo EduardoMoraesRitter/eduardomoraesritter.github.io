@@ -6,6 +6,20 @@ import {analyzeFrame,autoZoom} from '../public/farol4/camera.mjs';
 import {pairPacket,readPair} from '../public/farol4/pairing.mjs';
 import {readFile} from 'node:fs/promises';
 import {TransferRate,duration} from '../public/farol4/transfer-rate.mjs';
+import {PauseState} from '../public/farol4/pause-state.mjs';
+
+test('shared pause converges, rejects stale state and resolves simultaneous actions',()=>{
+  const a=new PauseState('sender'),b=new PauseState('receiver');
+  const first=a.change(true);assert.ok(b.accept(first));assert.equal(b.value.paused,true);
+  assert.equal(b.accept(first),false); // A repeated request does not toggle the state.
+  const resumed=b.change(false);assert.ok(a.accept(resumed));assert.equal(a.value.paused,false);
+  assert.equal(a.accept(first),false);
+  const pause=a.change(true),resume=b.change(false);
+  a.accept(resume);b.accept(pause);assert.deepEqual(a.value,b.value);assert.equal(a.value.paused,true);
+  // A missed notification is recovered by the next state heartbeat.
+  const missed=a.change(false);assert.ok(b.accept(missed));assert.ok(b.matches(a.value));
+  assert.equal(b.accept({revision:Infinity,paused:true,author:'x'}),false);
+});
 
 test('ETA counts new bytes only, handles stalls and restored baselines',()=>{
   const meter=new TransferRate();

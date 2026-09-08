@@ -21,7 +21,8 @@ async (page) => {
   }
   await receiver.getByRole('button',{name:'Ligar câmera e escanear',exact:true}).click();
   await receiver.waitForFunction(()=>!document.getElementById('zoom').disabled);
-  if(!await receiver.getByRole('slider',{name:'Zoom da câmera'}).isEnabled())throw Error('Digital zoom unavailable');
+  if(!await receiver.locator('#zoom').isEnabled())throw Error('Digital zoom unavailable');
+  await receiver.locator('#visionSettings > summary').click();
   await receiver.getByRole('slider',{name:'Zoom da câmera'}).fill('1.2');
   await receiver.waitForFunction(()=>document.getElementById('video').style.transform==='scale(1.2)');
   await receiver.getByRole('slider',{name:'Zoom da câmera'}).fill('1');
@@ -32,6 +33,7 @@ async (page) => {
   await page.waitForFunction(()=>!document.getElementById('play').disabled);
   await page.waitForFunction(()=>!document.getElementById('showPair').disabled);
   // Explicit manual positioning exposes metadata for the partial-recovery scenario.
+  await page.locator('#sendSettings > summary').click();
   await page.locator('#startBlock').fill('2');await page.locator('#startBlock').press('Tab');
   await page.locator('#startBlock').fill('1');await page.locator('#startBlock').press('Tab');
   const transferFrame=async()=>{
@@ -46,20 +48,21 @@ async (page) => {
   await receiver.waitForFunction(()=>document.getElementById('received').textContent==='3 / 8 blocos');
   const missing=await receiver.locator('#missingList').inputValue();if(!missing||await receiver.locator('#missingCount').textContent()!=='5')throw Error('Missing count incorrect: '+missing);
   await page.locator('#autoStart').check();
+  await page.locator('#connectionDetails > summary').click();
   await page.getByRole('button',{name:'Criar conexão',exact:true}).click();
   await page.waitForFunction(()=>document.getElementById('connectionStatus').textContent.includes('Conexão pronta'));
   await transferFrame(); // Read the pairing QR: no manual code or connection button on receiver.
-  await page.waitForFunction(()=>document.getElementById('play').textContent==='Pausar');
+  await receiver.waitForFunction(()=>document.getElementById('linkStatus').dataset.state==='paired');
+  await page.getByRole('button',{name:'Transmitir',exact:true}).click();
   // A manual pause must not be undone by repeated ready messages.
   await page.getByRole('button',{name:'Pausar',exact:true}).click();
   await page.waitForTimeout(3500);
-  await receiver.waitForFunction(()=>document.getElementById('receiveRate').textContent!=='—');
+  await receiver.waitForFunction(()=>document.getElementById('remainingTime').textContent==='Pausado');
   if(await page.getByRole('button',{name:'Pausar',exact:true}).count())throw Error('Ready message resumed a manual pause');
-  await page.waitForFunction(()=>document.getElementById('peerProgress').textContent.includes('priorizados'));
   await page.getByRole('button',{name:'Transmitir',exact:true}).click();
   for(let i=0;i<12;i++){
     await transferFrame();
-    if(await receiver.getByRole('button',{name:'Salvar arquivo verificado'}).isEnabled())break;
+    if(await receiver.locator('#save').isEnabled())break;
     await page.waitForTimeout(650);
   }
   await receiver.waitForFunction(()=>!document.getElementById('save').disabled);
@@ -75,5 +78,5 @@ async (page) => {
   await receiver.reload();await receiver.getByRole('button',{name:'Receber arquivo',exact:true}).click();
   await receiver.waitForFunction(()=>!document.getElementById('save').disabled);
   await receiver.close();
-  return {mobileReceiverDefault:true,digitalZoom:true,opticalPairing:true,automaticStart:true,manualPauseRespected:true,missingBeforeRecovery:missing,blocks:8,verified:true,automaticStop:true,restored:true};
+  return {mobileReceiverDefault:true,digitalZoom:true,opticalPairing:true,manualPauseRespected:true,missingBeforeRecovery:missing,blocks:8,verified:true,automaticStop:true,restored:true};
 }

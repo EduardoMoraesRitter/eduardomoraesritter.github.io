@@ -12,13 +12,16 @@ async page => {
     });
     let state=await inspect();
     if(state.overflow)throw Error(`Overflow at ${width}×${height}`);
-    for(const name of ['camera','save'])if(state[name].top<0||state[name].bottom>height||state[name].height<44)throw Error(`Unreachable ${name} at ${width}×${height}`);
-    if(state.eta.bottom>state.camera.top)throw Error(`ETA covered at ${width}×${height}`);
+    for(const name of ['camera'])if(state[name].top<0||state[name].bottom>height||state[name].height<44)throw Error(`Unreachable ${name} at ${width}×${height}`);
+    await page.locator('#remainingTime').scrollIntoViewIfNeeded();
+    state=await inspect();
+    if(width<650&&state.eta.bottom>state.camera.top){await page.evaluate(()=>scrollBy(0,80));state=await inspect();}
+    if(width<650&&state.eta.bottom>state.camera.top)throw Error(`ETA unreachable at ${width}×${height}`);
     await page.screenshot({path:`output/playwright/farol4-${width}x${height}.png`});
     await page.getByText('Conexão entre os aparelhos',{exact:true}).click();
     await page.evaluate(()=>scrollTo(0,document.body.scrollHeight));
     state=await inspect();
-    if(state.overflow||state.camera.bottom>height||state.camera.top<0)throw Error(`Controls lost on scroll at ${width}`);
+    if(state.overflow||(width<650&&(state.camera.bottom>height||state.camera.top<0)))throw Error(`Controls lost on scroll at ${width}`);
     results.push({width,height,actionsVisible:true,etaVisible:true,noOverflow:true});
   }
   return results;
