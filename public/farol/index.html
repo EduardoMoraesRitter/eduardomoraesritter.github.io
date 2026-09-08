@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Farol — transferência por QR</title>
+<meta name="description" content="Transfira arquivos entre telas por QR animado, sem rede. Uma tela pisca os códigos, a câmera do outro aparelho lê.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#EAEEF1; --surface:#FFFFFF; --surface-2:#E4E9ED; --border:#CDD5DC;
+    --text:#141A20; --muted:#5A6672; --faint:#8A96A2;
+    --accent:#0E7490; --accent-ink:#FFFFFF; --accent-soft:rgba(14,116,144,.10);
+    --ok:#15803D; --ok-soft:rgba(21,128,61,.12);
+    --warn:#B45309; --warn-soft:rgba(180,83,9,.12);
+    --miss:#B91C1C;
+    --shadow:0 1px 2px rgba(20,26,32,.06),0 8px 24px rgba(20,26,32,.06);
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0D1217; --surface:#151C23; --surface-2:#1D262F; --border:#2A343E;
+      --text:#E7ECF1; --muted:#94A2AF; --faint:#66737F;
+      --accent:#22B8CF; --accent-ink:#06121A; --accent-soft:rgba(34,184,207,.14);
+      --ok:#4ADE80; --ok-soft:rgba(74,222,128,.14);
+      --warn:#FBBF24; --warn-soft:rgba(251,191,36,.14);
+      --miss:#F87171;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0D1217; --surface:#151C23; --surface-2:#1D262F; --border:#2A343E;
+    --text:#E7ECF1; --muted:#94A2AF; --faint:#66737F;
+    --accent:#22B8CF; --accent-ink:#06121A; --accent-soft:rgba(34,184,207,.14);
+    --ok:#4ADE80; --ok-soft:rgba(74,222,128,.14);
+    --warn:#FBBF24; --warn-soft:rgba(251,191,36,.14);
+    --miss:#F87171;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5;
+    -webkit-font-smoothing:antialiased;padding:clamp(14px,3vw,32px)}
+  .wrap{max-width:960px;margin:0 auto}
+
+  header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .beacon{width:11px;height:11px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 0 0 var(--accent);animation:pulse 2.4s ease-out infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 var(--accent-soft)}70%{box-shadow:0 0 0 12px transparent}100%{box-shadow:0 0 0 0 transparent}}
+  h1{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;margin:0}
+  .tag{color:var(--muted);font-size:.9rem;margin:2px 0 20px;max-width:70ch}
+  .tag b{color:var(--text);font-weight:600}
+
+  .modes{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:11px;padding:4px;gap:4px;margin-bottom:22px}
+  .modes button{font-family:var(--sans);font-size:.92rem;font-weight:600;color:var(--muted);
+    background:transparent;border:0;padding:9px 20px;border-radius:8px;cursor:pointer;
+    display:flex;align-items:center;gap:8px;transition:color .15s}
+  .modes button svg{width:16px;height:16px}
+  .modes button[aria-selected="true"]{background:var(--surface);color:var(--accent);box-shadow:var(--shadow)}
+
+  .grid{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
+  @media (max-width:720px){
+    body{padding:10px}
+    header{margin-bottom:2px}
+    .tag{display:none}                     /* economiza espaço no topo */
+    .grid{grid-template-columns:1fr;gap:12px}
+    .stagePanel{order:-1}                 /* câmera/QR em primeiro no celular */
+    .panel-pad{padding:14px}
+    .modes{width:100%;margin-bottom:14px}
+    .modes button{flex:1;justify-content:center;padding:11px 8px}
+    h1{font-size:1.3rem}
+    .stage{aspect-ratio:1/1}
+    .meters{gap:8px}
+    .meter{min-width:0;padding:9px 10px}
+    .meter .v{font-size:1rem}
+  }
+
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    box-shadow:var(--shadow)}
+  .panel-pad{padding:18px}
+  .eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 14px}
+
+  label.field{display:block;margin-bottom:16px}
+  label.field:last-child{margin-bottom:0}
+  .field .lab{display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;
+    font-weight:500;color:var(--muted);margin-bottom:7px}
+  .field .val{font-family:var(--mono);font-size:.82rem;color:var(--accent);font-weight:600}
+  input[type="range"]{width:100%;accent-color:var(--accent);height:22px;cursor:pointer}
+  select{width:100%;font-family:var(--sans);font-size:.9rem;color:var(--text);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:9px;padding:9px 10px;cursor:pointer}
+  input[type=text]{width:100%;font-family:var(--mono);font-size:.85rem;color:var(--text);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:9px;padding:9px 10px}
+  .stepbtn{font-family:var(--mono);font-size:.82rem;font-weight:600;color:var(--accent);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:8px;padding:8px 11px;cursor:pointer;white-space:nowrap}
+  .stepbtn:hover{background:var(--accent-soft)}
+  .steprow{display:flex;align-items:center;gap:8px}
+  .steprow input[type=range]{flex:1}
+
+  .drop{border:1.5px dashed var(--border);border-radius:12px;padding:22px 16px;text-align:center;
+    cursor:pointer;transition:border-color .15s,background .15s;background:var(--surface-2)}
+  .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+  .drop .ico{font-size:1.5rem;line-height:1}
+  .drop .t{font-weight:600;font-size:.92rem;margin-top:8px}
+  .drop .s{color:var(--muted);font-size:.8rem;margin-top:3px}
+  .filechip{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:10px;padding:10px 12px;margin-top:12px}
+  .filechip .nm{font-weight:600;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+  .filechip .mt{font-family:var(--mono);font-size:.76rem;color:var(--muted);white-space:nowrap}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    font-family:var(--sans);font-size:.95rem;font-weight:600;padding:12px 16px;border-radius:10px;
+    border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer;
+    transition:filter .15s,opacity .15s}
+  .btn:hover{filter:brightness(1.06)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  .btn.ghost{background:transparent;color:var(--accent)}
+  .btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+  .btn svg{width:17px;height:17px}
+
+  .stage{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;
+    background:var(--surface-2);border-radius:11px;overflow:hidden;position:relative}
+  #qrImg{width:100%;height:100%;object-fit:contain;image-rendering:pixelated;
+    background:#fff;display:none}
+  #video{width:100%;height:100%;object-fit:cover;display:none}
+  #scanCanvas{display:none}
+  .stage .placeholder{color:var(--faint);text-align:center;padding:24px;font-size:.9rem}
+  .stage .placeholder .big{font-size:2rem;margin-bottom:8px}
+  .reticle{position:absolute;inset:10%;border:3px solid var(--accent);border-radius:14px;
+    opacity:0;pointer-events:none;transition:opacity .12s,border-color .12s,box-shadow .15s}
+  .reticle.on{opacity:.5}                                   /* procurando: azul */
+  .reticle.hit{opacity:1;border-color:var(--ok);           /* encontrou: verde */
+    box-shadow:0 0 0 4px rgba(74,222,128,.22)}
+  .zoomOverlay{position:absolute;left:10px;right:10px;bottom:10px;display:flex;align-items:center;gap:10px;
+    background:rgba(8,12,16,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    border-radius:11px;padding:9px 12px;z-index:3}
+  .zoomOverlay input[type=range]{flex:1;margin:0;accent-color:#fff}
+  .zoomOverlay .zlab{color:#fff;font-size:.78rem;font-weight:600;white-space:nowrap;font-family:var(--mono)}
+  [hidden]{display:none!important}
+
+  .meters{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  .meter{flex:1;min-width:88px;background:var(--surface);border:1px solid var(--border);
+    border-radius:11px;padding:11px 13px}
+  .meter .k{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  .meter .v{font-family:var(--mono);font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums;
+    margin-top:3px}
+  .meter .v.small{font-size:.95rem}
+  .meter.state .v{color:var(--muted)}
+  .meter.state.tx .v{color:var(--warn)} .meter.state.rx .v{color:var(--accent)}
+  .meter.state.done .v{color:var(--ok)}
+
+  .progwrap{margin-top:14px}
+  .progtop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .progtop .lab{font-size:.78rem;color:var(--muted);font-weight:500}
+  .progtop .pct{font-family:var(--mono);font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+  #progCanvas{width:100%;height:14px;border-radius:7px;image-rendering:pixelated;
+    background:var(--surface-2);border:1px solid var(--border);display:block}
+  .progsub{margin-top:7px;font-size:.78rem;color:var(--muted);font-family:var(--mono);
+    font-variant-numeric:tabular-nums}
+  .progsub b{color:var(--accent);font-weight:600}
+
+  .filemeta{margin-top:14px;padding:13px;background:var(--accent-soft);border-radius:11px;
+    border:1px solid var(--border);display:none}
+  .filemeta.show{display:block}
+  .filemeta .row{display:flex;justify-content:space-between;gap:12px;font-size:.85rem;padding:2px 0}
+  .filemeta .row .k{color:var(--muted)} .filemeta .row .v{font-family:var(--mono);font-weight:500}
+
+  .hint{font-size:.8rem;color:var(--muted);margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+  .hint b{color:var(--text);font-weight:600}
+  .err{color:var(--miss);font-size:.82rem;margin-top:10px;font-weight:500;display:none}
+  .err.show{display:block}
+  footer{max-width:960px;margin:26px auto 0;color:var(--faint);font-size:.76rem;text-align:center}
+  [hidden]{display:none!important}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){.beacon{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="beacon" aria-hidden="true"></span><h1>Farol</h1></div>
+  </header>
+  <p class="tag">Manda arquivo de uma tela pra outra por <b>QR animado</b>. Uma tela pisca os códigos, a câmera do outro aparelho lê. Sem rede, sem cabo, sem nuvem — o dado viaja pela luz.</p>
+
+  <div class="modes" role="tablist" aria-label="Modo">
+    <button id="mSend" role="tab" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg>
+      Enviar
+    </button>
+    <button id="mRecv" role="tab" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Receber
+    </button>
+  </div>
+
+  <!-- ENVIAR -->
+  <section id="sendView" class="grid">
+    <div class="panel panel-pad">
+      <p class="eyebrow">Transmissor</p>
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Escolher arquivo">
+        <div class="ico" aria-hidden="true">📄</div>
+        <div class="t">Escolher arquivo</div>
+        <div class="s">clique ou arraste aqui</div>
+        <input type="file" id="file" hidden>
+      </div>
+      <div id="fileChip" class="filechip" hidden>
+        <span class="nm" id="fileName">—</span><span class="mt" id="fileMeta"></span>
+      </div>
+
+      <div style="margin-top:16px">
+        <label class="field">
+          <span class="lab">Bytes por quadro <span class="val" id="chunkVal">300</span></span>
+          <input type="range" id="chunk" min="100" max="800" step="20" value="300">
+        </label>
+        <label class="field">
+          <span class="lab">Quadros por segundo <span class="val" id="fpsVal">8</span></span>
+          <input type="range" id="fps" min="2" max="15" step="1" value="8">
+        </label>
+      </div>
+
+      <label class="field" id="startWrap" hidden style="margin-top:4px">
+        <span class="lab">A partir do bloco <span class="val" id="startBlockVal">1 / 1</span></span>
+        <div class="steprow">
+          <button type="button" class="stepbtn" id="startMinus" title="−10 (setas do teclado também)">−10</button>
+          <input type="range" id="startBlock" min="1" max="1" step="1" value="1">
+          <button type="button" class="stepbtn" id="startPlus" title="+10">+10</button>
+        </div>
+      </label>
+      <label class="field" id="onlyWrap" hidden>
+        <span class="lab">Só estes blocos (ex.: 5, 20-25)</span>
+        <input type="text" id="onlyBlocks" placeholder="vazio = todos" inputmode="numeric">
+      </label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn" id="playBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <span id="playLbl">Transmitir</span>
+        </button>
+        <button class="btn ghost" id="resetBtn" disabled style="width:auto;flex:0 0 auto;padding:12px 15px" title="Recomeçar do bloco 1">↺ Do zero</button>
+      </div>
+
+      <p class="hint">Quanto <b>maior</b> bytes por quadro, mais rápido — mas o QR fica denso e a câmera pode não ler. Se o outro lado usar webcam de PC, baixe pra ~200 e reduza os quadros.</p>
+    </div>
+
+    <div class="panel panel-pad stagePanel">
+      <div class="stage">
+        <img id="qrImg" alt="Código QR sendo transmitido">
+        <div class="placeholder" id="sendPlaceholder"><div class="big" aria-hidden="true">📡</div>Escolha um arquivo pra começar a transmitir</div>
+      </div>
+      <div class="meters">
+        <div class="meter state" id="sendStateM"><div class="k">Estado</div><div class="v small" id="sendState">Parado</div></div>
+        <div class="meter"><div class="k">Quadro</div><div class="v" id="sendFrame">—</div></div>
+        <div class="meter"><div class="k">Blocos</div><div class="v" id="sendBlocks">—</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RECEBER -->
+  <section id="recvView" class="grid" hidden>
+    <div class="panel panel-pad">
+      <p class="eyebrow">Receptor</p>
+      <label class="field">
+        <span class="lab">Câmera</span>
+        <select id="camSelect"><option>Liberar câmera…</option></select>
+      </label>
+      <button class="btn" id="startCam" style="margin-bottom:8px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        Ligar câmera
+      </button>
+      <div class="filemeta" id="syncBanner" style="background:var(--ok-soft);border-color:var(--ok)">
+        <div class="row"><span class="k">Sincronização</span><span class="v" id="syncTxt" style="color:var(--ok)">—</span></div>
+      </div>
+      <div class="filemeta" id="recvMeta">
+        <div class="row"><span class="k">Arquivo</span><span class="v" id="rName">—</span></div>
+        <div class="row"><span class="k">Tipo</span><span class="v" id="rType">—</span></div>
+        <div class="row"><span class="k">Tamanho</span><span class="v" id="rSize">—</span></div>
+        <div class="row"><span class="k">Blocos</span><span class="v" id="rBlocks">—</span></div>
+      </div>
+      <button class="btn ok" id="saveBtn" disabled style="margin-top:14px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        Salvar arquivo
+      </button>
+      <button class="btn ghost" id="discardBtn" hidden style="margin-top:8px">Descartar e recomeçar</button>
+      <p class="err" id="recvErr"></p>
+      <p class="hint"><b>iPhone não foca de perto</b> (limitação do Safari). Segure <b>mais longe</b>, uns 30–40 cm, e use o <b>Zoom</b> acima pra aproximar — assim ele foca. Tela transmissora com brilho no máximo. Ele preenche os blocos que faltam a cada passada, não precisa pegar tudo de primeira.</p>
+    </div>
+
+    <div class="panel panel-pad stagePanel">
+      <div class="stage">
+        <video id="video" playsinline muted></video>
+        <canvas id="scanCanvas"></canvas>
+        <div class="reticle" id="reticle"></div>
+        <div class="placeholder" id="recvPlaceholder" style="cursor:pointer"><div class="big" aria-hidden="true">🎥</div>Toque para ligar a câmera</div>
+        <div class="zoomOverlay" id="zoomWrap" hidden>
+          <span class="zlab">Zoom</span>
+          <input type="range" id="zoom" min="1" max="5" step="0.1" value="1" aria-label="Zoom">
+          <span class="zlab" id="zoomVal">1×</span>
+        </div>
+      </div>
+      <div class="progwrap">
+        <div class="progtop"><span class="lab">Blocos recebidos</span><span class="pct" id="recvPct">0%</span></div>
+        <canvas id="progCanvas" height="1" width="100"></canvas>
+        <div class="progsub" id="recvRate" hidden></div>
+        <div class="progsub" id="recvMissing" hidden></div>
+      </div>
+      <div class="meters">
+        <div class="meter state" id="recvStateM"><div class="k">Estado</div><div class="v small" id="recvState">Aguardando</div></div>
+        <div class="meter"><div class="k">Recebidos</div><div class="v" id="recvCount">—</div></div>
+        <div class="meter"><div class="k">Faltam</div><div class="v" id="recvLeft">—</div></div>
+        <div class="meter"><div class="k">Repetidos</div><div class="v" id="recvDup">0</div></div>
+      </div>
+    </div>
+  </section>
+</div>
+<footer>Farol · transferência óptica por QR · funciona offline, o arquivo nunca sai dos seus aparelhos</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+<script type="module">
+  // Detector robusto (ZXing/WASM) — funciona no Safari do iPhone, onde não há BarcodeDetector nativo
+  import { BarcodeDetector as ZX } from "https://cdn.jsdelivr.net/npm/barcode-detector@2/dist/es/pure.min.js";
+  window.__ZX = ZX;
+</script>
+<script>
+(function(){
+  "use strict";
+  var $=function(id){return document.getElementById(id)};
+  var EC='M';
+
+  // base64 <-> bytes (payload viaja como TEXTO, p/ detector nativo ler perfeito)
+  function bytesToB64(bytes){ var s=''; for(var i=0;i<bytes.length;i++) s+=String.fromCharCode(bytes[i]); return btoa(s); }
+  function b64ToBytes(b64){ var s=atob(b64); var a=new Uint8Array(s.length); for(var i=0;i<s.length;i++) a[i]=s.charCodeAt(i); return a; }
+
+  function fmtBytes(n){
+    if(n<1024)return n+' B';
+    if(n<1048576)return (n/1024).toFixed(1)+' KB';
+    return (n/1048576).toFixed(2)+' MB';
+  }
+  function fmtTime(s){ s=Math.max(0,Math.round(s)); if(s<60) return s+'s';
+    var m=Math.floor(s/60); return m+'m'+String(s%60).padStart(2,'0')+'s'; }
+
+  /* ---------- mode switch ---------- */
+  var mSend=$('mSend'), mRecv=$('mRecv'), sendView=$('sendView'), recvView=$('recvView');
+  function setMode(send){
+    mSend.setAttribute('aria-selected', send?'true':'false');
+    mRecv.setAttribute('aria-selected', send?'false':'true');
+    sendView.hidden=!send; recvView.hidden=send;
+    if(send){ stopCamera(); } else { stopPlay(); }
+  }
+  mSend.onclick=function(){setMode(true)};
+  mRecv.onclick=function(){setMode(false)};
+  // No celular, já abre na câmera (Receber) — aplicado no fim, quando tudo já existe
+  var isMobile=(window.matchMedia&&window.matchMedia('(max-width:720px)').matches)||/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
+
+  /* ================= SENDER ================= */
+  var fileBytes=null, fileName='', fileType='', origSize=0, frames=null, sequence=null, playTimer=null, seqPos=0, startBlock=1;
+  var chunkEl=$('chunk'), fpsEl=$('fps'), chunkVal=$('chunkVal'), fpsVal=$('fpsVal');
+  var playBtn=$('playBtn'), playLbl=$('playLbl'), qrImg=$('qrImg'), sendPlaceholder=$('sendPlaceholder');
+
+  chunkEl.oninput=function(){ chunkVal.textContent=chunkEl.value; frames=null; if(fileBytes){ buildFrames(); renderFrame(0); } };
+  fpsEl.oninput=function(){ fpsVal.textContent=fpsEl.value; if(playTimer){ stopPlay(true); startPlay(); } };
+
+  var drop=$('drop'), fileInput=$('file');
+  drop.onclick=function(){fileInput.click()};
+  drop.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){e.preventDefault();fileInput.click();} };
+  drop.ondragover=function(e){e.preventDefault();drop.classList.add('over')};
+  drop.ondragleave=function(){drop.classList.remove('over')};
+  drop.ondrop=function(e){e.preventDefault();drop.classList.remove('over');
+    if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); };
+  fileInput.onchange=function(e){ if(e.target.files[0]) loadFile(e.target.files[0]); };
+
+  function loadFile(f){
+    fileName=f.name; fileType=f.type||'';
+    var rd=new FileReader();
+    rd.onload=function(ev){
+      var raw=new Uint8Array(ev.target.result);
+      origSize=raw.length;
+      // comprime no próprio navegador (gzip) — arquivo grande cabe em menos QR
+      try{ fileBytes=window.pako?pako.gzip(raw):raw; }catch(e){ fileBytes=raw; }
+      $('fileChip').hidden=false;
+      $('fileName').textContent=fileName;
+      $('fileMeta').textContent = (fileBytes.length<origSize)
+        ? fmtBytes(origSize)+' → '+fmtBytes(fileBytes.length)+' (zip)'
+        : fmtBytes(origSize);
+      frames=null; buildFrames();
+      playBtn.disabled=false; $('resetBtn').disabled=false;
+      renderFrame(0); setSendState('','Pronto');
+      sendPlaceholder.style.display='none'; qrImg.style.display='block';
+    };
+    rd.readAsArrayBuffer(f);
+  }
+
+  // texto ASCII (base64 + dígitos + '|') -> QR em modo byte
+  qrcode.stringToBytes=function(s){ var b=[]; for(var i=0;i<s.length;i++) b.push(s.charCodeAt(i)&0xff); return b; };
+  function qrDataUrl(text){
+    var qr=qrcode(0, EC);
+    qr.addData(text);
+    qr.make();
+    return qr.createDataURL(6); // cellSize 6px, quiet zone padrão (=24px)
+  }
+  function buildFrames(){
+    var chunk=parseInt(chunkEl.value,10);
+    var total=Math.max(1,Math.ceil(fileBytes.length/chunk));
+    var meta={name:fileName,type:fileType,size:fileBytes.length,total:total,chunk:chunk,gz:(fileBytes.length<origSize?1:0),orig:origSize};
+    var metaBytes=new TextEncoder().encode(JSON.stringify(meta));
+    frames=new Array(total+1);
+    frames[0]=qrDataUrl('0|'+bytesToB64(metaBytes));
+    for(var i=1;i<=total;i++){
+      var off=(i-1)*chunk;
+      var part=fileBytes.subarray(off, Math.min(off+chunk, fileBytes.length));
+      frames[i]=qrDataUrl(i+'|'+bytesToB64(part));
+    }
+    $('sendBlocks').textContent=total;
+    var sb=$('startBlock'); sb.min=1; sb.max=total; sb.value=1; startBlock=1;
+    $('startBlockVal').textContent='1 / '+total; $('startWrap').hidden=false; $('onlyWrap').hidden=false;
+    rebuildSequence();
+  }
+  function parseBlocks(str,total){
+    if(!str) return null;
+    var set=[];
+    str.split(',').forEach(function(part){
+      part=part.trim(); if(!part) return;
+      var m=part.split('-');
+      if(m.length===2){ var a=parseInt(m[0],10),b=parseInt(m[1],10);
+        if(!isNaN(a)&&!isNaN(b)) for(var i=Math.min(a,b);i<=Math.max(a,b);i++) if(i>=1&&i<=total) set.push(i); }
+      else { var n=parseInt(part,10); if(n>=1&&n<=total) set.push(n); }
+    });
+    return set.length?set:null;
+  }
+  function rebuildSequence(){
+    if(!frames) return;
+    var total=frames.length-1;
+    var only=parseBlocks(($('onlyBlocks').value||'').trim(), total);
+    var list=only;
+    if(!list){ list=[]; for(var b=startBlock;b<=total;b++) list.push(b); }
+    sequence=[0]; // sempre reenvia o metadados (sync) na frente
+    for(var i=0;i<list.length;i++){ if(i>0 && i%12===0) sequence.push(0); sequence.push(list[i]); }
+    seqPos=0;
+  }
+  function renderFrame(idx){
+    if(!frames) return;
+    qrImg.src=frames[idx];
+    $('sendFrame').textContent=(idx===0?'meta':idx+' / '+(frames.length-1));
+  }
+  function startPlay(){
+    if(!frames) return;
+    if(seqPos>=sequence.length) seqPos=0; // retoma de onde parou
+    var interval=1000/parseInt(fpsEl.value,10);
+    playTimer=setInterval(function(){
+      renderFrame(sequence[seqPos]);
+      seqPos=(seqPos+1)%sequence.length;
+    }, interval);
+    playLbl.textContent='Parar';
+    playBtn.querySelector('svg').innerHTML='<rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/>';
+    setSendState('tx','Transmitindo');
+  }
+  function stopPlay(keepState){
+    if(playTimer){ clearInterval(playTimer); playTimer=null; }
+    playLbl.textContent='Transmitir';
+    playBtn.querySelector('svg').innerHTML='<path d="M8 5v14l11-7z"/>';
+    if(!keepState) setSendState('','Parado');
+  }
+  function setSendState(cls,txt){
+    var m=$('sendStateM'); m.className='meter state'+(cls?' '+cls:''); $('sendState').textContent=txt;
+  }
+  playBtn.onclick=function(){ if(playTimer) stopPlay(); else startPlay(); };
+  function applyStart(n){
+    var total=frames?frames.length-1:1;
+    startBlock=Math.max(1, Math.min(total, n||1));
+    $('startBlock').value=startBlock;
+    $('startBlockVal').textContent=startBlock+' / '+total;
+    rebuildSequence(); if(!playTimer) renderFrame(sequence[0]);
+  }
+  $('startBlock').oninput=function(e){ applyStart(parseInt(e.target.value,10)); };
+  $('startBlock').onkeydown=function(e){
+    if(e.key==='ArrowUp'||e.key==='ArrowRight'){ e.preventDefault(); applyStart(startBlock+10); }
+    else if(e.key==='ArrowDown'||e.key==='ArrowLeft'){ e.preventDefault(); applyStart(startBlock-10); }
+    else if(e.key==='PageUp'){ e.preventDefault(); applyStart(startBlock+50); }
+    else if(e.key==='PageDown'){ e.preventDefault(); applyStart(startBlock-50); }
+    else if(e.key==='Home'){ e.preventDefault(); applyStart(1); }
+    else if(e.key==='End'){ e.preventDefault(); applyStart(frames?frames.length-1:1); }
+  };
+  $('startMinus').onclick=function(){ applyStart(startBlock-10); };
+  $('startPlus').onclick=function(){ applyStart(startBlock+10); };
+  $('resetBtn').onclick=function(){
+    startBlock=1; $('startBlock').value=1; $('onlyBlocks').value='';
+    $('startBlockVal').textContent='1 / '+(frames?frames.length-1:1);
+    rebuildSequence(); renderFrame(sequence[0]);
+  };
+  $('onlyBlocks').oninput=function(){ rebuildSequence(); if(!playTimer) renderFrame(sequence[0]); };
+
+  // QR de sincronização (mostrado antes de escolher arquivo)
+  function showSyncQR(){
+    qrImg.src=qrDataUrl('FAROL-SYNC'); qrImg.style.display='block';
+    sendPlaceholder.style.display='none';
+    $('sendFrame').textContent='sync'; setSendState('rx','Sincronizando');
+  }
+  showSyncQR();
+
+  /* ================= RECEIVER ================= */
+  var video=$('video'), scanCanvas=$('scanCanvas'), sctx=scanCanvas.getContext('2d',{willReadFrequently:true});
+  var stream=null, scanning=false, recvBuf=null, recvSet=null, recvTotal=0, recvChunk=0, recvName='', recvSize=0, codesSeen=0, dupCount=0, recvGz=0, recvOrig=0, recvStart=0;
+  var readTimes=[]; // timestamps de leituras, pra medir QR/s do aparelho
+  var hitTimer=null, recvType='', saveDirty=false, DB=null;
+  var progCanvas=$('progCanvas'), pctx=progCanvas.getContext('2d');
+  var camSelect=$('camSelect'), reticle=$('reticle');
+
+  // Detector: nativo (Android) -> ZXing/WASM (iPhone, PC) -> jsQR
+  var detector=null, detecting=false, detectorFailed=false, engineName='jsQR', actx=null;
+  function pickDetector(){
+    detector=null; engineName='jsQR';
+    if(window.BarcodeDetector){ try{ detector=new window.BarcodeDetector({formats:['qr_code']}); engineName='nativo'; return; }catch(e){} }
+    if(window.__ZX){ try{ detector=new window.__ZX({formats:['qr_code']}); engineName='zxing'; return; }catch(e){} }
+  }
+  function beep(freq,dur){ try{ if(!actx) return; var o=actx.createOscillator(),g=actx.createGain(); o.type='sine'; o.frequency.value=freq; g.gain.value=0.06; o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime+dur);}catch(e){} }
+  function buzz(p){ try{ if(navigator.vibrate) navigator.vibrate(p); }catch(e){} }
+
+  function setRecvState(cls,txt){ var m=$('recvStateM'); m.className='meter state'+(cls?' '+cls:''); $('recvState').textContent=txt; }
+  function updateMissing(){
+    var el=$('recvMissing'); if(!recvSet){ el.hidden=true; return; }
+    var miss=recvTotal-recvSet.size;
+    if(miss<=0){ el.hidden=true; return; }
+    if(miss>120){ el.hidden=false; el.textContent='Faltam '+miss+' blocos (a lista aparece quando faltar pouco)'; return; }
+    var arr=[]; for(var i=1;i<=recvTotal;i++) if(!recvSet.has(i)) arr.push(i);
+    var out=[], s=arr[0], p=arr[0];
+    for(var k=1;k<arr.length;k++){ if(arr[k]===p+1){ p=arr[k]; } else { out.push(s===p?(''+s):(s+'-'+p)); s=p=arr[k]; } }
+    out.push(s===p?(''+s):(s+'-'+p));
+    el.hidden=false; el.innerHTML='Faltam: <b>'+out.join(', ')+'</b>';
+  }
+  function showErr(t){ var e=$('recvErr'); if(t){e.textContent=t;e.classList.add('show');} else e.classList.remove('show'); }
+
+  $('startCam').onclick=function(){ startCamera(camSelect.value&&camSelect.value.length>20?camSelect.value:null); };
+  $('recvPlaceholder').onclick=function(){ if(!stream) $('startCam').click(); };
+  camSelect.onchange=function(){ if(stream) startCamera(camSelect.value); };
+
+  function startCamera(deviceId){
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+      showErr('Este navegador não permite acessar a câmera (precisa de HTTPS).'); return;
+    }
+    showErr('');
+    stopCamera();
+    try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); }catch(e){}
+    detectorFailed=false; pickDetector();
+    var v=deviceId?{deviceId:{exact:deviceId}}:{facingMode:{ideal:'environment'}};
+    v.width={ideal:1920}; v.height={ideal:1080};
+    var constraints={video:v};
+    navigator.mediaDevices.getUserMedia(constraints).then(function(s){
+      stream=s; video.srcObject=s; video.style.display='block';
+      reticle.classList.add('on'); reticle.classList.remove('hit'); // moldura azul: procurando
+      $('recvPlaceholder').style.display='none';
+      video.play();
+      codesSeen=0; readTimes=[];
+      setRecvState('rx','Procurando… ('+engineName+')');
+      // iPhone: não dá pra controlar foco, mas zoom ajuda a afastar além da distância mínima de foco
+      try{
+        var track=s.getVideoTracks()[0];
+        var caps=track.getCapabilities?track.getCapabilities():{};
+        if(caps.focusMode && caps.focusMode.indexOf('continuous')>=0){ track.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(function(){}); }
+        var zw=$('zoomWrap'), zi=$('zoom');
+        if(caps.zoom && (caps.zoom.max||0) > (caps.zoom.min||1)){
+          zi.min=caps.zoom.min; zi.max=caps.zoom.max; zi.step=caps.zoom.step||0.1;
+          var init=Math.min(caps.zoom.max, Math.max(caps.zoom.min, 2));
+          zi.value=init; $('zoomVal').textContent=(+init).toFixed(1)+'×';
+          track.applyConstraints({advanced:[{zoom:init}]}).catch(function(){});
+          zi.oninput=function(){ var z=parseFloat(zi.value); $('zoomVal').textContent=z.toFixed(1)+'×'; track.applyConstraints({advanced:[{zoom:z}]}).catch(function(){}); };
+          zw.hidden=false;
+        } else { zw.hidden=true; }
+      }catch(e){}
+      return navigator.mediaDevices.enumerateDevices();
+    }).then(function(devs){
+      var cams=devs.filter(function(d){return d.kind==='videoinput'});
+      camSelect.innerHTML='';
+      cams.forEach(function(c,i){ var o=document.createElement('option'); o.value=c.deviceId;
+        o.textContent=c.label||('Câmera '+(i+1)); camSelect.appendChild(o); });
+      var cur=stream.getVideoTracks()[0];
+      if(cur&&cur.getSettings){ var sid=cur.getSettings().deviceId; if(sid) camSelect.value=sid; }
+      scanning=true; requestAnimationFrame(scanLoop);
+    }).catch(function(err){
+      showErr('Não consegui abrir a câmera: '+err.message+'. Verifique a permissão.');
+      setRecvState('','Aguardando');
+    });
+  }
+  function stopCamera(){
+    scanning=false;
+    if(stream){ stream.getTracks().forEach(function(t){t.stop()}); stream=null; }
+    video.style.display='none';
+    reticle.classList.remove('on','hit');
+  }
+
+  function gotCode(text){
+    codesSeen++;
+    reticle.classList.add('hit');                          // verde ao encontrar
+    clearTimeout(hitTimer); hitTimer=setTimeout(function(){ reticle.classList.remove('hit'); }, 350);
+    var now=Date.now(); readTimes.push(now);
+    while(readTimes.length && now-readTimes[0]>2000) readTimes.shift();
+    if(!recvBuf){
+      $('syncBanner').style.display='block';
+      var span=(now-readTimes[0])/1000, rps=span>=1?(readTimes.length-1)/span:0;
+      if(rps>0){
+        var fps=Math.max(2,Math.min(15,Math.round(rps)));
+        $('syncTxt').innerHTML='✓ seu aparelho lê ~'+rps.toFixed(0)+' QR/s → use <b>'+fps+' fps</b> no transmissor';
+      } else {
+        $('syncTxt').textContent='✓ sincronizado ('+engineName+')';
+      }
+      setRecvState('rx','Sincronizado ('+engineName+')');
+    }
+    handlePacket(text);
+  }
+  function scanLoop(){
+    if(!scanning) return;
+    if(!detector && !detectorFailed && (window.__ZX||window.BarcodeDetector)) pickDetector();
+    if(video.readyState===video.HAVE_ENOUGH_DATA){
+      if(detector){
+        if(!detecting){
+          detecting=true;
+          detector.detect(video).then(function(codes){
+            detecting=false;
+            if(codes && codes.length){ gotCode(codes[0].rawValue); }
+          }).catch(function(){ detecting=false; detectorFailed=true; detector=null; engineName='jsQR'; });
+        }
+      } else {
+        var vw=video.videoWidth, vh=video.videoHeight;
+        var scale=Math.min(1, 900/Math.max(vw,vh));
+        var w=Math.round(vw*scale), h=Math.round(vh*scale);
+        if(scanCanvas.width!==w){ scanCanvas.width=w; scanCanvas.height=h; }
+        sctx.drawImage(video,0,0,w,h);
+        var img=sctx.getImageData(0,0,w,h);
+        var code=jsQR(img.data,w,h,{inversionAttempts:'attemptBoth'});
+        if(code && code.data){ gotCode(code.data); }
+      }
+    }
+    requestAnimationFrame(scanLoop);
+  }
+
+  function handlePacket(text){
+    var p=text.indexOf('|');
+    if(p<0) return;
+    var index=parseInt(text.slice(0,p),10);
+    if(isNaN(index)) return;
+    var payload;
+    try{ payload=b64ToBytes(text.slice(p+1)); }catch(e){ return; }
+    if(index===0){
+      var meta;
+      try{ meta=JSON.parse(new TextDecoder().decode(payload)); }catch(e){ return; }
+      if(meta.name!==recvName || meta.size!==recvSize){
+        recvName=meta.name; recvSize=meta.size; recvTotal=meta.total; recvChunk=meta.chunk;
+        recvGz=meta.gz||0; recvOrig=meta.orig||meta.size; recvType=meta.type||'';
+        recvBuf=new Uint8Array(recvSize); recvSet=new Set();
+        $('rName').textContent=recvName;
+        $('rSize').textContent=fmtBytes(recvOrig)+(recvGz?' (zip '+fmtBytes(recvSize)+')':'');
+        $('rType').textContent=meta.type||'arquivo'; $('rBlocks').textContent=recvTotal;
+        $('syncBanner').style.display='none';
+        $('recvMeta').classList.add('show');
+        $('recvCount').textContent='0 / '+recvTotal;
+        $('recvLeft').textContent=recvTotal; dupCount=0; $('recvDup').textContent='0';
+        recvStart=0; $('recvRate').hidden=true; $('recvMissing').hidden=true;
+        progCanvas.width=recvTotal; pctx.clearRect(0,0,recvTotal,1);
+        $('saveBtn').disabled=true;
+        setRecvState('rx','Recebendo');
+      }
+      return;
+    }
+    if(!recvBuf) return;
+    if(recvSet.has(index)){ dupCount++; $('recvDup').textContent=dupCount; return; } // já veio: ignora
+    var off=(index-1)*recvChunk;
+    if(off>=recvSize) return;
+    recvBuf.set(payload.subarray(0, Math.min(payload.length, recvSize-off)), off);
+    recvSet.add(index);
+    var col=getComputedStyle(document.documentElement).getPropertyValue('--ok').trim()||'#15803D';
+    pctx.fillStyle=col; pctx.fillRect(index-1,0,1,1);
+    var got=recvSet.size;
+    $('recvCount').textContent=got+' / '+recvTotal;
+    $('recvLeft').textContent=(recvTotal-got);
+    $('recvPct').textContent=Math.round(got/recvTotal*100)+'%';
+    if(!recvStart) recvStart=Date.now();
+    var el=(Date.now()-recvStart)/1000;
+    if(el>0.8 && got>1){
+      var rate=got/el, kbs=rate*recvChunk/1024, eta=rate>0?(recvTotal-got)/rate:0;
+      $('recvRate').hidden=false;
+      $('recvRate').innerHTML=rate.toFixed(1)+' blocos/s · '+kbs.toFixed(1)+' KB/s · falta <b>~'+fmtTime(eta)+'</b>';
+    }
+    updateMissing();
+    saveDirty=true;
+    beep(880,0.03); buzz(18);
+    if(got===recvTotal){ complete(); }
+  }
+
+  function complete(){
+    scanning=false;
+    if(stream){ stream.getTracks().forEach(function(t){t.stop()}); }
+    video.style.display='none';
+    $('recvPlaceholder').style.display='block';
+    $('recvPlaceholder').innerHTML='<div class="big" aria-hidden="true">✓</div>Arquivo completo — toque em <b>Salvar arquivo</b>';
+    setRecvState('done','Completo');
+    $('saveBtn').disabled=false; $('discardBtn').hidden=false;
+    if(recvStart){ $('recvRate').hidden=false; $('recvRate').innerHTML='✓ completo em <b>'+fmtTime((Date.now()-recvStart)/1000)+'</b>'; }
+    saveDirty=false; saveSession();
+    beep(1320,0.18); buzz([40,40,90]);
+  }
+
+  $('saveBtn').onclick=function(){
+    if(!recvBuf) return;
+    var out=recvBuf;
+    if(recvGz){ try{ out=pako.ungzip(recvBuf); }catch(e){ alert('Falha ao descomprimir o arquivo.'); return; } }
+    var blob=new Blob([out], {type:'application/octet-stream'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download=recvName||'arquivo';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1500);
+  };
+
+  /* ===== Persistência (IndexedDB): retoma o recebimento se recarregar/cair ===== */
+  function idb(){ return new Promise(function(res){
+    if(DB) return res(DB);
+    try{ var r=indexedDB.open('farol',1);
+      r.onupgradeneeded=function(){ r.result.createObjectStore('kv'); };
+      r.onsuccess=function(){ DB=r.result; res(DB); };
+      r.onerror=function(){ res(null); };
+    }catch(e){ res(null); }
+  }); }
+  function idbPut(k,v){ return idb().then(function(db){ if(!db)return; return new Promise(function(res){ try{ var t=db.transaction('kv','readwrite'); t.objectStore('kv').put(v,k); t.oncomplete=function(){res()}; t.onerror=function(){res()}; }catch(e){res()} }); }); }
+  function idbGet(k){ return idb().then(function(db){ if(!db)return null; return new Promise(function(res){ try{ var t=db.transaction('kv','readonly'); var q=t.objectStore('kv').get(k); q.onsuccess=function(){res(q.result||null)}; q.onerror=function(){res(null)}; }catch(e){res(null)} }); }); }
+  function idbDel(k){ return idb().then(function(db){ if(!db)return; return new Promise(function(res){ try{ var t=db.transaction('kv','readwrite'); t.objectStore('kv').delete(k); t.oncomplete=function(){res()}; t.onerror=function(){res()}; }catch(e){res()} }); }); }
+
+  function saveSession(){
+    if(!recvBuf || !recvSet) return;
+    idbPut('session',{ name:recvName,type:recvType,size:recvSize,total:recvTotal,chunk:recvChunk,
+      gz:recvGz,orig:recvOrig, buf:recvBuf, got:Array.from(recvSet) });
+  }
+  setInterval(function(){ if(saveDirty){ saveDirty=false; saveSession(); } }, 2000);
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='hidden') saveSession(); });
+  window.addEventListener('pagehide', saveSession);
+
+  function paintProgress(){
+    progCanvas.width=recvTotal; pctx.clearRect(0,0,recvTotal,1);
+    var col=getComputedStyle(document.documentElement).getPropertyValue('--ok').trim()||'#15803D';
+    pctx.fillStyle=col; recvSet.forEach(function(i){ pctx.fillRect(i-1,0,1,1); });
+  }
+  function restoreSession(){
+    idbGet('session').then(function(s){
+      if(!s || !s.buf || !s.got || !s.got.length) return;
+      recvName=s.name; recvType=s.type||''; recvSize=s.size; recvTotal=s.total; recvChunk=s.chunk;
+      recvGz=s.gz||0; recvOrig=s.orig||s.size;
+      recvBuf=(s.buf instanceof Uint8Array)?s.buf:new Uint8Array(s.buf);
+      recvSet=new Set(s.got);
+      $('rName').textContent=recvName;
+      $('rSize').textContent=fmtBytes(recvOrig)+(recvGz?' (zip '+fmtBytes(recvSize)+')':'');
+      $('rType').textContent=recvType||'arquivo'; $('rBlocks').textContent=recvTotal;
+      $('recvMeta').classList.add('show'); $('syncBanner').style.display='none';
+      paintProgress();
+      var got=recvSet.size;
+      $('recvCount').textContent=got+' / '+recvTotal; $('recvLeft').textContent=(recvTotal-got);
+      $('recvPct').textContent=Math.round(got/recvTotal*100)+'%';
+      dupCount=0; $('recvDup').textContent='0'; updateMissing();
+      $('discardBtn').hidden=false;
+      if(got>=recvTotal){ setRecvState('done','Completo'); $('saveBtn').disabled=false; }
+      else { setRecvState('rx','Retomado '+got+'/'+recvTotal+' — ligue a câmera p/ continuar'); }
+      if(!isMobile) setMode(false); // mostra a aba Receber com o progresso retomado
+    });
+  }
+  $('discardBtn').onclick=function(){
+    idbDel('session');
+    recvBuf=null; recvSet=null; recvTotal=0; recvName=''; recvSize=0; recvGz=0; recvStart=0; dupCount=0;
+    $('recvMeta').classList.remove('show'); $('syncBanner').style.display='none';
+    $('recvCount').textContent='—'; $('recvLeft').textContent='—'; $('recvDup').textContent='0';
+    $('recvPct').textContent='0%'; $('recvRate').hidden=true; $('recvMissing').hidden=true;
+    progCanvas.width=100; pctx.clearRect(0,0,100,1);
+    $('saveBtn').disabled=true; $('discardBtn').hidden=true; setRecvState('','Aguardando');
+  };
+  restoreSession();
+
+  // tudo definido: no celular, abre já na aba Receber (câmera)
+  if(isMobile) setMode(false);
+
+  // avisa antes de recarregar/sair no meio de uma recepção (evita perder progresso num pull-to-refresh)
+  window.addEventListener('beforeunload', function(e){
+    if(recvBuf && recvSet && recvSet.size>0 && recvSet.size<recvTotal){ e.preventDefault(); e.returnValue=''; }
+  });
+})();
+</script>
+</body>
+</html>
