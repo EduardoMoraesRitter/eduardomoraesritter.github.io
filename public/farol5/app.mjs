@@ -1,0 +1,71 @@
+import {Sender,Receiver,validMeta,b64,unb64,newPairCode,MAX_BYTES,digest} from './protocol.mjs?v=5-1';
+import {AcousticPackets} from './acoustic-packets.mjs?v=5-1';
+import {AcousticAudio} from './acoustic-audio.mjs?v=5-1';
+import {cameraConstraints,syncCameraAspect} from './camera-view.mjs?v=5-1';
+import {analyzeFrame} from './camera.mjs?v=5-1';
+import {TransferClock,elapsed,dataSize} from './transfer-clock.mjs?v=5-1';
+const $=id=>document.getElementById(id),status=s=>{$('status').textContent=s;};
+let mode=matchMedia('(max-width:720px)').matches?'receive':'send',sender=null,receiver=null,secret='',packets=null,peer=false,txPaused=false,remotePaused=false,desiredPause=null,complete=false;
+let stream=null,raf=0,frame=0,lastTx=0,lastScan=0,lastReport=0,reportBusy=false,db=null,dirty=false,verifying=false,clock=new TransferClock(),generation=0;
+const audio=new AcousticAudio(onAudio,s=>{$('audioStatus').textContent=s;});
+const scan=document.createElement('canvas'),scanCtx=scan.getContext('2d',{willReadFrequently:true});
+const canvas=$('qr'),ctx=canvas.getContext('2d');
+function render(texts){
+ const qs=texts.map(text=>{const q=window.qrcode(0,'M');q.addData(text);q.make();return q;});const count=Math.max(...qs.map(q=>q.getModuleCount())),size=(count+8)*6;canvas.width=canvas.height=size;const img=ctx.createImageData(size,size);img.data.fill(255);
+ for(let c=0;c<3;c++){const q=qs[c]||qs[0],offset=4+Math.floor((count-q.getModuleCount())/2);for(let y=0;y<q.getModuleCount();y++)for(let x=0;x<q.getModuleCount();x++)if(q.isDark(y,x))for(let dy=0;dy<6;dy++)for(let dx=0;dx<6;dx++)img.data[(((y+offset)*6+dy)*size+(x+offset)*6+dx)*4+c]=0;}
+ ctx.putImageData(img,0,0);canvas.hidden=false;$('placeholder').hidden=true;
+}
+function showSession(){if(sender)render(['F5|P|'+b64(new TextEncoder().encode(JSON.stringify({code:secret,meta:sender.meta,paused:txPaused,complete})))]);}
+function update(){
+ document.body.classList.toggle('received',mode==='receive'&&!!receiver?.verified&&!stream);$('retry').hidden=complete&&mode==='receive';$('guidance').hidden=!!receiver?.verified;$('zoom').parentElement.hidden=!!receiver?.verified;
+ $('pauseTx').disabled=!sender||complete;$('pauseTx').textContent=txPaused?'Continuar envio':'Pausar envio';$('pauseRx').disabled=!receiver||!stream||receiver.verified;$('pauseRx').textContent=(desiredPause??remotePaused)?'Continuar recepção':'Pausar recepção';$('retry').disabled=!receiver||!packets;$('discard').disabled=!receiver;$('save').hidden=!receiver?.verified||verifying;
+ if(mode==='receive'&&receiver){const r=receiver;const bytes=r.count*r.meta.bs-(r.flags[r.meta.total-1]?r.meta.total*r.meta.bs-r.meta.size:0);clock.update(Date.now(),!!stream&&!document.hidden&&!(desiredPause??remotePaused)&&!r.verified,r.count>0);if(r.verified)clock.finish(Date.now());const t=clock.summary();$('progress').textContent=`${r.meta.name} · ${dataSize(bytes)} de ${dataSize(r.meta.size)} · ${r.count}/${r.meta.total} blocos`;$('bar').value=r.count/r.meta.total*100;$('activity').textContent=`${r.duplicates} repetidos · ${r.corrupt} inválidos`;$('timing').textContent=`Total ${elapsed(t.totalMs)} · Recepção ativa ${elapsed(t.activeMs)} · Interrupções ${elapsed(t.pausedMs)}`;}
+}
+function stopCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}cancelAnimationFrame(raf);$('video').srcObject=null;$('video').hidden=true;$('placeholder').hidden=false;$('camera').textContent='Ativar som e câmera';$('zoom').disabled=true;document.body.classList.remove('camera-active');update();}
+function setMode(value){
+ if(mode==='receive'&&receiver&&stream){desiredPause=true;sendReport(true);}if(mode==='send'&&sender){txPaused=true;showSession();}
+ stopCamera();audio.stopListening();mode=value;$('sendPanel').hidden=mode!=='send';$('receivePanel').hidden=mode!=='receive';$('sendMode').setAttribute('aria-pressed',String(mode==='send'));$('receiveMode').setAttribute('aria-pressed',String(mode==='receive'));canvas.hidden=true;$('placeholder').hidden=false;status(mode==='send'?'Ative o microfone e escolha um arquivo.':'Ative som e câmera; depois leia o QR do computador.');if(mode==='send'&&sender)showSession();update();
+}
+$('sendMode').onclick=()=>setMode('send');$('receiveMode').onclick=()=>setMode('receive');
+$('mic').onclick=async()=>{try{if(audio.stream){audio.stopListening();txPaused=true;showSession();$('mic').textContent='Ativar microfone do computador';status('Microfone desligado. Envio pausado.');}else{await audio.enable(true);$('mic').textContent='Desativar microfone';status(sender?'Microfone ativo. Aguarde o retorno sonoro do receptor.':'Microfone ativo. Escolha um arquivo.');}}catch(e){status('Não foi possível ativar o microfone: '+e.message);}update();};
+$('file').onchange=async()=>{const file=$('file').files[0];if(!file)return;if(file.size>MAX_BYTES){status('Limite: 32 MiB. Para o primeiro teste, use poucos kB.');return;}const g=++generation;try{const candidate=await Sender.create(new Uint8Array(await file.arrayBuffer()),file.name,400);if(g!==generation)return;sender=candidate;sender.request([],true);secret=newPairCode();packets=await AcousticPackets.create(secret);peer=false;complete=false;txPaused=false;frame=0;$('room').textContent='Sessão: '+Array.from(packets.room,x=>x.toString(16).padStart(2,'0')).join('');$('progress').textContent=`${file.name} · ${dataSize(file.size)} · ${sender.meta.total} blocos`;status('Leia o QR no receptor. Os blocos só começam após o retorno por som.');showSession();update();}catch(e){status('Não foi possível preparar o arquivo: '+e.message);}};
+$('pauseTx').onclick=()=>{txPaused=!txPaused;showSession();status(txPaused?'Envio pausado. O receptor confirma ao ler o QR.':'Envio liberado. Aguardando pedidos por som.');update();};
+$('pauseRx').onclick=()=>{desiredPause=!(desiredPause??remotePaused);lastReport=0;status(desiredPause?'Pausado aqui. Enviando pedido ao computador…':'Retomada solicitada por som…');sendReport(true);update();};
+$('retry').onclick=()=>sendReport(true);
+setInterval(()=>{if(mode!=='send'||!sender||complete||Date.now()-lastTx<1000/Number($('fps').value))return;lastTx=Date.now();if(txPaused||!peer){if(frame++%6===0)showSession();return;}try{if(frame++%6===0)showSession();else{const list=[sender.next(),sender.next(),sender.next()].filter(Boolean);if(list.length)render(list);else showSession();}}catch(e){txPaused=true;status('Falha ao gerar QR: '+e.message);}},50);
+async function onAudio(text){
+ if(mode!=='send'||!packets||!sender)return;const m=await packets.decode(text);if(!m||m.count>sender.meta.total)return;peer=true;$('audioStatus').textContent='Retorno sonoro autenticado recebido.';
+ if(m.type===2||m.type===3){txPaused=m.type===2;showSession();status(txPaused?'Pausa solicitada pelo receptor.':'Receptor solicitou continuar.');}
+ if(m.type===1){if(!m.indices.length&&m.count<sender.meta.total)return;if(m.indices.some(i=>i>=sender.meta.total)||m.indices.length>sender.meta.total-m.count)return;sender.request(m.indices,true);$('progress').textContent=`Receptor: ${m.count}/${sender.meta.total} blocos · ${sender.repairs.length} solicitados · próximo ${sender.repairs.length?sender.repairs[0]+1:'verificação'}`;$('bar').value=m.count/sender.meta.total*100;status(txPaused?'Pausado. Progresso do receptor atualizado.':'Recebidos os faltantes por som. Enviando apenas o lote pedido.');}
+ if(m.type===4&&m.count===sender.meta.total){complete=true;txPaused=true;$('bar').value=100;$('progress').textContent=`Receptor: ${sender.meta.total}/${sender.meta.total} blocos · ${dataSize(sender.meta.size)} confirmados`;$('activity').textContent='Integridade confirmada no receptor.';status('Receptor confirmou o arquivo íntegro por som. Transferência concluída.');showSession();}update();
+}
+async function sendReport(force=false){
+ if(mode!=='receive'||complete||!receiver||!packets||reportBusy||!audio.context||audio.context.state!=='running'||(!force&&Date.now()-lastReport<8000))return;
+ reportBusy=true;lastReport=Date.now();try{const type=receiver.verified?4:desiredPause===true?2:desiredPause===false?3:remotePaused?2:1;const text=await packets.encode({type,count:receiver.count,indices:type===1?receiver.missing(16):[]});await audio.play(text);}catch(e){$('audioStatus').textContent='Retorno não enviado: '+e.message;}finally{reportBusy=false;}
+}
+async function acceptPacket(text){
+ if(text.startsWith('F5|P|')){try{if(text.length>2400)return;const p=JSON.parse(new TextDecoder().decode(unb64(text.slice(5))));if(!/^[a-f0-9]{64}$/.test(p.code)||!validMeta(p.meta)||typeof p.paused!=='boolean'||typeof p.complete!=='boolean')return;
+ if(receiver&&receiver.meta.id!==p.meta.id){status('Outro arquivo detectado. Descarte a recepção anterior para trocar.');return;}
+ if(!receiver){receiver=new Receiver(p.meta);clock=new TransferClock();}
+ if(secret!==p.code){secret=p.code;complete=false;packets=null;packets=await AcousticPackets.create(secret);lastReport=0;dirty=true;$('room').textContent='Sessão: '+Array.from(packets.room,x=>x.toString(16).padStart(2,'0')).join('');}
+ if(desiredPause===null||p.paused===desiredPause){remotePaused=p.paused;desiredPause=null;}
+ status(receiver.verified?'Arquivo verificado. Salve neste aparelho.':desiredPause!==null?'Aguardando confirmação da pausa/retomada…':remotePaused?'Pausado nos dois aparelhos.':'QR reconhecido. Recebendo blocos e respondendo por som.');
+ if(p.complete&&receiver.verified){complete=true;stopCamera();$('audioStatus').textContent='Confirmação recebida · retorno sonoro encerrado';status('Transferência confirmada nos dois aparelhos. Salve o arquivo.');}update();if(!complete)sendReport();return;}catch{return;}}
+ if(!receiver||!(text.startsWith('F5|B|'))||(desiredPause??remotePaused))return;
+ if(receiver.accept(text)){dirty=true;if(receiver.count===receiver.meta.total)verify();}update();
+}
+async function verify(){if(verifying||receiver?.verified)return;verifying=true;const r=receiver;try{if(await r.verify()){clock.finish(Date.now());dirty=true;await persist();status('Arquivo íntegro. Enviando confirmação por som…');lastReport=0;sendReport(true);}else{receiver=new Receiver(r.meta);dirty=true;status('Verificação falhou. Pedindo os blocos novamente.');}}finally{verifying=false;update();}}
+$('camera').onclick=async()=>{if(stream){desiredPause=true;sendReport(true);stopCamera();return;}try{await audio.enable(false);stream=await navigator.mediaDevices.getUserMedia(cameraConstraints(innerWidth,innerHeight));$('video').srcObject=stream;await $('video').play();$('video').hidden=false;$('placeholder').hidden=true;canvas.hidden=true;syncCameraAspect($('video'));document.body.classList.add('camera-active');$('camera').textContent='Parar câmera';$('zoom').disabled=false;$('zoom').value='1';$('video').style.transform='';if(receiver&&!receiver.verified){desiredPause=false;lastReport=0;}raf=requestAnimationFrame(scanFrame);update();}catch(e){stopCamera();status('Não foi possível ativar: '+e.message);}};
+$('video').addEventListener('resize',()=>syncCameraAspect($('video')));$('zoom').oninput=()=>{$('video').style.transform=`scale(${$('zoom').value})`;};
+function scanFrame(time){
+ if(!stream)return;if(time-lastScan>180&&$('video').readyState>=2){lastScan=time;const v=$('video'),zoom=Number($('zoom').value),w=v.videoWidth/zoom,h=v.videoHeight/zoom,scale=Math.min(1,1000/w);scan.width=Math.round(w*scale);scan.height=Math.round(h*scale);scanCtx.drawImage(v,(v.videoWidth-w)/2,(v.videoHeight-h)/2,w,h,0,0,scan.width,scan.height);const img=scanCtx.getImageData(0,0,scan.width,scan.height);let location=null;
+ for(let ch=0;ch<3;ch++){const a=new Uint8ClampedArray(img.data.length);for(let i=0;i<a.length;i+=4){a[i]=a[i+1]=a[i+2]=img.data[i+ch];a[i+3]=255;}const q=window.jsQR(a,scan.width,scan.height,{inversionAttempts:'attemptBoth'});if(q?.data.startsWith('F5|')){location=q.location;acceptPacket(q.data);}}
+ $('guidance').textContent=analyzeFrame(img.data,scan.width,scan.height,location).message;}
+ if(stream)raf=requestAnimationFrame(scanFrame);
+}
+$('save').onclick=()=>{if(!receiver?.verified)return;const url=URL.createObjectURL(new Blob([receiver.bytes]));const a=document.createElement('a');a.href=url;a.download=receiver.meta.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);};
+$('discard').onclick=async()=>{if(!confirm('Descartar os blocos salvos no Farol 5?'))return;stopCamera();receiver=null;complete=false;secret='';packets=null;clock=new TransferClock();desiredPause=null;remotePaused=false;dirty=false;if(db)await new Promise(resolve=>{const tx=db.transaction('sessions','readwrite');tx.objectStore('sessions').delete('current');tx.oncomplete=resolve;});$('progress').textContent='Recepção descartada.';$('activity').textContent='Nenhum bloco recebido.';$('timing').textContent='';$('bar').value=0;update();};
+async function persist(){if(!dirty||!receiver||!db)return;update();dirty=false;await new Promise(resolve=>{const tx=db.transaction('sessions','readwrite');tx.objectStore('sessions').put({...receiver.snapshot(),secret,timing:clock.snapshot()},'current');tx.oncomplete=resolve;tx.onerror=()=>{dirty=true;status('Não foi possível salvar o progresso local.');resolve();};});}
+async function restore(){try{db=await new Promise((resolve,reject)=>{const q=indexedDB.open('farol5',1);q.onupgradeneeded=()=>q.result.createObjectStore('sessions');q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);});const saved=await new Promise(resolve=>{const q=db.transaction('sessions').objectStore('sessions').get('current');q.onsuccess=()=>resolve(q.result);q.onerror=()=>resolve(null);});if(saved&&!receiver){receiver=Receiver.restore(saved);clock=new TransferClock(saved.timing);secret=saved.secret||'';if(secret)packets=await AcousticPackets.create(secret);if(receiver.count===receiver.meta.total)await verify();update();status('Progresso restaurado. Ative som e câmera para continuar com o mesmo arquivo.');}}catch{status('Armazenamento indisponível. Mantenha esta página aberta.');}}
+setInterval(()=>{update();if(receiver){if(!receiver.verified)dirty=true;persist();if(!complete)sendReport();}},1000);
+document.addEventListener('visibilitychange',()=>{update();if(document.hidden){dirty=!!receiver;persist();}});setMode(mode);restore();
