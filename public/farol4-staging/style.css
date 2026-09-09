@@ -1,0 +1,96 @@
+:root{color-scheme:light dark;--bg:#f3f2ee;--surface:#fff;--well:#e9e8e2;--text:#202725;--muted:#58635f;--line:#d1d5cc;--accent:#c51844;--accent-ink:#fff;--ok:#177245;--focus:#126882;--radius:14px;font-family:'Segoe UI',sans-serif;font-size:16px}
+@media(prefers-color-scheme:dark){:root{--bg:#141b1c;--surface:#1b2526;--well:#101718;--text:#eef2eb;--muted:#aab8b3;--line:#3c4c4b;--accent:#ff89a5;--accent-ink:#30101a;--ok:#80d5a5;--focus:#8bcddd}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);line-height:1.45}button,input,select,textarea{font:inherit;color:inherit}button,summary,input[type=range],input[type=checkbox]{touch-action:manipulation}button,summary{cursor:pointer}button:disabled{opacity:.45;cursor:default}[hidden]{display:none!important}:focus-visible{outline:3px solid var(--focus);outline-offset:3px}::selection{background:var(--accent);color:var(--accent-ink)}a{color:inherit;text-underline-offset:4px}button{border:0}input,textarea{caret-color:var(--accent)}html{scrollbar-color:var(--line) var(--bg)}
+.wrap{max-width:1240px;margin:auto;padding:0 28px 16px}.appHeader{display:flex;align-items:center;gap:24px;min-height:80px;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:10px;text-decoration:none}.beacon{width:10px;height:10px;border-radius:50%;background:var(--accent)}h1{font-size:23px;letter-spacing:-.03em;margin:0;font-weight:650}h1 span{font-weight:400;color:var(--muted)}.modes{display:flex;gap:4px;margin:auto;background:var(--well);border-radius:10px;padding:3px}.modes button{background:none;padding:0 20px;min-height:44px;border-radius:7px;font-size:14px;color:var(--muted)}.modes button[aria-pressed=true]{background:var(--surface);color:var(--text);font-weight:650}.textButton{background:none;color:var(--muted);min-height:44px;padding:6px 8px;font-size:14px}.textButton:hover{color:var(--accent)}.textButton:disabled{display:none}
+.linkStatus{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0 4px;font-size:13px;min-width:0}.roomLine{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.roomLine strong{font-weight:600}.linkStatus[data-state=paired] strong{color:var(--ok)}#roomLabel{font-variant-numeric:tabular-nums;color:var(--muted)}#peerStatus{color:var(--muted);text-align:right}#retryConnection{min-height:32px}.flowLine{display:flex;align-items:baseline;gap:12px;margin:8px 0 18px;min-height:24px;font-size:13px}#transferState{font-weight:650;white-space:nowrap}#transferState[data-paused=true]{color:var(--accent)}#notice{margin:0;color:var(--muted);overflow-wrap:anywhere}
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:32px;align-items:start}.sendControls{grid-column:2;grid-row:1;display:flex;flex-direction:column;gap:20px}.sendStage{grid-column:1;grid-row:1}.stagePanel{min-width:0}.stage{position:relative;display:flex;align-items:center;justify-content:center;min-height:240px;height:clamp(280px,50dvh,580px);background:var(--well);border-radius:var(--radius);overflow:hidden}#rgbCanvas{display:none;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;image-rendering:pixelated;background:#fff}#video{display:none;width:100%;height:100%;object-fit:contain;transform-origin:center}.placeholder{display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;gap:12px;padding:24px;color:var(--muted);max-width:320px}.placeholder svg{width:56px;height:56px;fill:none;stroke:currentColor;stroke-width:2}.placeholder strong{font-size:19px;line-height:1.25;color:var(--text);font-weight:600}.placeholder span{font-size:14px}.fileSummary{display:grid;grid-template-columns:1fr auto;gap:6px 14px;padding:14px 0 0;font-size:13px}.fileSummary p{margin:0;overflow-wrap:anywhere}.fileSummary #sendName{font-weight:600;grid-column:1 / -1}.meters{display:flex;gap:18px;font-variant-numeric:tabular-nums}.meters span{color:var(--muted)}.meters b{color:var(--text);font-weight:600;margin-left:4px}#peerProgress{grid-column:1 / -1;color:var(--muted)}.fileSummary small{grid-column:2;grid-row:2;color:var(--muted)}
+.filePicker{display:block}.lab{display:flex;justify-content:space-between;gap:8px;margin:0 0 8px;font-size:13px;font-weight:600}.field{display:block;margin:16px 0}.field input:not([type=range]),select,textarea{display:block;width:100%;min-width:0;min-height:44px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:16px}textarea{resize:vertical;font-family:inherit}input[type=file]{width:100%;min-width:0;font-size:13px;cursor:pointer}input[type=file]::file-selector-button{font:inherit;min-height:44px;padding:10px 14px;margin-right:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);cursor:pointer}input[type=range]{width:100%;height:44px;margin:0;accent-color:var(--accent)}.check{display:flex;gap:10px;align-items:center;min-height:44px;font-size:14px;cursor:pointer}.check input{width:18px;height:18px;flex:none;accent-color:var(--accent);margin:0}.btn{min-height:46px;padding:10px 16px;background:var(--accent);color:var(--accent-ink);border-radius:9px;font-size:14px;font-weight:650;text-align:center}.btn:hover:not(:disabled){filter:brightness(.94)}.btn.secondary{background:var(--well);color:var(--text)}.btn.success{background:var(--ok);color:var(--bg)}.danger{color:var(--accent)}.actionBar{display:flex;gap:8px}.actionBar .btn{flex:1;min-width:0}.senderActions{flex-direction:column}.sendOptions{border-top:1px solid var(--line);padding-top:10px}.sendOptions details+details{border-top:1px solid var(--line)}details{min-width:0}summary{min-height:44px;align-content:center;font-size:14px;font-weight:600;list-style-position:inside}summary:hover{color:var(--accent)}.hint{font-size:13px;line-height:1.55;color:var(--muted);margin:12px 0}details .btn{width:100%}
+.receiveConsole{display:flex;flex-direction:column;gap:16px;min-width:0}.receiveProgress{font-variant-numeric:tabular-nums}#receiveName{font-size:15px;font-weight:600;margin:0 0 14px;overflow-wrap:anywhere}.progtop{display:flex;justify-content:space-between;gap:10px;font-size:14px}.progtop strong{font-weight:650}progress{display:block;width:100%;height:8px;margin:10px 0 16px;accent-color:var(--ok);border:0}progress::-webkit-progress-bar{background:var(--line);border-radius:4px}progress::-webkit-progress-value{background:var(--ok);border-radius:4px}.transferStats{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}.transferStats span{display:block;color:var(--muted);font-size:12px}.transferStats strong{display:block;font-size:14px;font-weight:600;margin-top:2px}.receiverActions{flex-wrap:wrap}.receiverActions .btn{flex-basis:140px}.cameraTools{border-top:1px solid var(--line);padding-top:8px}.cameraTools summary{display:flex;justify-content:space-between}.recoveryDetails{border-top:1px solid var(--line)}.camera-active .receiverPanel .stage{background:#101718}
+.connection{margin-top:24px;border-top:1px solid var(--line);padding-top:6px}.connectionContent{display:grid;grid-template-columns:1fr 1fr;gap:32px;padding:8px 0 20px;max-width:960px}.connectionContent p{margin-top:0}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions .btn{width:auto}#pairCode{font-family:ui-monospace,monospace;font-size:13px}footer{display:flex;gap:20px;border-top:1px solid var(--line);margin-top:12px;padding-top:16px;font-size:12px;color:var(--muted)}footer span{margin-right:auto}
+@media(max-width:900px){.wrap{padding:0 16px 16px}.workspace{grid-template-columns:minmax(0,1fr) 280px;gap:20px}.appHeader{gap:12px}.modes button{padding:0 12px}}
+@media(max-width:650px){
+ .wrap{padding:0 12px calc(86px + env(safe-area-inset-bottom))}.appHeader{min-height:60px;gap:10px;flex-wrap:wrap;padding:8px 0}.brand h1{font-size:19px}.brand{gap:6px}.beacon{width:8px;height:8px}.modes{order:3;width:100%;margin:0;padding:2px}.modes button{flex:1;min-height:44px}.appHeader>.textButton{margin-left:auto;font-size:13px;min-height:44px}
+ .linkStatus{display:block;padding:8px 0 0;font-size:12px}.roomLine{gap:6px;justify-content:space-between}#peerStatus{display:block;text-align:left;font-size:12px}#retryConnection{min-height:28px;font-size:12px}#roomLabel{margin-left:auto}.flowLine{display:block;margin:8px 0 10px;font-size:12px}#notice{margin-top:2px}
+ .workspace{display:flex;flex-direction:column;gap:12px}.sendControls{display:contents}.filePicker{order:0;width:100%}.filePicker .lab{margin-bottom:4px}.sendStage{order:1;width:100%}.sendOptions{order:3;width:100%;padding-top:0}.stage{height:clamp(180px,34dvh,340px);min-height:180px}.placeholder{gap:8px;padding:18px}.placeholder svg{width:40px;height:40px}.placeholder strong{font-size:17px}.placeholder span{font-size:13px}.fileSummary{padding-top:10px;gap:4px;font-size:12px}.fileSummary small{display:none}.meters{gap:14px}
+ .actionBar{position:fixed;bottom:0;left:0;right:0;z-index:5;flex-direction:row;margin:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line);flex-wrap:nowrap}.actionBar .btn{min-height:46px;padding:8px;font-size:13px;flex:1}.receiveConsole{width:100%;gap:8px}.receiverPanel{width:100%}.receiveProgress{display:grid;grid-template-columns:1fr auto;gap:4px 12px}#receiveName{grid-column:1;font-size:13px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.progtop{font-size:12px}.receiveProgress progress{grid-column:1 / -1;margin:2px 0 4px;height:6px}.transferStats{grid-column:1 / -1;gap:12px}.transferStats>div{display:flex;align-items:baseline;justify-content:space-between;gap:8px}.transferStats strong{font-size:12px}.transferStats span{font-size:12px}.cameraTools{padding-top:0}.check{font-size:13px}.connectionContent{grid-template-columns:1fr;gap:12px}.connection{margin-top:16px}footer{flex-wrap:wrap;gap:12px}
+ .camera-active .appHeader{min-height:52px;flex-wrap:nowrap}.camera-active .brand,.camera-active #openSettings{display:none}.camera-active .modes{order:0}.camera-active .flowLine{margin:4px 0 6px}.camera-active #notice{display:block;max-height:2.9em;overflow:auto;font-size:11px}.camera-active .linkStatus{padding:4px 0 0}.camera-active #peerStatus{display:none}.camera-active .stage{height:max(200px,calc(100dvh - 340px));min-height:200px}.camera-active .workspace{gap:8px}.camera-active .receiveConsole{gap:2px}.camera-active .connection,.camera-active footer{display:none}.camera-active .recoveryDetails{margin-top:8px}.camera-active .cameraTools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 8px}.cameraTools details{width:100%}.camera-active #visionSettings:not([open]){width:auto}.camera-active #visionSettings summary{font-size:12px;gap:12px}.camera-active .recoveryDetails:not([open]){display:none}
+}
+@media(max-width:950px) and (max-height:500px) and (orientation:landscape){
+ .wrap{padding:0 12px 16px}.appHeader{min-height:54px}.linkStatus{padding-top:6px}.flowLine{margin:4px 0 8px}.workspace{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px}.stage{height:200px;min-height:180px}.actionBar{position:static;padding:0;border:0;background:none}.camera-active .stage{height:max(190px,calc(100dvh - 146px))}.camera-active #peerStatus,.camera-active .connection,.camera-active footer{display:none}.camera-active .receiveConsole{gap:8px}.camera-active .transferStats strong{font-size:12px}.camera-active .check{font-size:12px}.camera-active .cameraTools{padding-top:0}.camera-active .recoveryDetails{display:none}.camera-active .receiverActions .btn{flex-basis:0;font-size:12px;padding:8px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* Reflow keeps enlarged text and keyboard targets inside their available column. */
+body{container-type:inline-size}
+.wrap :where(button,summary,p,span,strong,label,details,nav,div){min-width:0}
+:where(button,summary,.lab,.meters,.transferStats,#transferState){overflow-wrap:anywhere}
+#transferState{white-space:normal;overflow-wrap:anywhere;min-width:0}
+.meters{flex-wrap:wrap}
+.fileSummary{grid-template-columns:minmax(0,1fr) auto}
+.receiveProgress{grid-template-columns:minmax(0,1fr) auto}
+button,summary,input,textarea,select,a{scroll-margin-block:16px 100px}
+#retryConnection{min-height:44px}
+.skipLink{position:absolute;left:12px;top:8px;z-index:20;padding:10px 16px;background:var(--surface);transform:translateY(-160%)}
+.skipLink:focus{transform:none}
+#workspaceStart:focus{outline-offset:6px}
+@container(max-width:300px){
+ .wrap{padding-inline:10px;padding-bottom:20px}
+ .appHeader,.camera-active .appHeader{flex-wrap:wrap}
+ .modes{flex-wrap:wrap}.modes button{flex:1 1 100%;padding:8px}
+ .workspace{display:flex;flex-direction:column}
+ .actionBar{position:static;flex-direction:column;padding:0;border:0;background:none;width:100%}
+ .senderActions{order:2}.sendOptions{order:3}
+ .fileSummary,.receiveProgress,.transferStats{grid-template-columns:minmax(0,1fr)}
+ .progtop{grid-column:1}.transferStats>div{display:block}
+ .camera-active .stage,.stage{height:220px;min-height:180px}
+ .camera-active #notice{max-height:none;overflow:visible}
+ .camera-active .cameraTools{display:block}
+ .camera-active #visionSettings:not([open]){width:100%}
+ .actions{flex-direction:column}.actions .btn{width:100%}
+ .placeholder{padding:12px}
+ footer{flex-direction:column}
+}
+@media(forced-colors:active){.btn,.modes button[aria-pressed=true]{border:1px solid ButtonText}progress{border:1px solid CanvasText}}
+
+#calibrationReceiveStatus{scroll-margin-block:16px 100px}
+.receiveWorkspace{row-gap:0}
+.receiveWorkspace>#readActivity{grid-column:2;grid-row:1;margin:0 0 12px}
+.receiveWorkspace>.receiverPanel{grid-column:1;grid-row:1 / span 2}
+.receiveWorkspace>.receiveConsole{grid-column:2;grid-row:2}
+@media(max-width:650px){
+ .receiveWorkspace>#readActivity{order:0;margin:0;width:100%}
+ .receiveWorkspace>.receiverPanel{order:1}
+ .receiveWorkspace>.receiveConsole{order:2}
+}
+
+/* The sending screen is a light source first: keep navigation and transfer
+   controls beside it instead of consuming the height available to the QR. */
+@media(min-width:951px){
+ body[data-mode=send] .wrap{display:grid;grid-template-columns:minmax(0,1fr) 304px;grid-template-rows:auto auto auto 1fr;gap:14px 28px;max-width:1480px;padding-top:20px}
+ body[data-mode=send] .appHeader{grid-column:2;grid-row:1;min-height:0;flex-wrap:wrap;gap:8px;padding:0 0 10px}
+ body[data-mode=send] .brand{margin-right:auto}
+ body[data-mode=send] .brand h1{font-size:19px}
+ body[data-mode=send] .appHeader>.textButton{font-size:12px;padding-inline:0}
+ body[data-mode=send] .modes{order:3;flex:1 1 100%;margin:0}
+ body[data-mode=send] .modes button{flex:1;padding-inline:8px;font-size:13px}
+ body[data-mode=send] .linkStatus{grid-column:2;grid-row:2;display:block;padding:0}
+ body[data-mode=send] .roomLine{gap:4px 12px}
+ body[data-mode=send] #peerStatus{display:block;text-align:left;margin-top:4px}
+ body[data-mode=send] .flowLine{grid-column:2;grid-row:3;display:block;margin:0;font-size:12px}
+ body[data-mode=send] #notice{margin-top:4px}
+ body[data-mode=send] #workspaceStart{position:absolute;top:20px}
+ body[data-mode=send] .sendWorkspace{display:contents}
+ body[data-mode=send] .sendControls{grid-column:2;grid-row:4;gap:12px}
+ body[data-mode=send] .sendStage{grid-column:1;grid-row:1 / span 4;align-self:start}
+ body[data-mode=send] .sendStage .stage{height:clamp(440px,calc(100dvh - 144px),900px);min-height:0}
+ body[data-mode=send] #rgbCanvas{width:100%;height:100%;object-fit:contain}
+ body[data-mode=send] .connection{grid-column:1 / -1;margin-top:0}
+ body[data-mode=send] footer{grid-column:1 / -1;margin-top:0}
+}
+
+/* Preserve the full camera frame on a phone held upright. Extra height scrolls
+   with the page; the receiver's primary actions remain within thumb reach. */
+@media(max-width:650px) and (orientation:portrait){
+ .camera-active .receiverPanel .stage{height:auto;min-height:0;aspect-ratio:var(--camera-aspect,3 / 4)}
+ .camera-active .receiverPanel #video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+}
