@@ -66,7 +66,7 @@ button,summary,input,textarea,select,a{scroll-margin-block:16px 100px}
 /* The sending screen is a light source first: keep navigation and transfer
    controls beside it instead of consuming the height available to the QR. */
 @media(min-width:951px){
- body[data-mode=send] .wrap{display:grid;grid-template-columns:minmax(0,1fr) 304px;grid-template-rows:auto auto auto 1fr;gap:14px 28px;max-width:1480px;padding-top:20px}
+ body[data-mode=send] .wrap{display:grid;grid-template-columns:minmax(0,1fr) 304px;grid-template-rows:repeat(7,auto);gap:14px 24px;max-width:none;padding:12px 20px;align-items:start}
  body[data-mode=send] .appHeader{grid-column:2;grid-row:1;min-height:0;flex-wrap:wrap;gap:8px;padding:0 0 10px}
  body[data-mode=send] .brand{margin-right:auto}
  body[data-mode=send] .brand h1{font-size:19px}
@@ -81,11 +81,16 @@ button,summary,input,textarea,select,a{scroll-margin-block:16px 100px}
  body[data-mode=send] #workspaceStart{position:absolute;top:20px}
  body[data-mode=send] .sendWorkspace{display:contents}
  body[data-mode=send] .sendControls{grid-column:2;grid-row:4;gap:12px}
- body[data-mode=send] .sendStage{grid-column:1;grid-row:1 / span 4;align-self:start}
- body[data-mode=send] .sendStage .stage{height:clamp(440px,calc(100dvh - 144px),900px);min-height:0}
+ body[data-mode=send] .sendStage{display:contents}
+ body[data-mode=send] .sendStage .stage{grid-column:1;grid-row:1 / span 7;position:sticky;top:12px;height:calc(100dvh - 24px);min-height:0;align-self:start}
  body[data-mode=send] #rgbCanvas{width:100%;height:100%;object-fit:contain}
- body[data-mode=send] .connection{grid-column:1 / -1;margin-top:0}
- body[data-mode=send] footer{grid-column:1 / -1;margin-top:0}
+ body[data-mode=send] .fileSummary{grid-column:2;grid-row:5;padding-top:12px;border-top:1px solid var(--line);grid-template-columns:1fr}
+ body[data-mode=send] .fileSummary small{grid-column:1;grid-row:auto}
+ body[data-mode=send] .meters{flex-wrap:wrap;gap:6px 12px}
+ body[data-mode=send] .connection{grid-column:2;grid-row:6;margin-top:0}
+ body[data-mode=send] .connectionContent{grid-template-columns:minmax(0,1fr);gap:12px}
+ body[data-mode=send] footer{grid-column:2;grid-row:7;margin-top:0;flex-wrap:wrap;gap:10px}
+ body[data-mode=send] footer span{width:100%}
 }
 
 /* Preserve the full camera frame on a phone held upright. Extra height scrolls
