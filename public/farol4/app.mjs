@@ -535,7 +535,7 @@ let cameraStarting=false;
 
 $('camera').onclick=async()=>{
 
-  if(cameraStarting)return;if(stream){if(transferId())setPaused(true);stopCamera();return;}
+  if(cameraStarting)return;if(stream){if(transferId())setPaused(true);stopCamera();notice(transferId()?'Câmera parada. Pausa enviada; aguardando confirmação do transmissor.':'Câmera parada.');return;}
 
   if(!navigator.mediaDevices?.getUserMedia){notice('A câmera requer HTTPS ou localhost.');return;}
 
@@ -890,14 +890,19 @@ async function feedback(){
 
 }
 
-setInterval(()=>{feedback();announceReady();if(connection.ready&&peerLastSeen&&Date.now()-peerLastSeen>12000)$('connectionStatus').textContent='Sem confirmação recente · QR continua; aguardando receptor';},3000);
+setInterval(()=>{feedback();announceReady();
+  if(peerLastSeen&&Date.now()-peerLastSeen>12000){
+    if(mode==='send'&&timer&&feedbackPeer){setPaused(true);notice('Contato com o receptor perdido. Envio pausado por segurança.');}
+    $('connectionStatus').textContent='Sem confirmação recente · aguardando reconexão';
+  }
+},3000);
 
 setInterval(()=>{updateLinkStatus();updatePauseUI();if(connection.ready){sendPauseState();connection.send({type:'hello',role:mode,file:transferId()});}},3000);
 
 setInterval(()=>{
   updateDiagnostics();
-  if(mode!=='receive'||!stream||!receiver||receiver.verified||pauseState.value.paused||opticalBlocked)return;
-  if(connection.ready){if(Date.now()-lastFeedbackAt>=3000)feedback();}
+  if(!transferId()||opticalBlocked||resettingReception)return;
+  if(connection.ready){if(mode==='receive'&&stream&&receiver&&!receiver.verified&&!pauseState.value.paused&&Date.now()-lastFeedbackAt>=3000)feedback();}
   else if(!connecting&&['CHANNEL_ERROR','TIMED_OUT','CLOSED','ERROR'].includes(connectionState)&&Date.now()-lastPairAttempt>=8000&&/^[a-f0-9]{64}$/i.test($('pairCode').value.trim())){lastPairAttempt=Date.now();connect(false);}
 },1000);
 
