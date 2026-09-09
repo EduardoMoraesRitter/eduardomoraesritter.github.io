@@ -40,7 +40,7 @@ let cameraStartedAt=0,lastProgressAt=0;
 
 const pauseState=new PauseState(crypto.randomUUID());let pauseConfirmed=false;
 
-let restoredRoom=null,sessionEnabled=true;
+let restoredRoom=null,sessionEnabled=true,pendingNewPacket=null,resettingReception=false;
 
 function rememberRoom(){
 
@@ -264,7 +264,7 @@ async function prepare(){calibration.cancel();
 
     if(generation!==loadGeneration)return;
 
-    if(restoredRoom&&candidate.meta.id!==restoredRoom.file){notice('Este não é o arquivo da sala salva. Selecione o mesmo arquivo ou descarte a sala em Conexão e ajustes.');return;}
+    if(restoredRoom&&candidate.meta.id!==restoredRoom.file){forgetRoom();await connection.close();pauseState.reset();if(generation!==loadGeneration)return;}
 
     sender=candidate;
 
@@ -413,13 +413,13 @@ function receivePacket(packet){
 
   if(calibration.receive(packet))return;
 
-  if(mode!=='receive')return;
+  if(mode!=='receive'||resettingReception)return;
 
   const pair=readPair(packet);
 
   if(pair){
 
-    if(receiver&&receiver.meta.id!==pair.file){notice('Descarte a recepção anterior antes de receber outro arquivo.');return;}
+    if(receiver&&receiver.meta.id!==pair.file){offerNewReception(packet);return;}
 
     // Optical data cannot silently redirect the browser to another Supabase project.
 
@@ -445,9 +445,9 @@ function receivePacket(packet){
 
   if(meta){
 
-    if(pairTarget&&pairTarget!==meta.id){notice('Este QR não corresponde ao arquivo da sala. Leia o QR do transmissor correto.');return;}
+    if(pairTarget&&pairTarget!==meta.id){offerNewReception(packet);return;}
 
-    if(receiver&&receiver.meta.id!==meta.id){notice('Outro arquivo detectado. Descarte a recepção atual antes de trocar.');return;}
+    if(receiver&&receiver.meta.id!==meta.id){offerNewReception(packet);return;}
 
     if(!receiver){receiver=new Receiver(meta);storageTouched=true;dirty=true;updateReceiver();notice('Arquivo reconhecido. Recebendo blocos RGB.');feedback();}
 
@@ -647,23 +647,32 @@ $('save').onclick=()=>{
 
 };
 
-$('discard').onclick=async()=>{
-
-  if(receiver&&!confirm('Descartar os blocos recebidos deste arquivo?'))return;
-
-  if(transferId())setPaused(true);forgetRoom();await connection.close();onConnectionState('CLOSED');pairTarget=null;lastPairCode='';$('pairCode').value='';pauseState.reset();
-
-  stopCamera();receiver=null;storageTouched=true;dirty=false;await saveSnapshot(null);
-
-  $('receiveName').textContent='Aguardando arquivo';$('received').textContent='0 blocos';$('percent').textContent='0%';$('progress').value=0;$('missingCount').textContent='—';$('missingList').value='';
-
-  $('receivePlaceholder').textContent='Ligue a câmera para receber';$('integrity').textContent='O arquivo completo será conferido com SHA-256.';
-
-  for(const id of ['save','discard','copyMissing'])$(id).disabled=true;notice('Recepção descartada.');
-
-  updateTiming();
-
-};
+function offerNewReception(packet){
+  const pair=readPair(packet);if(pair&&pair.url!==config.url){notice('O QR usa outro projeto. Confira a configuração antes de conectar.');return;}
+  pendingNewPacket=packet;$('newReceive').textContent='Receber novo arquivo detectado';
+  notice('Novo arquivo detectado. Toque em “Receber novo arquivo detectado” para trocar. O atual continua salvo até você confirmar.');
+}
+async function resetReception(keepCamera=false){
+  if(resettingReception)return false;
+  if(receiver&&!confirm(receiver.verified?'Começar outro arquivo? Salve o arquivo verificado antes de continuar. A cópia no navegador será removida.':'Começar outro arquivo? Os blocos da recepção atual serão removidos.'))return false;
+  resettingReception=true;
+  try{
+    if(transferId())setPaused(true);forgetRoom();receiver=null;storageTouched=true;dirty=false;
+    await connection.close();onConnectionState('CLOSED');pairTarget=null;lastPairCode='';$('pairCode').value='';pauseState.reset();pauseConfirmed=false;
+    feedbackPeer=null;peerLastSeen=0;lastPairAttempt=0;opticalBlocked=false;transmissionDone=false;
+    if(!keepCamera)stopCamera();await saveSnapshot(null);
+    receiveClock=new TransferClock();clockReceiver=null;
+    $('receiveName').textContent='Aguardando novo arquivo';$('received').textContent='0 blocos';$('percent').textContent='0%';$('progress').value=0;$('missingCount').textContent='—';$('missingList').value='';
+    $('receivePlaceholder').textContent='Ligue a câmera e leia o QR do novo arquivo';$('integrity').textContent='O arquivo completo será conferido com SHA-256.';
+    $('readActivity').textContent='Aguardando leitura de blocos.';$('save').hidden=true;
+    for(const id of ['save','discard','copyMissing'])$(id).disabled=true;
+    pendingNewPacket=null;$('newReceive').textContent='Iniciar nova recepção';updateTiming();updatePauseUI();updateLinkStatus();
+    return true;
+  }finally{resettingReception=false;}
+}
+$('newReceive').onclick=async()=>{const packet=pendingNewPacket;if(await resetReception(!!stream)){notice('Pronto para outro arquivo. Leia o QR de conexão do transmissor.');if(packet)receivePacket(packet);}};
+$('discard').onclick=async()=>{if(await resetReception())notice('Recepção descartada. Pronto para outro arquivo.');};
+$('newSend').onclick=()=>{$('file').value='';$('file').click();};
 
 async function openStore(){
 
