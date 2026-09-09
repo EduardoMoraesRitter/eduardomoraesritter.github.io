@@ -1,4 +1,4 @@
-import {controlKey,digest,seal,open} from './protocol.mjs';
+import {controlKey,digest,seal,open} from './protocol.mjs?v=20260909-2';
 
 // A random 256-bit pairing secret authenticates/encrypts control messages.
 // Public Broadcast is a transport only; no file bytes enter its payload.

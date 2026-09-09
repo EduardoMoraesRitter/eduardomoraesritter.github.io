@@ -2,8 +2,8 @@
 <html lang="pt-BR"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer"><meta name="color-scheme" content="light dark">
 <title>Farol 4 — Transferência por luz</title><meta name="description" content="Arquivos por QR RGB com recuperação de blocos e conexão entre aparelhos.">
-<link rel="icon" href="../favicon.svg"><link rel="stylesheet" href="./style.css">
-<script src="./vendor/qrcode.js" defer></script><script src="./vendor/jsQR.js" defer></script><script src="./vendor/supabase.js" defer></script><script type="module" src="./app.mjs"></script>
+<link rel="icon" href="../favicon.svg"><link rel="stylesheet" href="./style.css?v=20260909-2">
+<script src="./vendor/qrcode.js?v=20260909-2" defer></script><script src="./vendor/jsQR.js?v=20260909-2" defer></script><script src="./vendor/supabase.js?v=20260909-2" defer></script><script type="module" src="./app.mjs?v=20260909-2"></script>
 </head><body data-mode="send"><a class="skipLink" href="#workspaceStart">Ir para a transferência</a><main class="wrap">
 <header class="appHeader"><a class="brand" href="../" aria-label="Farol 4 — início"><span class="beacon" aria-hidden="true"></span><h1>Farol <span>4</span></h1></a><nav class="modes" aria-label="Modo de transferência"><button id="sendMode" aria-pressed="true">Enviar arquivo</button><button id="receiveMode" aria-pressed="false">Receber arquivo</button></nav><button id="openSettings" class="textButton" aria-controls="connectionDetails">Conexão e ajustes</button></header>
 <div class="linkStatus" id="linkStatus" role="status"><div class="roomLine"><strong id="serviceStatus">Supabase · não conectado</strong><span id="roomLabel">Sala: —</span><button id="retryConnection" class="textButton" disabled>Reconectar</button></div><span id="peerStatus">Escolha um arquivo para criar a sala.</span></div>
