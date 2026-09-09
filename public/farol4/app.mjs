@@ -674,6 +674,19 @@ $('newReceive').onclick=async()=>{const packet=pendingNewPacket;if(await resetRe
 $('discard').onclick=async()=>{if(await resetReception())notice('Recepção descartada. Pronto para outro arquivo.');};
 $('newSend').onclick=()=>{$('file').value='';$('file').click();};
 
+$('resetAll').onclick=async()=>{
+  if(!confirm('Recomeçar o Farol 4 do zero? Isso remove os blocos, salas e configurações salvos neste navegador. Salve seu arquivo antes de continuar.'))return;
+  $('resetAll').disabled=true;
+  try{
+    await initialization;resettingReception=true;storageTouched=true;sessionEnabled=false;dirty=false;receiver=null;sender=null;restoredRoom=null;
+    stop();stopCamera();await connection.close();
+    if(db)await new Promise((resolve,reject)=>{const tx=db.transaction('sessions','readwrite');tx.objectStore('sessions').clear();tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});
+    for(const storage of [localStorage,sessionStorage])for(const key of Object.keys(storage))if(key.startsWith('farol4'))storage.removeItem(key);
+    if('caches' in window)for(const key of await caches.keys())if(/^farol4(?:[-:/]|$)/.test(key))await caches.delete(key);
+    const url=new URL(location.href);url.hash='';url.search='?v=20260909-7&reset='+Date.now();location.replace(url.href);
+  }catch(e){resettingReception=false;$('resetAll').disabled=false;notice('Não foi possível concluir a limpeza: '+e.message);}
+};
+
 async function openStore(){
 
   return new Promise(resolve=>{
