@@ -63,16 +63,11 @@ button,summary,input,textarea,select,a{scroll-margin-block:16px 100px}
  .receiveWorkspace>.receiveConsole{order:2}
 }
 
-/* The sending screen is a light source first: keep navigation and transfer
-   controls beside it instead of consuming the height available to the QR. */
+/* Shared header above both modes; transfer details stay beside the QR. */
 @media(min-width:951px){
  body[data-mode=send] .wrap{display:grid;grid-template-columns:minmax(0,1fr) 304px;grid-template-rows:repeat(7,auto);gap:14px 24px;max-width:none;padding:12px 20px;align-items:start}
- body[data-mode=send] .appHeader{grid-column:2;grid-row:1;min-height:0;flex-wrap:wrap;gap:8px;padding:0 0 10px}
- body[data-mode=send] .brand{margin-right:auto}
- body[data-mode=send] .brand h1{font-size:19px}
- body[data-mode=send] .appHeader>.textButton{font-size:12px;padding-inline:0}
- body[data-mode=send] .modes{order:3;flex:1 1 100%;margin:0}
- body[data-mode=send] .modes button{flex:1;padding-inline:8px;font-size:13px}
+ .wrap{max-width:none;padding-inline:20px}
+ body[data-mode=send] .appHeader{grid-column:1 / -1;grid-row:1;min-height:68px}
  body[data-mode=send] .linkStatus{grid-column:2;grid-row:2;display:block;padding:0}
  body[data-mode=send] .roomLine{gap:4px 12px}
  body[data-mode=send] #peerStatus{display:block;text-align:left;margin-top:4px}
@@ -82,7 +77,7 @@ button,summary,input,textarea,select,a{scroll-margin-block:16px 100px}
  body[data-mode=send] .sendWorkspace{display:contents}
  body[data-mode=send] .sendControls{grid-column:2;grid-row:4;gap:12px}
  body[data-mode=send] .sendStage{display:contents}
- body[data-mode=send] .sendStage .stage{grid-column:1;grid-row:1 / span 7;position:sticky;top:12px;height:calc(100dvh - 24px);min-height:0;align-self:start}
+ body[data-mode=send] .sendStage .stage{grid-column:1;grid-row:2 / span 6;position:sticky;top:12px;height:calc(100dvh - 106px);min-height:0;align-self:start}
  body[data-mode=send] #rgbCanvas{width:100%;height:100%;object-fit:contain}
  body[data-mode=send] .fileSummary{grid-column:2;grid-row:5;padding-top:12px;border-top:1px solid var(--line);grid-template-columns:1fr}
  body[data-mode=send] .fileSummary small{grid-column:1;grid-row:auto}
@@ -99,3 +94,5 @@ button,summary,input,textarea,select,a{scroll-margin-block:16px 100px}
  .camera-active .receiverPanel .stage{height:auto;min-height:0;aspect-ratio:var(--camera-aspect,3 / 4)}
  .camera-active .receiverPanel #video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 }
+
+@media(max-width:650px){.camera-active .appHeader{min-height:60px;flex-wrap:wrap}.camera-active .brand{display:flex}.camera-active #openSettings{display:block}.camera-active .modes{order:3}}
