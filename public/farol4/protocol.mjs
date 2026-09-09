@@ -43,8 +43,11 @@ export class Sender {
   }
   request(indices,remote=false) {
     if(!Array.isArray(indices)||indices.length>BATCH||!indices.every(i=>Number.isInteger(i)&&i>=0&&i<this.meta.total)) return false;
-    // Replace the outstanding batch: a fresh report supersedes older missing state.
-    this.repairs=[...new Set(indices)]; this.remotePlan=remote; return true;
+    // Keep unsent requested blocks ahead of retries so frequent reports cannot starve the tail.
+    const requested=new Set(indices);
+    const pending=remote&&this.remotePlan?this.repairs.filter(i=>requested.has(i)):[];
+    this.repairs=[...new Set([...pending,...requested])];
+    this.remotePlan=remote; return true;
   }
   next() {
     if(this.remotePlan&&!this.repairs.length)return null;

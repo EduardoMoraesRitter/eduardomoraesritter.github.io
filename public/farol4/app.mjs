@@ -2,7 +2,7 @@ import {TransferClock,elapsed,dataSize} from './transfer-clock.mjs?v=20260909-5'
 
 import {cameraConstraints,syncCameraAspect} from './camera-view.mjs?v=20260909-3';
 
-import {Sender,Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from './protocol.mjs?v=20260909-3';
+import {Sender,Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from './protocol.mjs?v=20260909-8';
 
 import {ReturnChannel} from './realtime.mjs?v=20260909-3';
 
@@ -10,7 +10,7 @@ import {analyzeFrame,autoZoom} from './camera.mjs?v=20260909-3';
 
 import {pairPacket,readPair} from './pairing.mjs?v=20260909-3';
 
-import {TransferRate,duration} from './transfer-rate.mjs?v=20260909-3';
+import {TransferRate,duration,needsRecovery} from './transfer-rate.mjs?v=20260909-8';
 
 import {PauseState} from './pause-state.mjs?v=20260909-3';
 
@@ -731,7 +731,7 @@ const connection=new ReturnChannel(onControl,onConnectionState,(...args)=>window
 
 let config={url:'',key:''},connecting=false,feedbackBusy=false;
 
-let lastReadySent=0;
+let lastReadySent=0,lastFeedbackAt=0;
 
 function announceReady(){
 
@@ -865,7 +865,7 @@ function onControl(m){
 
     if(!Array.isArray(m.indices)||m.indices.length>sender.meta.total-m.count||!sender.request(m.indices,true))return;
 
-    feedbackPeer=m.from;peerLastSeen=Date.now();updateLinkStatus();$('nextBlock').textContent=sender.repairs.length?sender.repairs[0]+1:'Aguardando verificação';$('connectionStatus').textContent='Receptor conectado · recuperação automática ativa';
+    feedbackPeer=m.from;peerLastSeen=Date.now();updateLinkStatus();$('nextBlock').textContent=sender.repairs.length?sender.repairs[0]+1:'Aguardando verificação';$('connectionStatus').textContent=m.stalled?'Receptor sem blocos novos · fila de recuperação atualizada':'Receptor conectado · recuperação automática ativa';
 
     $('peerProgress').textContent=`Receptor já tem ${m.count} de ${sender.meta.total} blocos. Faltam ${sender.meta.total-m.count}. ${sender.repairs.length?"Próximo solicitado: "+(sender.repairs[0]+1):"Aguardando verificação"}.`;
 
@@ -881,9 +881,12 @@ async function feedback(){
 
   if(feedbackBusy||!connection.ready||mode!=='receive'||!receiver)return;
 
-  feedbackBusy=true;
-
-  try{await connection.send(receiver.verified?{type:'done',role:mode,file:receiver.meta.id,count:receiver.count,hash:receiver.meta.hash}:{type:'missing',role:mode,file:receiver.meta.id,count:receiver.count,indices:receiver.missing()});}finally{feedbackBusy=false;}
+  feedbackBusy=true;lastFeedbackAt=Date.now();
+  const r=receiver,stalled=needsRecovery({active:!!stream,paused:pauseState.value.paused,complete:r.verified,lastDecoded,progressSince:lastProgressAt||cameraStartedAt,now:performance.now()});
+  try{
+    const sent=await connection.send(r.verified?{type:'done',role:mode,file:r.meta.id,count:r.count,hash:r.meta.hash}:{type:'missing',role:mode,file:r.meta.id,count:r.count,indices:r.missing(),stalled});
+    if(stalled&&receiver===r)$('connectionStatus').textContent=sent?'Sem blocos novos · pedido de recuperação reenviado':'Retorno falhou · tentando novamente';
+  }catch{$('connectionStatus').textContent='Retorno falhou · tentando novamente';}finally{feedbackBusy=false;}
 
 }
 
@@ -891,7 +894,12 @@ setInterval(()=>{feedback();announceReady();if(connection.ready&&peerLastSeen&&D
 
 setInterval(()=>{updateLinkStatus();updatePauseUI();if(connection.ready){sendPauseState();connection.send({type:'hello',role:mode,file:transferId()});}},3000);
 
-setInterval(updateDiagnostics,1000);
+setInterval(()=>{
+  updateDiagnostics();
+  if(mode!=='receive'||!stream||!receiver||receiver.verified||pauseState.value.paused||opticalBlocked)return;
+  if(connection.ready){if(Date.now()-lastFeedbackAt>=3000)feedback();}
+  else if(!connecting&&['CHANNEL_ERROR','TIMED_OUT','CLOSED','ERROR'].includes(connectionState)&&Date.now()-lastPairAttempt>=8000&&/^[a-f0-9]{64}$/i.test($('pairCode').value.trim())){lastPairAttempt=Date.now();connect(false);}
+},1000);
 
 window.addEventListener('online',updateDiagnostics);
 

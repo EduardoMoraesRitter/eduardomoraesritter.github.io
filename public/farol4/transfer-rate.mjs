@@ -18,3 +18,7 @@ export function duration(seconds){
   if(seconds<3600)return `~${Math.ceil(seconds/60)} min`;
   return `~${Math.floor(seconds/3600)} h ${Math.ceil(seconds%3600/60)} min`;
 }
+
+export function needsRecovery({active,paused,complete,lastDecoded,progressSince,now}) {
+  return active&&!paused&&!complete&&lastDecoded>0&&now-lastDecoded<3000&&now-progressSince>=8000;
+}
