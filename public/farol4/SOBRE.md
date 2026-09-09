@@ -33,7 +33,7 @@ O progresso e a estimativa ficam abaixo da câmera no celular. A velocidade úti
 
 **Pausar** no transmissor e **Pausar recepção** no receptor enviam o estado pelo canal Supabase da sala. Ambos interrompem o processamento de blocos; a câmera permanece ligada. **Transmitir** ou **Continuar recepção** retoma os dois. A interface diferencia pausa local aguardando confirmação de pausa confirmada pelo outro aparelho. Sem rede, a sincronização não é imediata.
 
-Mensagens autenticadas incluem identificação do arquivo e revisão crescente. Repetições não alternam o estado; mensagens antigas são ignoradas. Em ações simultâneas da mesma revisão, a pausa prevalece. Reconectar à mesma sala reapresenta o estado atual. Isso cobre reconexão de rede; recarregar a página exige selecionar o arquivo e parear novamente.
+Mensagens autenticadas incluem identificação do arquivo e revisão crescente. Repetições não alternam o estado; mensagens antigas são ignoradas. Em ações simultâneas da mesma revisão, a pausa prevalece. Reconectar à mesma sala reapresenta o estado atual. Isso cobre reconexão de rede; recarregar restaura a sala salva neste navegador; o transmissor ainda precisa selecionar o mesmo arquivo e o receptor precisa ligar a câmera.
 
 Ao concluir, o receptor tenta gravar imediatamente o estado completo no IndexedDB antes da confirmação ao transmissor. O teste de sessão inclui download e restauração logo após concluir. Armazenamento indisponível ainda é informado pela interface; a garantia depende do navegador permitir persistência.
 
@@ -57,8 +57,8 @@ começa em 1. Se pausado, clique em Transmitir.
 O ponto **Começar no bloco** permite retomar uma posição. Para restaurar uma
 recepção parcial, use exatamente o mesmo arquivo e tamanho de bloco. O IndexedDB
 salva periodicamente os blocos recebidos; fechar abruptamente pode perder os
-últimos segundos. O transmissor precisa selecionar o arquivo novamente após
-recarregar. O código de pareamento não é salvo automaticamente.
+últimos segundos. O transmissor precisa selecionar o mesmo arquivo novamente após
+recarregar. A identificação e o tamanho de bloco são conferidos antes de retomar; um arquivo diferente é rejeitado enquanto houver sala salva. A sala é salva separadamente para transmissor e receptor, por até 7 dias. O segredo fica no armazenamento local do navegador; não é enviado a uma tabela. **Esquecer sala salva neste navegador**, em Conexão e ajustes, remove essa lembrança sem apagar os blocos. **Descartar recepção** remove os blocos e a sala do receptor.
 
 ## Protocolo
 
@@ -168,3 +168,23 @@ o scanner e o canal Supabase real. Em 8 de setembro de 2026, recebeu inicialment
 parada automática. Também verificou restauração, modo receptor no celular, zoom digital, pareamento óptico, início automático, respeito à pausa manual e ausência de overflow em 390px.
 Isso não substitui um teste físico entre dois aparelhos; esse teste permanece
 pendente.
+
+
+## Acessibilidade e validação em aparelhos
+
+A interface inclui atalho de teclado para a transferência, foco visível e ajuste de layout para largura útil pequena, incluindo ampliação CSS de 200% em 390 px. Os controles deixam de ficar fixos quando essa ampliação reduz demais a área disponível. Esse teste de reflow não certifica zoom de todos os sistemas móveis nem leitor de tela.
+
+O roteiro físico está em `docs/farol4-teste-fisico.md` no repositório. Ainda é necessário executá-lo entre um computador e um celular real, usando a mesma versão numa prévia HTTPS acessível aos dois. `localhost` no celular aponta para o próprio celular. Os testes automatizados usam câmera sintética e Supabase real, sem comprovar foco, exposição ou desempenho óptico de um aparelho físico.
+
+
+## Teste de leitura antes do envio
+
+No receptor, ligue a câmera, abra **Teste de leitura** e toque em **Medir leitura**. No transmissor, abra **Testar leitura antes de enviar** e inicie **Testar QR por 8 segundos**. O teste usa a velocidade e o tamanho de bloco selecionados nos ajustes e mantém o envio do arquivo pausado.
+
+São quadros RGB de exemplo (`F4|C|…`), com sequência e verificação de corrupção. O receptor conta canais únicos, sem dar crédito às leituras repetidas do mesmo quadro. Ao terminar, informa a proporção lida, uma sugestão conservadora de quadros por segundo e orientação de enquadramento. Ajuste a velocidade manualmente e repita se necessário. Com poucos quadros distintos, não sugere velocidade. Os quadros de teste não alteram os blocos do arquivo e não exigem retorno via Supabase.
+
+A medição é uma amostra das condições atuais; não certifica câmera, foco nem taxa futura. Abertura tardia da medição reduz a proporção observada e pode levar a uma sugestão mais conservadora. O zoom continua disponível nos controles da câmera; não há medição calibrada de luz.
+
+## Diagnóstico da transferência
+
+O status distingue internet ausente segundo o navegador, tentativa/erro de conexão, falta de resposta do outro aparelho, câmera desligada, ausência de QR recente e QR reconhecido sem blocos novos. A observação óptica tem uma margem inicial de 8 segundos; ausência de resposta remota usa 12 segundos. São indícios para orientar a ação, não prova da causa de uma falha. Avisos específicos de configuração ou retomada permanecem na página.

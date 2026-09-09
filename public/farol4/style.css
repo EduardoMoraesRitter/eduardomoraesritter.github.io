@@ -20,3 +20,36 @@
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 
+/* Reflow keeps enlarged text and keyboard targets inside their available column. */
+body{container-type:inline-size}
+.wrap :where(button,summary,p,span,strong,label,details,nav,div){min-width:0}
+:where(button,summary,.lab,.meters,.transferStats,#transferState){overflow-wrap:anywhere}
+#transferState{white-space:normal;overflow-wrap:anywhere;min-width:0}
+.meters{flex-wrap:wrap}
+.fileSummary{grid-template-columns:minmax(0,1fr) auto}
+.receiveProgress{grid-template-columns:minmax(0,1fr) auto}
+button,summary,input,textarea,select,a{scroll-margin-block:16px 100px}
+#retryConnection{min-height:44px}
+.skipLink{position:absolute;left:12px;top:8px;z-index:20;padding:10px 16px;background:var(--surface);transform:translateY(-160%)}
+.skipLink:focus{transform:none}
+#workspaceStart:focus{outline-offset:6px}
+@container(max-width:300px){
+ .wrap{padding-inline:10px;padding-bottom:20px}
+ .appHeader,.camera-active .appHeader{flex-wrap:wrap}
+ .modes{flex-wrap:wrap}.modes button{flex:1 1 100%;padding:8px}
+ .workspace{display:flex;flex-direction:column}
+ .actionBar{position:static;flex-direction:column;padding:0;border:0;background:none;width:100%}
+ .senderActions{order:2}.sendOptions{order:3}
+ .fileSummary,.receiveProgress,.transferStats{grid-template-columns:minmax(0,1fr)}
+ .progtop{grid-column:1}.transferStats>div{display:block}
+ .camera-active .stage,.stage{height:220px;min-height:180px}
+ .camera-active #notice{max-height:none;overflow:visible}
+ .camera-active .cameraTools{display:block}
+ .camera-active #visionSettings:not([open]){width:100%}
+ .actions{flex-direction:column}.actions .btn{width:100%}
+ .placeholder{padding:12px}
+ footer{flex-direction:column}
+}
+@media(forced-colors:active){.btn,.modes button[aria-pressed=true]{border:1px solid ButtonText}progress{border:1px solid CanvasText}}
+
+#calibrationReceiveStatus{scroll-margin-block:16px 100px}
