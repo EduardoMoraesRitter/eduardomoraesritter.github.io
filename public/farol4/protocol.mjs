@@ -34,19 +34,20 @@ export class Sender {
     if(!validMeta(meta)) throw Error('Configuração de blocos inválida.');
     return new Sender(bytes,meta);
   }
-  constructor(bytes,meta) { this.bytes=bytes; this.meta=meta; this.cursor=0; this.repairs=[]; this.sent=0; }
+  constructor(bytes,meta) { this.bytes=bytes; this.meta=meta; this.cursor=0; this.repairs=[]; this.sent=0; this.remotePlan=false; }
   metadata() { return 'F4|M|'+b64(enc.encode(JSON.stringify(this.meta))); }
   packet(i) {
     if (!Number.isInteger(i)||i<0||i>=this.meta.total) throw Error('Bloco inválido');
     const data=this.bytes.subarray(i*this.meta.bs,Math.min((i+1)*this.meta.bs,this.bytes.length));
     return `F4|B|${this.meta.id}|${i}|${crc32(data)}|${b64(data)}`;
   }
-  request(indices) {
+  request(indices,remote=false) {
     if(!Array.isArray(indices)||indices.length>BATCH||!indices.every(i=>Number.isInteger(i)&&i>=0&&i<this.meta.total)) return false;
     // Replace the outstanding batch: a fresh report supersedes older missing state.
-    this.repairs=[...new Set(indices)]; return true;
+    this.repairs=[...new Set(indices)]; this.remotePlan=remote; return true;
   }
   next() {
+    if(this.remotePlan&&!this.repairs.length)return null;
     const i=this.repairs.length?this.repairs.shift():this.cursor++%this.meta.total;
     this.sent++; return this.packet(i);
   }

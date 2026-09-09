@@ -1,4 +1,4 @@
-import {b64,unb64} from './protocol.mjs?v=20260909-2';
+import {b64,unb64} from './protocol.mjs?v=20260909-3';
 export function pairPacket({url,key,code,file}){
   return 'F4|P|'+b64(new TextEncoder().encode(JSON.stringify({url,key,code,file})));
 }

@@ -18,7 +18,7 @@ async page => {
     setInterval(()=>{paint();stream.getVideoTracks()[0].requestFrame();},100);return stream;
    };
   },{vw,vh});
-  await p.goto('http://127.0.0.1:4322/farol4-staging/index.html');
+  await p.goto('http://127.0.0.1:4322/farol4/index.html');
   await p.getByRole('button',{name:'Receber arquivo',exact:true}).click();
   await p.getByRole('button',{name:'Ligar câmera e escanear',exact:true}).click();
   await p.waitForFunction(()=>!document.getElementById('zoom').disabled);

@@ -1,4 +1,4 @@
-import {b64,unb64,crc32} from './protocol.mjs?v=20260909-2';
+import {b64,unb64,crc32} from './protocol.mjs?v=20260909-3';
 
 // Three independent, numbered color channels. Duplicate camera scans never add credit.
 export function calibrationRun(fps=6,bs=400,id=crypto.randomUUID().replaceAll('-','')) {

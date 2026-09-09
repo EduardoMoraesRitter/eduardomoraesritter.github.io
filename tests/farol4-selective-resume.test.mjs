@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {Sender,Receiver} from '../public/farol4-staging/protocol.mjs';
+import {Sender,Receiver} from '../public/farol4/protocol.mjs';
 test('remote plan skips already received blocks and waits after its batch',async()=>{
  const s=await Sender.create(new Uint8Array(256*3000),'large.bin',256),r=new Receiver(s.meta);
  for(let i=0;i<3000;i++)if(i!==17&&i!==2111)r.accept(s.packet(i));

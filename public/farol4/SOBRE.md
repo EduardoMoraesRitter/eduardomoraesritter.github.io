@@ -188,3 +188,8 @@ A medição é uma amostra das condições atuais; não certifica câmera, foco 
 ## Diagnóstico da transferência
 
 O status distingue internet ausente segundo o navegador, tentativa/erro de conexão, falta de resposta do outro aparelho, câmera desligada, ausência de QR recente e QR reconhecido sem blocos novos. A observação óptica tem uma margem inicial de 8 segundos; ausência de resposta remota usa 12 segundos. São indícios para orientar a ação, não prova da causa de uma falha. Avisos específicos de configuração ou retomada permanecem na página.
+
+
+## QR ampliado e retomada seletiva
+
+No desktop, o QR ocupa quase toda a altura e as informações ficam na lateral. A câmera solicita orientação conforme o aparelho e preserva a proporção real. Leituras novas, repetidas e inválidas aparecem no receptor. O progresso é informado mesmo pausado; após receber o relatório, o transmissor envia os faltantes e aguarda o próximo lote em vez de reiniciar o arquivo. Atualize os dois aparelhos.
