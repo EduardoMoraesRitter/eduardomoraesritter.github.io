@@ -193,3 +193,6 @@ O status distingue internet ausente segundo o navegador, tentativa/erro de conex
 ## QR ampliado e retomada seletiva
 
 No desktop, o QR ocupa quase toda a altura e as informações ficam na lateral. A câmera solicita orientação conforme o aparelho e preserva a proporção real. Leituras novas, repetidas e inválidas aparecem no receptor. O progresso é informado mesmo pausado; após receber o relatório, o transmissor envia os faltantes e aguarda o próximo lote em vez de reiniciar o arquivo. Atualize os dois aparelhos.
+## Tempo acumulado da recepção
+
+O receptor mostra bytes/MB recebidos, tempo total desde o primeiro bloco, tempo com a câmera ativa em recepção e tempo em pausas/interrupções. O tempo total inclui o intervalo entre fechar e reabrir a página; a recepção ativa exclui pausa, câmera desligada e página oculta. Câmera ligada sem novos blocos ainda conta como tempo de recepção ativa. A contagem é persistida junto ao progresso e congelada ao verificar a conclusão. Arquivos antigos não têm histórico retroativo; a interface informa essa limitação.

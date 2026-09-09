@@ -1,3 +1,4 @@
+import {TransferClock,elapsed,dataSize} from './transfer-clock.mjs?v=20260909-5';
 
 import {cameraConstraints,syncCameraAspect} from './camera-view.mjs?v=20260909-3';
 
@@ -305,7 +306,18 @@ $('sendMode').onclick=()=>setMode('send');$('receiveMode').onclick=()=>setMode('
 
 let rateMeter=new TransferRate(),rateReceiver=null,rateStream=null;
 
+let receiveClock=new TransferClock(),clockReceiver=null;
+function updateTransferSummary(){
+  if(!receiver){$('transferSummary').textContent='';return;}
+  if(clockReceiver!==receiver){clockReceiver=receiver;receiveClock=new TransferClock();}
+  const now=Date.now();receiveClock.update(now,mode==='receive'&&!!stream&&!pauseState.value.paused&&!document.hidden&&!receiver.verified,receiver.count>0);
+  if(receiver.verified)receiveClock.finish(now);
+  const {totalMs,activeMs,pausedMs}=receiveClock.summary(now);
+  const bytes=receiver.count*receiver.meta.bs-(receiver.flags[receiver.meta.total-1]?receiver.meta.total*receiver.meta.bs-receiver.meta.size:0);
+  $('transferSummary').textContent=`${dataSize(bytes)} de ${dataSize(receiver.meta.size)} recebidos · Tempo total: ${elapsed(totalMs)} · Recepção ativa: ${elapsed(activeMs)} · Pausas e interrupções: ${elapsed(pausedMs)}${receiveClock.partial?' · Histórico anterior sem tempo registrado.':''}`;
+}
 function updateTiming(){
+  updateTransferSummary();
 
   if(rateReceiver!==receiver||rateStream!==stream){rateMeter=new TransferRate();rateReceiver=receiver;rateStream=stream;}
 
@@ -673,7 +685,7 @@ async function saveSnapshot(value){
 
 }
 
-async function persist(){if(dirty&&storageReady&&receiver){dirty=false;await saveSnapshot(receiver.snapshot());}}
+async function persist(){if(dirty&&storageReady&&receiver){dirty=false;updateTransferSummary();await saveSnapshot({...receiver.snapshot(),timing:receiveClock.snapshot()});}}
 
 async function restore(){
 
@@ -683,13 +695,13 @@ async function restore(){
 
     const saved=await new Promise(resolve=>{const q=db.transaction('sessions').objectStore('sessions').get('current');q.onsuccess=()=>resolve(q.result);q.onerror=()=>resolve(null);});
 
-    if(saved&&!storageTouched&&!receiver){receiver=Receiver.restore(saved);updateReceiver();notice('Recepção anterior restaurada. Use o mesmo arquivo e tamanho de bloco no transmissor.');if(receiver.count===receiver.meta.total)verifyReceiver();}
+    if(saved&&!storageTouched&&!receiver){receiver=Receiver.restore(saved);clockReceiver=receiver;receiveClock=new TransferClock(saved.timing);if(!saved.timing&&receiver.count>0)receiveClock.partial=true;updateReceiver();notice('Recepção anterior restaurada. Use o mesmo arquivo e tamanho de bloco no transmissor.');if(receiver.count===receiver.meta.total)verifyReceiver();}
 
   }catch{storageReady=true;notice('Progresso local indisponível; mantenha esta página aberta.');}
 
 }
 
-setInterval(()=>{persist();rememberRoom();},2500);document.addEventListener('visibilitychange',()=>{if(document.hidden){persist();rememberRoom();}});window.addEventListener('pagehide',()=>{persist();rememberRoom();});
+setInterval(()=>{if(receiver&&receiveClock.startedAt&&!receiveClock.completedAt)dirty=true;persist();rememberRoom();},2500);document.addEventListener('visibilitychange',()=>{updateTransferSummary();if(document.hidden){dirty=!!receiver;persist();rememberRoom();}});window.addEventListener('pagehide',()=>{persist();rememberRoom();});
 
 
 
