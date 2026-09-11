@@ -22,7 +22,6 @@ const title = 'GECX Helpdesk POC — demonstração';
       .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 18px rgba(114, 212, 175, .75); }
       .back { color: var(--muted); text-decoration: none; font-size: .9rem; }
       .back:hover { color: var(--ink); }
-      .page-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px 20px; }
       h1 { max-width: 760px; margin: 24px 0 16px; font-size: clamp(2.5rem, 6vw, 4.8rem); letter-spacing: -.055em; line-height: .98; }
       .lead { max-width: 700px; margin: 0; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.24rem); }
       .layout { display: grid; grid-template-columns: 1.15fr .85fr; gap: 22px; margin-top: 46px; }
@@ -44,10 +43,7 @@ const title = 'GECX Helpdesk POC — demonstração';
     <main>
       <div class="topbar">
         <div class="eyebrow">GECX · Helpdesk POC</div>
-        <nav class="page-links" aria-label="Páginas relacionadas">
-          <a class="back" href="/gemini-cx-teste/email/">Relatório e email</a>
-          <a class="back" href="/">← voltar ao site</a>
-        </nav>
+        <a class="back" href="/">← voltar ao site</a>
       </div>
       <h1>Teste o atendimento por chat e voz.</h1>
       <p class="lead">Demonstração pública do agente virtual de suporte interno. Abra o botão no canto inferior direito para iniciar uma conversa.</p>
