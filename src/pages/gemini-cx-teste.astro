@@ -1,0 +1,18 @@
+---
+const destination = '/gecx-poc/';
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="refresh" content={`0;url=${destination}`} />
+    <link rel="canonical" href={destination} />
+    <title>GECX Helpdesk POC</title>
+    <script is:inline>{`window.location.replace('${destination}');`}</script>
+  </head>
+  <body>
+    <p>A abrir a demonstração GECX… <a href={destination}>continuar</a></p>
+  </body>
+</html>
