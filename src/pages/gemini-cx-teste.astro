@@ -1,5 +1,5 @@
 ---
-const destination = '/gecx-poc/';
+const title = 'GECX Helpdesk POC — demonstração';
 ---
 
 <!doctype html>
@@ -7,12 +7,87 @@ const destination = '/gecx-poc/';
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="refresh" content={`0;url=${destination}`} />
-    <link rel="canonical" href={destination} />
-    <title>GECX Helpdesk POC</title>
-    <script is:inline>{`window.location.replace('${destination}');`}</script>
+    <meta name="description" content="Demonstração pública do agente GECX Helpdesk com chat e voz." />
+    <title>{title}</title>
+    <script defer src="https://www.gstatic.com/chat-messenger/sdk/prod/latest/chat-messenger.js"></script>
+    <link rel="stylesheet" href="https://www.gstatic.com/chat-messenger/sdk/prod/latest/themes/chat-messenger-default.css" />
+    <link rel="stylesheet" href="https://www.gstatic.com/chat-messenger/sdk/prod/latest/themes/chat-messenger-layout.css" />
+    <style>
+      :root { color-scheme: dark; --ink: #f2f6ff; --muted: #a8b7ca; --line: rgba(167, 192, 224, 0.2); --surface: rgba(17, 34, 58, 0.78); --accent: #7aaaff; --green: #72d4af; }
+      * { box-sizing: border-box; }
+      body { min-height: 100vh; margin: 0; color: var(--ink); background: radial-gradient(circle at 80% 4%, rgba(74, 119, 212, 0.36), transparent 31rem), radial-gradient(circle at 15% 95%, rgba(28, 124, 108, 0.2), transparent 26rem), #07111f; font: 16px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { width: min(1050px, calc(100% - 40px)); margin: 0 auto; padding: 70px 0 110px; }
+      .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+      .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: var(--accent); font-size: .74rem; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+      .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 18px rgba(114, 212, 175, .75); }
+      .back { color: var(--muted); text-decoration: none; font-size: .9rem; }
+      .back:hover { color: var(--ink); }
+      h1 { max-width: 760px; margin: 24px 0 16px; font-size: clamp(2.5rem, 6vw, 4.8rem); letter-spacing: -.055em; line-height: .98; }
+      .lead { max-width: 700px; margin: 0; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.24rem); }
+      .layout { display: grid; grid-template-columns: 1.15fr .85fr; gap: 22px; margin-top: 46px; }
+      .panel { border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: 0 22px 70px rgba(0, 0, 0, .2); backdrop-filter: blur(16px); }
+      .intro, .details { padding: 28px; }
+      h2 { margin: 0 0 10px; font-size: 1.08rem; letter-spacing: -.01em; }
+      .intro p { margin: 0; color: var(--muted); }
+      .badges { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 22px; }
+      .badge { border: 1px solid var(--line); border-radius: 999px; padding: 7px 11px; color: #dce7f5; background: rgba(255, 255, 255, .04); font-size: .84rem; }
+      .badge strong { color: var(--green); font-weight: 700; }
+      .details ol { margin: 16px 0 0; padding-left: 21px; color: var(--muted); }
+      .details li + li { margin-top: 9px; }
+      .note { margin-top: 23px; padding: 13px 14px; border-left: 3px solid var(--accent); color: #cfdbeb; background: rgba(122, 170, 255, .12); font-size: .89rem; }
+      footer { margin-top: 28px; color: #8294aa; font-size: .8rem; }
+      @media (max-width: 760px) { main { width: min(100% - 28px, 680px); padding-top: 42px; } .topbar { align-items: flex-start; } .layout { grid-template-columns: 1fr; margin-top: 32px; } .intro, .details { padding: 22px; } }
+    </style>
   </head>
   <body>
-    <p>A abrir a demonstração GECX… <a href={destination}>continuar</a></p>
+    <main>
+      <div class="topbar">
+        <div class="eyebrow">GECX · Helpdesk POC</div>
+        <a class="back" href="/">← voltar ao site</a>
+      </div>
+      <h1>Teste o atendimento por chat e voz.</h1>
+      <p class="lead">Demonstração pública do agente virtual de suporte interno. Abra o botão no canto inferior direito para iniciar uma conversa.</p>
+      <section class="layout" aria-label="Informações do teste">
+        <article class="panel intro">
+          <h2>O que está disponível</h2>
+          <p>O agente identifica o utilizador de teste, consulta a base de conhecimento, procura um chamado simulado e pode encaminhar a conversa para uma fila humana simulada.</p>
+          <div class="badges">
+            <span class="badge"><strong>●</strong> Chat + voz</span>
+            <span class="badge"><strong>●</strong> Vertex AI Search</span>
+            <span class="badge"><strong>●</strong> API de tickets</span>
+            <span class="badge"><strong>●</strong> Handoff simulado</span>
+          </div>
+        </article>
+        <aside class="panel details">
+          <h2>Como testar</h2>
+          <ol>
+            <li>Abra o botão de conversa no canto inferior direito.</li>
+            <li>Escreva ou diga: “Olá, sou o Eduardo”.</li>
+            <li>Pergunte pelo estado do seu chamado ou sobre acesso ao portal.</li>
+            <li>Peça “quero falar com um atendente” para testar o transbordo.</li>
+          </ol>
+          <div class="note">Ambiente de demonstração: utilize apenas dados fictícios. Não introduza palavras-passe, dados pessoais ou informação confidencial.</div>
+        </aside>
+      </section>
+      <footer>GECX Helpdesk POC · canal público de teste · a utilização pode consumir quota do projecto.</footer>
+    </main>
+    <script is:inline>
+      window.addEventListener('chat-messenger-loaded', () => {
+        chatSdk.registerContext(
+          chatSdk.prebuilts.ces.createContext({
+            deploymentName: 'projects/501912525936/locations/us/apps/ed178bc4-49d8-4b9c-8422-dd76d3e1a445/deployments/36b553cc-337a-41ff-b788-f22789f63d08',
+            tokenBroker: { enableTokenBroker: true, enableRecaptcha: true },
+            enableWelcomeEvent: true,
+          }),
+        );
+      });
+    </script>
+    <chat-messenger url-allowlist="*">
+      <chat-messenger-container chat-title="Helpdesk POC - Teste de voz e chat" chat-title-icon="https://gstatic.com/dialogflow-console/common/assets/ccai-favicons/conversational_agents.png" enable-audio-input>
+        <chat-reset-session-button slot="titlebar-actions" title-text="Iniciar nova conversa"></chat-reset-session-button>
+        <chat-toggle-dialog-button slot="titlebar-actions" title-text-expanded="Recolher" title-text-collapsed="Expandir"></chat-toggle-dialog-button>
+        <chat-messenger-close-button slot="titlebar-actions" title-text="Fechar"></chat-messenger-close-button>
+      </chat-messenger-container>
+    </chat-messenger>
   </body>
 </html>
