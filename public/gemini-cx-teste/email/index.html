@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email GECX — Estimativa e clarificações</title>
+<style>body{margin:0;background:#f3f5f8;color:#172331;font-family:Arial,sans-serif}.toolbar{max-width:800px;margin:24px auto 14px;padding:0 24px;font-size:14px;line-height:1.5}.toolbar button{border:0;border-radius:6px;padding:12px 18px;background:#1759a6;color:white;font-size:14px;font-weight:bold;cursor:pointer}.toolbar p{margin:10px 0}#email{max-width:752px;margin:0 auto 40px;padding:30px 36px;background:white;border:1px solid #dce2e9;border-radius:8px}@media print{.toolbar{display:none}body{background:white}#email{border:0;padding:0;margin:0;max-width:none}}@media(max-width:600px){#email{margin:12px;padding:22px}.toolbar{padding:0 16px}}</style></head><body>
+<div class="toolbar"><p><strong>Assunto:</strong> GECX — Estimativa de implementação e clarificações para fechar o âmbito</p><button id="copy" type="button">Copiar email com formatação</button><p id="status" role="status">Copie e cole no corpo do email em modo HTML/texto formatado. O assunto deve ser copiado separadamente.</p></div>
+<article id="email"><div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#202c39;">
+<p style="margin:0 0 16px;">Olá,</p>
+<p style="margin:0 0 16px;">Com base na informação partilhada e na análise técnica realizada, reunimos as componentes previstas para a PoC, uma estimativa inicial de esforço e as clarificações necessárias para fechar o orçamento.</p>
+<p style="margin:0 0 22px;"><strong>Demonstração exploratória:</strong><br><a href="https://eduardomoraesritter.github.io/gemini-cx-teste/" style="color:#1759a6;">https://eduardomoraesritter.github.io/gemini-cx-teste/</a></p>
+<h2 style="font-size:17px;color:#173d67;margin:26px 0 14px;">1. Solução prevista e esforço de implementação</h2>
+<ul style="padding-left:24px;margin:0 0 16px;">
+<li style="margin-bottom:15px;"><strong>Telefonia GoContact–GECX — 2 semanas.</strong><br>Ligação de voz, saudação, despedida, small talk, tratamento básico de silêncio ou incompreensão e testes de áudio. Pressupõe um mecanismo de integração suportado e configuração SIP disponibilizada pela equipa responsável pela telefonia.</li>
+<li style="margin-bottom:15px;"><strong>Base de conhecimento — 1 a 2 semanas.</strong><br>Preparação e importação dos artigos/PDFs, configuração da pesquisa e validação das respostas. A origem, o volume e a atualização dos conteúdos determinarão a utilização de Vertex AI Search/Data Store ou de outro mecanismo. Consideramos uma fonte com conteúdo aprovado; múltiplas fontes ou sincronização automática exigem avaliação adicional.</li>
+<li style="margin-bottom:15px;"><strong>Integração de tickets BMC — 1 a 2 semanas.</strong><br>Configuração das operações de consulta, criação, atualização e adição de notas, declaradas como disponíveis pela Sonae. Inclui mapeamento dos campos, tratamento de erros e testes técnicos, com acessos e documentação disponíveis. As regras de cada fluxo de atendimento são dimensionadas separadamente.</li>
+<li style="margin-bottom:15px;"><strong>Transbordo para atendimento humano — 1 a 2 semanas.</strong><br>Configuração da transferência, passagem de contexto e testes de indisponibilidade. O esforço depende de existir um destino único ou encaminhamento para diferentes áreas e horários, através de mecanismos suportados pela telefonia.</li>
+<li style="margin-bottom:15px;"><strong>Validação integrada e entrega — 1 semana.</strong><br>Testes do percurso completo, incluindo voz, conhecimento, BMC e transbordo; correções dos defeitos identificados, apoio à aceitação e documentação básica. Considera uma ronda de aceitação consolidada com a Sonae.</li>
+</ul>
+<p style="margin:0 0 16px;"><strong>Subtotal: 30–45 dias úteis de esforço, equivalentes a 6–9 semanas para uma pessoa dedicada.</strong> Esta estimativa contempla margem para configuração, diagnóstico e correções. Ainda não é o prazo total da solução: falta dimensionar os cinco fluxos específicos e eventuais integrações adicionais de identificação/autenticação.</p>
+<p style="margin:0 0 16px;">Os testes técnicos estão incluídos em cada integração; os testes específicos serão incluídos no esforço de cada fluxo. A semana final destina-se à validação conjunta. Esperas por acessos, configurações de terceiros ou respostas de validação afetam o calendário. O acompanhamento continuado do piloto deverá ser delimitado separadamente.</p>
+<h2 style="font-size:17px;color:#173d67;margin:26px 0 14px;">2. Capacidades e limitações</h2>
+<p style="margin:0 0 14px;">O agente pode consultar conhecimento durante a conversa e executar operações através das integrações configuradas. Informações que mudam frequentemente, como o estado de um ticket, devem ser consultadas diretamente no BMC.</p>
+<p style="margin:0 0 14px;">A solução suporta vários idiomas. A voz portuguesa identificada na <a href="https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/reference/language" style="color:#1759a6;">documentação consultada</a> é <strong>pt-BR</strong>. Podemos orientar o vocabulário para português de Portugal, mas isso não garante sotaque português europeu.</p>
+<p style="margin:0 0 16px;">O transbordo necessita de um destino de telefonia/contact center onde o humano receba a chamada. Consultar uma escala ou obter um contacto de prevenção não estabelece, por si só, a transferência.</p>
+<h2 style="font-size:17px;color:#173d67;margin:26px 0 14px;">3. Custo estimado de utilização</h2>
+<p style="margin:0 0 12px;">Para <strong>3.600 chamadas mensais</strong>, assumindo que todas passam pelo agente e que cada chamada corresponde a uma sessão:</p>
+<ul style="padding-left:24px;margin:0 0 16px;"><li style="margin-bottom:8px;"><strong>Base do CX Agent Studio: US$ 1.800/mês</strong>, a US$ 0,50 por sessão.</li><li style="margin-bottom:8px;">Acrescem <strong>US$ 0,0025 por segundo acima dos primeiros cinco minutos de cada chamada</strong>. A duração média de 3m12s não permite excluir estes excedentes.</li><li style="margin-bottom:8px;">Telefonia, pesquisa, armazenamento, outros serviços utilizados e impostos aplicáveis acrescem conforme a configuração.</li></ul>
+<p style="margin:0 0 16px;">Este custo de utilização é separado do preço de implementação. Valores da tabela consultada em 11/09/2026: <a href="https://cloud.google.com/products/gemini-enterprise-for-customer-experience/cx-agent-studio/pricing" style="color:#1759a6;">preços oficiais do CX Agent Studio</a>.</p>
+<h2 style="font-size:17px;color:#173d67;margin:26px 0 14px;">4. Perguntas em aberto para fechar o âmbito</h2>
+<p style="margin:0 0 18px;">O desenho apresenta as etapas gerais do atendimento. Precisamos de compreender as consultas, decisões e ações realizadas dentro dessas etapas.</p>
+<h3 style="font-size:15px;margin:20px 0 8px;">A. Como se identifica e valida o utilizador?</h3>
+<p style="margin:0 0 14px;">Que identificador é solicitado — número de colaborador, nome, email ou loja — e em que sistema é verificado? Existe uma operação de API para essa consulta? Localizar a pessoa é suficiente ou existe autenticação adicional? Como se determina a que tickets essa pessoa pode aceder?</p>
+<p style="margin:0 0 14px;">Esta resposta define se utilizamos a integração BMC existente ou se é necessária outra integração de identidade.</p>
+<h3 style="font-size:15px;margin:20px 0 8px;">B. Como se encontra e analisa o ticket?</h3>
+<p style="margin:0 0 14px;">Quando o utilizador não sabe o número, que critérios utiliza o atendente para pesquisar e selecionar o registo correto? Depois de o encontrar, que campos ou notas consulta e como determinam a ação seguinte?</p>
+<p style="margin:0 0 14px;">Precisamos de identificar os campos e as regras exatas de intervenção humana: tipificação 24×7, contagem dos 30 dias e significado/contagem de RFI.</p>
+<h3 style="font-size:15px;margin:20px 0 8px;">C. Quais são os cinco fluxos concretos e como são resolvidos hoje?</h3>
+<p style="margin:0 0 10px;">Para cada fluxo, pedimos um exemplo que mostre:</p>
+<p style="margin:0 0 14px;"><strong>Pedido → perguntas do atendente → artigo ou sistema consultado → decisão → ação → resultado.</strong></p>
+<p style="margin:0 0 14px;">“POS” precisa de ser desdobrado num problema específico. É necessário perceber se o atendente apenas orienta a pessoa ou também executa ações noutros sistemas, e em que ponto considera o pedido resolvido ou o encaminha para humano. Incluir o caso habitual e as principais exceções abrangidas pela PoC.</p>
+<h3 style="font-size:15px;margin:20px 0 8px;">D. Que operações BMC estão autorizadas em cada fluxo?</h3>
+<p style="margin:0 0 14px;">Que campos são necessários para criar um ticket e quais podem ser atualizados? Quando deve ser adicionada uma nota e quando pode ser fechado o registo? Onde fica guardado o resumo e o resultado do atendimento?</p>
+<p style="margin:0 0 14px;">Precisamos de esclarecer as chamadas sem ticket: o agente pode criar um registo ou deve transferir? O documento prevê abertura de registo, mas também indica intervenção humana obrigatória quando não existe ticket.</p>
+<h3 style="font-size:15px;margin:20px 0 8px;">E. Onde está o conhecimento e como será atualizado?</h3>
+<p style="margin:0 0 14px;">Podem partilhar uma amostra dos artigos utilizados nos cinco fluxos, indicando a origem, quantidade aproximada e formato? Quem valida o conteúdo e com que frequência muda? A atualização no agente deverá ser feita por nova importação ou por sincronização automática?</p>
+<p style="margin:0 0 14px;">Esta informação permite distinguir uma carga simples de PDFs de uma integração contínua com o repositório de conhecimento.</p>
+<h3 style="font-size:15px;margin:20px 0 8px;">F. Qual é o percurso real do transbordo?</h3>
+<p style="margin:0 0 14px;">O operador recebe hoje a chamada no GoContact, num ramal ou noutro sistema? Existe um destino único ou destinos diferentes por área e horário? Que contexto deve acompanhar a chamada, onde será apresentado e qual é a alternativa quando não há atendimento disponível?</p>
+<p style="margin:0 0 14px;">Se for necessário consultar uma escala de prevenção, precisamos de identificar o sistema e a consulta correspondente.</p>
+<p style="margin:22px 0 14px;"><strong>Não são necessárias gravações.</strong> Uma demonstração com um atendente, apoiada nos artigos e ecrãs utilizados, ou exemplos escritos e anonimizados permitem documentar os percursos.</p>
+<p style="margin:0 0 20px;">Com estas respostas, poderemos fechar os cinco fluxos, as integrações necessárias, os critérios de aceitação e os limites da entrega, consolidando o prazo e o orçamento.</p>
+<p style="margin:0;">Obrigado,<br>Eduardo</p>
+</div></article>
+<script>
+const button=document.getElementById('copy');
+button.addEventListener('click',async()=>{
+const email=document.getElementById('email');const status=document.getElementById('status');
+try{if(!navigator.clipboard||!window.ClipboardItem)throw new Error('fallback');await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([email.innerHTML],{type:'text/html'}),'text/plain':new Blob([email.innerText],{type:'text/plain'})})]);status.textContent='Email copiado com formatação. Cole no corpo da mensagem com Ctrl+V.';}
+catch(error){const selection=window.getSelection();const range=document.createRange();range.selectNodeContents(email);selection.removeAllRanges();selection.addRange(range);let copied=false;try{copied=document.execCommand('copy')}catch(e){}status.textContent=copied?'Email copiado com formatação. Cole no corpo da mensagem com Ctrl+V.':'O email está selecionado. Prima Ctrl+C e depois cole no email com Ctrl+V.';}
+});
+</script></body></html>
