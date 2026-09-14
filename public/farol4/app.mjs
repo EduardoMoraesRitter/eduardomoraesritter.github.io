@@ -1,6 +1,6 @@
 import {TransferClock,elapsed,dataSize} from './transfer-clock.mjs?v=20260909-5';
 
-import {cameraConstraints,syncCameraAspect} from './camera-view.mjs?v=20260909-3';
+import {cameraConstraints,syncCameraAspect} from './camera-view.mjs?v=20260914-1';
 
 import {Sender,Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from './protocol.mjs?v=20260909-8';
 
@@ -531,7 +531,7 @@ $('zoom').oninput=()=>{$('autoZoom').checked=false;applyZoom(Number($('zoom').va
 
 $('video').addEventListener('resize',()=>syncCameraAspect($('video')));
 
-let cameraStarting=false;
+let cameraStarting=false,cameraFacing='environment';
 
 $('camera').onclick=async()=>{
 
@@ -539,11 +539,11 @@ $('camera').onclick=async()=>{
 
   if(!navigator.mediaDevices?.getUserMedia){notice('A câmera requer HTTPS ou localhost.');return;}
 
-  cameraStarting=true;
+  cameraStarting=true;$('switchCamera').disabled=true;
 
   try{
 
-    const candidate=await navigator.mediaDevices.getUserMedia(cameraConstraints(window.innerWidth,window.innerHeight));
+    const candidate=await navigator.mediaDevices.getUserMedia(cameraConstraints(window.innerWidth,window.innerHeight,cameraFacing));
 
     if(mode!=='receive'){candidate.getTracks().forEach(t=>t.stop());return;}
 
@@ -573,7 +573,7 @@ $('camera').onclick=async()=>{
 
     raf=requestAnimationFrame(scanFrame);
 
-  }catch(e){stopCamera();notice('Não foi possível ligar a câmera: '+e.message);}finally{cameraStarting=false;}
+  }catch(e){stopCamera();notice('Não foi possível ligar a câmera: '+e.message);}finally{cameraStarting=false;$('switchCamera').disabled=false;}
 
 };
 
@@ -1026,3 +1026,20 @@ async function initialize(){
 
 const initialization=initialize();
 
+
+$('switchCamera').onclick=async()=>{
+ if(cameraStarting)return;
+ const wasActive=!!stream,wasPaused=pauseState.value.paused;
+ cameraFacing=cameraFacing==='environment'?'user':'environment';
+ $('switchCamera').textContent=cameraFacing==='user'?'Usar câmera traseira':'Usar câmera frontal';
+ if(wasActive){if(transferId())setPaused(true);stopCamera();await $('camera').onclick();if(stream&&!wasPaused&&transferId())setPaused(false);}
+ else notice(cameraFacing==='user'?'Câmera frontal selecionada. Ligue a câmera para começar.':'Câmera traseira selecionada. Ligue a câmera para começar.');
+};
+const senderSidebar=document.createElement('aside');senderSidebar.className='senderSidebar';senderSidebar.setAttribute('aria-label','Controles e progresso do envio');
+const sidebarParts=['.linkStatus','.flowLine','.sendControls','.fileSummary','.connection','footer'].map(selector=>{const element=document.querySelector(selector),anchor=document.createComment('sidebar-position');element.before(anchor);return {element,anchor};});
+function arrangeSenderSidebar(){
+ const wide=mode==='send'&&matchMedia('(min-width:951px)').matches;
+ if(wide){document.querySelector('.wrap').append(senderSidebar);for(const {element} of sidebarParts)senderSidebar.append(element);}
+ else{for(const {element,anchor} of sidebarParts)anchor.after(element);senderSidebar.remove();}
+}
+$('sendMode').addEventListener('click',arrangeSenderSidebar);$('receiveMode').addEventListener('click',arrangeSenderSidebar);window.addEventListener('resize',arrangeSenderSidebar);initialization.then(arrangeSenderSidebar);arrangeSenderSidebar();

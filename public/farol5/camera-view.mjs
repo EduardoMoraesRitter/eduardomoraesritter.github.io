@@ -1,10 +1,10 @@
 // Prefer the sensor's complete image. Constraints are preferences so older
 // mobile browsers can return their available camera resolution.
-export function cameraConstraints(width, height) {
+export function cameraConstraints(width, height, facing = 'environment') {
   const portrait = height > width;
   return {
     video: {
-      facingMode: {ideal: 'environment'},
+      facingMode: {ideal: facing},
       width: {ideal: portrait ? 1080 : 1440},
       height: {ideal: portrait ? 1440 : 1080},
       resizeMode: {ideal: 'none'},

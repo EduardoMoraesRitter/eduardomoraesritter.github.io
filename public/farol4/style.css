@@ -96,3 +96,16 @@ button,summary,input,textarea,select,a{scroll-margin-block:16px 100px}
 }
 
 @media(max-width:650px){.camera-active .appHeader{min-height:60px;flex-wrap:wrap}.camera-active .brand{display:flex}.camera-active #openSettings{display:block}.camera-active .modes{order:3}}
+/* Keep long transfer names and controls inside the sidebar at every width. */
+.wrap>*:not(.skipLink),.sendControls,.sendControls>*,.fileSummary,.connectionContent>*{min-width:0;max-width:100%}
+.sendControls input,.connection input,.connection textarea{min-width:0;max-width:100%;box-sizing:border-box}
+.sendControls label,.fileSummary,.connectionContent,.roomLine{overflow-wrap:anywhere}
+.meters{flex-wrap:wrap}.fileSummary small{white-space:normal}.sendControls .btn{white-space:normal}
+@media(min-width:951px){body[data-mode=send] .wrap{grid-template-columns:minmax(0,1fr) minmax(280px,clamp(280px,30vw,380px))}body[data-mode=send] .fileSummary{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:650px){#switchCamera{align-self:stretch}.actionBar{flex-wrap:wrap}.actionBar .btn{min-width:0;flex:1 1 100px}body{padding-bottom:60px}}
+@media(min-width:951px){
+ body[data-mode=send] .wrap{grid-template-rows:auto minmax(0,1fr)}
+ body[data-mode=send] .sendStage .stage{grid-row:2}
+ .senderSidebar{grid-column:2;grid-row:2;display:flex;flex-direction:column;gap:14px;max-height:calc(100dvh - 106px);overflow:auto;scrollbar-gutter:stable;padding-right:8px;position:sticky;top:12px;min-width:0}
+ .senderSidebar>*{flex-shrink:0;min-width:0;max-width:100%}
+}

@@ -1,11 +1,12 @@
 import {Sender,Receiver,validMeta,b64,unb64,newPairCode,MAX_BYTES,digest} from './protocol.mjs?v=5-1';
 import {AcousticPackets} from './acoustic-packets.mjs?v=5-1';
 import {AcousticAudio} from './acoustic-audio.mjs?v=5-1';
-import {cameraConstraints,syncCameraAspect} from './camera-view.mjs?v=5-1';
+import {cameraConstraints,syncCameraAspect} from './camera-view.mjs?v=20260914-1';
 import {analyzeFrame} from './camera.mjs?v=5-1';
 import {TransferClock,elapsed,dataSize} from './transfer-clock.mjs?v=5-1';
 const $=id=>document.getElementById(id),status=s=>{$('status').textContent=s;};
 let mode=matchMedia('(max-width:720px)').matches?'receive':'send',sender=null,receiver=null,secret='',packets=null,peer=false,txPaused=false,remotePaused=false,desiredPause=null,complete=false;
+let cameraFacing='environment',cameraStarting=false;
 let stream=null,raf=0,frame=0,lastTx=0,lastScan=0,lastReport=0,reportBusy=false,db=null,dirty=false,verifying=false,clock=new TransferClock(),generation=0;
 const audio=new AcousticAudio(onAudio,s=>{$('audioStatus').textContent=s;});
 const scan=document.createElement('canvas'),scanCtx=scan.getContext('2d',{willReadFrequently:true});
@@ -55,7 +56,7 @@ async function acceptPacket(text){
  if(receiver.accept(text)){dirty=true;if(receiver.count===receiver.meta.total)verify();}update();
 }
 async function verify(){if(verifying||receiver?.verified)return;verifying=true;const r=receiver;try{if(await r.verify()){clock.finish(Date.now());dirty=true;await persist();status('Arquivo íntegro. Enviando confirmação por som…');lastReport=0;sendReport(true);}else{receiver=new Receiver(r.meta);dirty=true;status('Verificação falhou. Pedindo os blocos novamente.');}}finally{verifying=false;update();}}
-$('camera').onclick=async()=>{if(stream){desiredPause=true;sendReport(true);stopCamera();return;}try{await audio.enable(false);stream=await navigator.mediaDevices.getUserMedia(cameraConstraints(innerWidth,innerHeight));$('video').srcObject=stream;await $('video').play();$('video').hidden=false;$('placeholder').hidden=true;canvas.hidden=true;syncCameraAspect($('video'));document.body.classList.add('camera-active');$('camera').textContent='Parar câmera';$('zoom').disabled=false;$('zoom').value='1';$('video').style.transform='';if(receiver&&!receiver.verified){desiredPause=false;lastReport=0;}raf=requestAnimationFrame(scanFrame);update();}catch(e){stopCamera();status('Não foi possível ativar: '+e.message);}};
+$('camera').onclick=async()=>{if(cameraStarting)return;if(stream){desiredPause=true;sendReport(true);stopCamera();return;}cameraStarting=true;$('switchCamera').disabled=true;try{await audio.enable(false);stream=await navigator.mediaDevices.getUserMedia(cameraConstraints(innerWidth,innerHeight,cameraFacing));$('video').srcObject=stream;await $('video').play();$('video').hidden=false;$('placeholder').hidden=true;canvas.hidden=true;syncCameraAspect($('video'));document.body.classList.add('camera-active');$('camera').textContent='Parar câmera';$('zoom').disabled=false;$('zoom').value='1';$('video').style.transform='';if(receiver&&!receiver.verified){desiredPause=false;lastReport=0;}raf=requestAnimationFrame(scanFrame);update();}catch(e){stopCamera();status('Não foi possível ativar: '+e.message);}finally{cameraStarting=false;$('switchCamera').disabled=false;}};
 $('video').addEventListener('resize',()=>syncCameraAspect($('video')));$('zoom').oninput=()=>{$('video').style.transform=`scale(${$('zoom').value})`;};
 function scanFrame(time){
  if(!stream)return;if(time-lastScan>180&&$('video').readyState>=2){lastScan=time;const v=$('video'),zoom=Number($('zoom').value),w=v.videoWidth/zoom,h=v.videoHeight/zoom,scale=Math.min(1,1000/w);scan.width=Math.round(w*scale);scan.height=Math.round(h*scale);scanCtx.drawImage(v,(v.videoWidth-w)/2,(v.videoHeight-h)/2,w,h,0,0,scan.width,scan.height);const img=scanCtx.getImageData(0,0,scan.width,scan.height);let location=null;
@@ -69,3 +70,12 @@ async function persist(){if(!dirty||!receiver||!db)return;update();dirty=false;a
 async function restore(){try{db=await new Promise((resolve,reject)=>{const q=indexedDB.open('farol5',1);q.onupgradeneeded=()=>q.result.createObjectStore('sessions');q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);});const saved=await new Promise(resolve=>{const q=db.transaction('sessions').objectStore('sessions').get('current');q.onsuccess=()=>resolve(q.result);q.onerror=()=>resolve(null);});if(saved&&!receiver){receiver=Receiver.restore(saved);clock=new TransferClock(saved.timing);secret=saved.secret||'';if(secret)packets=await AcousticPackets.create(secret);if(receiver.count===receiver.meta.total)await verify();update();status('Progresso restaurado. Ative som e câmera para continuar com o mesmo arquivo.');}}catch{status('Armazenamento indisponível. Mantenha esta página aberta.');}}
 setInterval(()=>{update();if(receiver){if(!receiver.verified)dirty=true;persist();if(!complete)sendReport();}},1000);
 document.addEventListener('visibilitychange',()=>{update();if(document.hidden){dirty=!!receiver;persist();}});setMode(mode);restore();
+
+$('switchCamera').onclick=async()=>{
+ if(cameraStarting)return;
+ const active=!!stream,wasPaused=desiredPause??remotePaused;
+ cameraFacing=cameraFacing==='environment'?'user':'environment';
+ $('switchCamera').textContent=cameraFacing==='user'?'Usar câmera traseira':'Usar câmera frontal';
+ if(active){if(receiver){desiredPause=true;await sendReport(true);}stopCamera();await $('camera').onclick();if(receiver&&stream){desiredPause=wasPaused;await sendReport(true);update();}}
+ else status(cameraFacing==='user'?'Câmera frontal selecionada. Ative som e câmera para começar.':'Câmera traseira selecionada. Ative som e câmera para começar.');
+};
