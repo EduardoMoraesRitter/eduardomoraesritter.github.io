@@ -11,8 +11,8 @@ async page=>{
  await p.locator('#sendMode').click();await p.evaluate(()=>{const dt=new DataTransfer();dt.items.add(new File([new Uint8Array(800)],'arquivo_com_nome_muito_longo_'.repeat(6)+'.bin'));const input=document.querySelector('#file');input.files=dt.files;input.dispatchEvent(new Event('change'));});
  if(version===4){await p.waitForFunction(()=>!document.querySelector('#play').disabled);await p.locator('#play').click();}
  else await p.waitForFunction(()=>!document.querySelector('#qr').hidden);
- for(const width of [320,390,768,1024,1440]){await p.setViewportSize({width,height:720});if(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1))throw Error(`Overflow farol${version} width ${width}`);}
- await p.setViewportSize({width:1024,height:600});await p.screenshot({path:`output/playwright/farol${version}-sender-responsive.png`,fullPage:true});
+ for(const width of [320,390,768,1024,1440]){await p.setViewportSize({width,height:720});await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));if(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1))throw Error(`Overflow farol${version} width ${width}`);}
+ await p.setViewportSize({width:1024,height:600});await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await p.screenshot({path:`output/playwright/farol${version}-sender-responsive.png`,fullPage:true});
  if(errors.length)throw Error(errors.join(';'));await ctx.close();
  }
 }
