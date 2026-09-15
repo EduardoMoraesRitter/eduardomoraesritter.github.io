@@ -1,0 +1,80 @@
+<div class="gcx-side" data-open="false" id="gcxSideDemo">
+  <button class="gcx-launcher" id="gcxLauncher" type="button" aria-expanded="false" aria-controls="gcxPanel">
+    <span class="gcx-launcher-orb" aria-hidden="true"></span>
+    <span><strong>Testar GECX</strong><small>Assistente Helpdesk</small></span>
+    <svg class="gcx-launcher-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+  </button>
+
+  <aside class="gcx-panel" id="gcxPanel" aria-labelledby="gcxPanelTitle" hidden>
+    <header class="gcx-panel-header">
+      <div class="gcx-panel-identity"><span class="gcx-live-dot" aria-hidden="true"></span><div><h2 id="gcxPanelTitle">GECX Helpdesk</h2><p>Conversa por voz ou chat</p></div></div>
+      <button class="gcx-close" id="gcxClose" type="button" aria-label="Fechar demonstração"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
+    </header>
+    <div class="gcx-panel-body">
+      <div class="gcx-hero-orb" aria-hidden="true"><span></span></div>
+      <div class="gcx-panel-copy"><p class="gcx-eyebrow">DEMONSTRAÇÃO INTERACTIVA</p><h3>Fala com o teu Helpdesk</h3><p>Experimenta uma chamada de voz, consulta um ticket ou testa a base de conhecimento. O ambiente usa dados fictícios.</p></div>
+      <div class="gcx-actions"><a class="gcx-primary" href="/gemini-cx-teste/">Abrir demonstração completa <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><button class="gcx-secondary" id="gcxQuickStart" type="button">Como funciona?</button></div>
+      <div class="gcx-note" id="gcxNote" hidden><strong>Inclui</strong><span>voz com feedback visual, mudo sem desligar, chat, preferências de idioma e diagnóstico de erros.</span></div>
+    </div>
+    <footer class="gcx-panel-footer"><span class="gcx-security-icon" aria-hidden="true">✓</span><span>Ligação segura · GECX · dados fictícios</span></footer>
+  </aside>
+</div>
+
+<style is:global>
+  .gcx-side { position:fixed; z-index:90; right:24px; bottom:24px; width:min(360px,calc(100vw - 32px)); font-family:"Google Sans", "Segoe UI", sans-serif; }
+  .gcx-launcher { width:100%; display:flex; align-items:center; gap:12px; min-height:68px; padding:10px 14px; border:1px solid color-mix(in srgb,var(--gold,#c9a96e) 34%,transparent); border-radius:20px; color:var(--text-primary,#f4f1eb); background:color-mix(in srgb,var(--bg-surface,#151515) 92%,transparent); box-shadow:0 14px 44px #0008; backdrop-filter:blur(18px); text-align:left; cursor:pointer; transition:transform .2s ease,border-color .2s ease; }
+  .gcx-launcher:hover { transform:translateY(-2px); border-color:color-mix(in srgb,var(--gold,#c9a96e) 68%,transparent); }
+  .gcx-launcher-orb,.gcx-hero-orb { flex:none; display:block; border-radius:50%; background:radial-gradient(circle at 70% 24%,#d8ffd5 0 8%,transparent 28%),radial-gradient(circle at 30% 20%,#4b9364 0 22%,transparent 57%),linear-gradient(150deg,#99e2d1,#3999de 74%); box-shadow:inset -8px -10px 24px #15669d55,0 0 22px #68cdb055; }
+  .gcx-launcher-orb { width:42px; height:42px; }
+  .gcx-launcher strong,.gcx-launcher small { display:block; }
+  .gcx-launcher strong { font-size:.9rem; letter-spacing:.01em; }
+  .gcx-launcher small { margin-top:3px; color:#a9aaa7; font-size:.72rem; }
+  .gcx-launcher-chevron { width:18px; height:18px; margin-left:auto; fill:none; stroke:currentColor; stroke-width:1.7; transition:transform .2s ease; }
+  .gcx-side[data-open="true"] .gcx-launcher-chevron { transform:rotate(180deg); }
+  .gcx-panel { position:absolute; right:0; bottom:80px; width:100%; max-height:min(680px,calc(100vh - 120px)); display:flex; flex-direction:column; overflow:hidden; border:1px solid #d9d5cc; border-radius:24px; color:#1d211f; background:#f8f7f4; box-shadow:0 24px 70px #0009; animation:gcxPanelIn .22s ease-out; }
+  @keyframes gcxPanelIn { from { opacity:0; transform:translateY(12px) scale(.98); } to { opacity:1; transform:none; } }
+  .gcx-panel-header { display:flex; justify-content:space-between; align-items:center; padding:18px 18px 16px; border-bottom:1px solid #e5e2dc; }
+  .gcx-panel-identity { display:flex; align-items:center; gap:10px; }
+  .gcx-panel-identity h2 { margin:0; font-size:1rem; letter-spacing:-.02em; }
+  .gcx-panel-identity p { margin:3px 0 0; color:#70756e; font-size:.75rem; }
+  .gcx-live-dot { width:8px; height:8px; border-radius:50%; background:#43a86b; box-shadow:0 0 0 5px #43a86b1c; }
+  .gcx-close { width:40px; height:40px; display:grid; place-items:center; border:0; border-radius:50%; color:#4f5650; background:transparent; cursor:pointer; }
+  .gcx-close:hover { background:#ebe9e4; }
+  .gcx-close svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.7; }
+  .gcx-panel-body { padding:22px 20px 20px; overflow:auto; }
+  .gcx-hero-orb { width:112px; height:112px; margin:2px auto 22px; }
+  .gcx-panel-copy { text-align:center; }
+  .gcx-eyebrow { margin:0 0 8px; color:#277b78; font-size:.65rem; font-weight:700; letter-spacing:.13em; }
+  .gcx-panel-copy h3 { margin:0; font-size:1.35rem; letter-spacing:-.03em; }
+  .gcx-panel-copy p:last-child { max-width:29ch; margin:9px auto 0; color:#626861; font-size:.86rem; line-height:1.55; }
+  .gcx-actions { display:grid; gap:9px; margin-top:22px; }
+  .gcx-primary,.gcx-secondary { min-height:48px; display:flex; align-items:center; justify-content:center; gap:8px; border-radius:13px; font-size:.86rem; font-weight:600; text-decoration:none; cursor:pointer; }
+  .gcx-primary { color:#fff; background:#151817; }
+  .gcx-primary:hover { background:#2c3631; }
+  .gcx-primary svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.8; }
+  .gcx-secondary { border:1px solid #d4d8d1; color:#303732; background:#fff; }
+  .gcx-secondary:hover { background:#eef1ec; }
+  .gcx-note { display:flex; gap:8px; margin-top:16px; padding:11px 12px; border-radius:12px; color:#59625a; background:#e9f0e9; font-size:.73rem; line-height:1.45; }
+  .gcx-note strong { color:#216349; }
+  .gcx-panel-footer { display:flex; align-items:center; gap:7px; padding:13px 18px; border-top:1px solid #e5e2dc; color:#777d76; font-size:.68rem; }
+  .gcx-security-icon { width:17px; height:17px; display:grid; place-items:center; border-radius:50%; color:#247451; background:#d8eddd; font-size:.65rem; }
+  @media(max-width:560px) { .gcx-side { right:16px; bottom:16px; width:calc(100vw - 32px); } .gcx-panel { bottom:76px; max-height:calc(100vh - 106px); } }
+  @media(prefers-reduced-motion:reduce) { .gcx-panel { animation:none; } .gcx-launcher { transition:none; } }
+</style>
+
+<script is:inline>
+  (() => {
+    const root = document.getElementById('gcxSideDemo');
+    const launcher = document.getElementById('gcxLauncher');
+    const panel = document.getElementById('gcxPanel');
+    const close = document.getElementById('gcxClose');
+    const quick = document.getElementById('gcxQuickStart');
+    const note = document.getElementById('gcxNote');
+    if (!root || !launcher || !panel) return;
+    const setOpen = open => { root.dataset.open = String(open); panel.hidden = !open; launcher.setAttribute('aria-expanded', String(open)); if (open) close?.focus({ preventScroll:true }); else launcher.focus({ preventScroll:true }); };
+    launcher.addEventListener('click', () => setOpen(panel.hidden));
+    close?.addEventListener('click', () => setOpen(false));
+    quick?.addEventListener('click', () => { note.hidden = !note.hidden; quick.textContent = note.hidden ? 'Como funciona?' : 'Ocultar detalhes'; });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && !panel.hidden) setOpen(false); });
+  })();
+</script>
