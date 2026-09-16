@@ -7,7 +7,9 @@ Contratos do SDK e documentação oficial consultados em 11/09/2026. Este docume
 
 - `src/pages/gemini-cx-teste.astro`: interface, chamada, microfone, chat e preferência de idioma.
 - `public/gemini-cx-demo/diagnostics.js`: classificação de erros e registo local limitado.
+- `public/gemini-cx-demo/session-auth.js`: espera limitada por autorização válida, incluindo tokens restaurados pelo SDK.
 - `tests/gecx-diagnostics.test.mjs`: testes automáticos da classificação e proteção do registo.
+- `tests/gecx-session-auth.test.mjs`: regressões de autorização após recarregar, expiração e nova sessão.
 
 O SDK oficial do Google trata da autorização, transmissão do áudio e reprodução das respostas. A página é uma demonstração de conversa por voz no navegador; não disponibiliza, por si só, um número de telefone nem uma fila de operadores humanos. O transbordo desta demonstração é simulado. O consumo do serviço pode gerar custos.
 
@@ -45,7 +47,9 @@ Português de Portugal (`pt-PT`) não consta da lista oficial de voz consultada;
 
 O contexto do SDK é registado uma vez. Chamadas repetidas a `createContext` podem adicionar listeners globais de sessão e resposta, pelo que não são utilizadas como mecanismo de recuperação.
 
-`messenger.startNewSession()` limpa a sessão anterior e inicia a renovação da autorização em segundo plano. Não devolve uma promessa que represente a conclusão dessa renovação. Antes de abrir a chamada seguinte, a página aguarda a autorização, através de `chat-messenger-access-token-resolved` e do estado de preparação, com um tempo limite.
+`messenger.startNewSession()` limpa a sessão anterior e inicia a renovação da autorização em segundo plano. Não devolve uma promessa que represente a conclusão dessa renovação. Antes de enviar texto ou abrir uma chamada, a página verifica a autorização e a respetiva validade no estado do contexto SDK. O evento `chat-messenger-access-token-resolved` e uma consulta periódica limitada complementam essa verificação, com um tempo limite de 20 segundos. Não são guardados nem apresentados valores de credenciais pela página.
+
+O SDK CES pode restaurar um token válido em cache sem emitir esse evento. Esperar exclusivamente pelo evento bloqueava chat e voz após recarregar a página. A verificação de estado também evita aceitar um sinal antigo depois de o token expirar. A falta de autorização é apresentada separadamente de uma falha no carregamento do componente.
 
 O limite local da demonstração é de **quatro minutos após a confirmação da ligação**, não desde o clique inicial. Continua a contar no mudo. O serviço pode terminar uma conversa antes desse limite, por exemplo por inatividade ou erro; isso deve ser distinguido do limite imposto pela página.
 
@@ -99,6 +103,8 @@ Esta proteção refere-se ao registo de diagnóstico próprio, não ao funcionam
 | `15/5` | Falha de estabelecimento do fluxo. |
 | `15/6` | Falha genérica BiDi. Não prova quota, problema de rede do utilizador ou uma causa única. |
 | HTTP `429` ou código SDK `21` | Limite explícito de pedidos ou capacidade; os detalhes exigem consulta no projeto Google. |
+| `{code: 429, status: 'RESOURCE_EXHAUSTED'}` e variantes aninhadas em `error` | O mesmo limite; o SDK pode colocar o estado HTTP em `code`. Mensagens genéricas posteriores não substituem este diagnóstico. |
+| `Error` com `.error = {code: 'UNKNOWN', status: '429'}` | Formato observado no código de transporte unary do SDK para uma resposta HTTP 429; os eventos podem aninhar este erro em `detail.error`. |
 | HTTP `401` / `403` | Falha de autorização ou acesso. |
 | `NotAllowedError`, `NotFoundError`, `NotReadableError` | Sinais do navegador sobre permissão, ausência ou indisponibilidade do microfone. |
 | Fluxo vazio | Falha de arranque sem causa confirmada; não equivale automaticamente a permissão recusada. |
@@ -110,7 +116,7 @@ O valor `status: -1` é uma sentinela do SDK, não um estado HTTP. Não deve ocu
 A partir da raiz deste repositório:
 
 ```sh
-node --test tests/gecx-diagnostics.test.mjs
+node --test tests/gecx-diagnostics.test.mjs tests/gecx-session-auth.test.mjs
 npm run build
 ```
 

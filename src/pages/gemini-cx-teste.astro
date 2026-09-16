@@ -11,6 +11,7 @@ const title = 'Helpdesk — conversa com o assistente';
   <title>{title}</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23509a99'/%3E%3C/svg%3E" />
   <script is:inline defer src="/gemini-cx-demo/diagnostics.js"></script>
+  <script is:inline defer src="/gemini-cx-demo/session-auth.js"></script>
   <script is:inline defer src="https://www.gstatic.com/chat-messenger/sdk/prod/latest/chat-messenger.js"></script>
   <link rel="stylesheet" href="https://www.gstatic.com/chat-messenger/sdk/prod/latest/themes/chat-messenger-default.css" />
   <style>
@@ -192,7 +193,7 @@ const title = 'Helpdesk — conversa com o assistente';
     let active=false, ready=false, muted=false, tick, limit, startedAt=0, mediaStream, generation=0;
     let meterContext, meterSource, meterAnalyser, meterSamples, meterFrame, connected=false;
     let outputLevel=0, outputAt=0, userAt=0, smoothLevel=0, lastMeterPaint=0;
-    let journal, pendingStart=false, phase='idle', connectTimer, tokenReady=false, hasSession=false, preferenceSent=false;
+    let journal, pendingStart=false, phase='idle', connectTimer, hasSession=false, preferenceSent=false;
     let lastEnd={kind:'none',at:0}, pendingResponseAt=0, chatBusy=false, chatGeneration=0, chatResponseCount=0, chatTimer;
     const preferences={
       'pt-BR':'Please conduct this conversation in Portuguese (Brazil).',
@@ -214,7 +215,9 @@ const title = 'Helpdesk — conversa com o assistente';
     }
     function clearError(){error.hidden=true;error.dataset.kind='';}
     function presentError(detail){
-      const info=GecxDiagnostics.describe(detail);
+      const info=GecxDiagnostics.describe({...detail,mode:demo.dataset.mode});
+      // The SDK can emit a generic follow-up after the detailed service error.
+      if(!error.hidden&&['capacity','access'].includes(error.dataset.kind)&&['stream','chat-request'].includes(info.kind))return;
       error.dataset.kind=info.kind;error.dataset.action=info.action;document.getElementById('error-title').textContent=info.title;
       document.getElementById('error-message').textContent=info.message;
       retry.hidden=info.action==='reload';retry.textContent=demo.dataset.mode==='chat'?'Nova conversa':'Voltar a ligar';
@@ -308,12 +311,10 @@ const title = 'Helpdesk — conversa com o assistente';
       presentError(detail);
     }
     function waitForToken(reset=false){
-      if(!reset&&tokenReady)return Promise.resolve();
-      return new Promise((resolve,reject)=>{
-        const done=()=>{clearTimeout(timeout);window.removeEventListener('chat-messenger-access-token-resolved',done);resolve();};
-        const timeout=setTimeout(()=>{window.removeEventListener('chat-messenger-access-token-resolved',done);reject({kind:'sdk-load'});},20000);
-        window.addEventListener('chat-messenger-access-token-resolved',done);
-        if(reset){tokenReady=false;messenger.startNewSession();}
+      return GecxSessionAuth.waitForAuthorization({
+        readState:()=>chatSdk.getContext()?.state,
+        eventTarget:window,
+        ...(reset?{reset:()=>messenger.startNewSession()}:{}),
       });
     }
     async function prepareSession(){
@@ -328,14 +329,14 @@ const title = 'Helpdesk — conversa com o assistente';
     }
     function initialize(){
       if(ready)return;
-      if(!window.GecxDiagnostics)return;
+      if(!window.GecxDiagnostics||!window.GecxSessionAuth)return;
       chatSdk.registerContext(chatSdk.prebuilts.ces.createContext({
         deploymentName:'projects/501912525936/locations/us/apps/ed178bc4-49d8-4b9c-8422-dd76d3e1a445/deployments/36b553cc-337a-41ff-b788-f22789f63d08',
         tokenBroker:{enableTokenBroker:true,enableRecaptcha:true},enableWelcomeEvent:false,
       }));
       ready=true;controls();status.textContent='Iniciar uma conversa';record('sdk-ready');
     }
-    window.addEventListener('chat-messenger-access-token-resolved',()=>{tokenReady=true;record('authorization-ready');});
+    window.addEventListener('chat-messenger-access-token-resolved',()=>record('authorization-ready'));
     window.addEventListener('chat-messenger-loaded',initialize,{once:true});
     setTimeout(()=>{if(!ready){status.textContent='O assistente não carregou';transcript.textContent='Atualiza a página para voltar a tentar.';if(window.GecxDiagnostics)presentError({kind:'sdk-load'});}},20000);
     async function startCall(){

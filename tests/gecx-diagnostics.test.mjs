@@ -46,6 +46,58 @@ for (const detail of [{ status: 429 }, { errorCode: 21, status: -1 }, { status: 
   });
 }
 
+for (const detail of [
+  { code: 429, status: 'RESOURCE_EXHAUSTED' },
+  { error: { code: 429, status: 'RESOURCE_EXHAUSTED' } },
+  { error: { error: { code: '429', status: 'RESOURCE_EXHAUSTED' } } },
+]) {
+  test(`recognises the real CES API limit in SDK event shape ${JSON.stringify(detail)}`, () => {
+    const description = diagnostics.describe({ ...detail, mode: 'chat' });
+    assert.equal(description.kind, 'capacity');
+    assert.equal(description.http, 429);
+    assert.doesNotMatch(description.message, /áudio|microfone/i);
+    const journal = diagnostics.createJournal();
+    journal.add('error', { ...detail, message: 'private', token: 'private' });
+    assert.equal(journal.entries()[0].http, 429);
+    assert.doesNotMatch(JSON.stringify(journal.entries()), /private/);
+  });
+}
+
+test('explicit RESOURCE_EXHAUSTED is recognised without inferring an HTTP status', () => {
+  const result = diagnostics.describe({ status: 'RESOURCE_EXHAUSTED', mode: 'chat' });
+  assert.equal(result.kind, 'capacity');
+  assert.equal(result.http, undefined);
+});
+
+test('the CES unary fetch Error and its v1/v2 events retain HTTP 429', () => {
+  // Current SDK discards the response body and wraps the status as a string.
+  const failure = new Error('Fetch error');
+  failure.error = { code: 'UNKNOWN', message: 'Fetch error', status: '429' };
+  const observedShapes = [failure, { error: failure }, { ...failure.error }];
+  for (const detail of observedShapes) {
+    const result = diagnostics.describe(detail);
+    assert.equal(result.kind, 'capacity');
+    assert.equal(result.http, 429);
+    assert.doesNotMatch(JSON.stringify(result), /Fetch error|UNKNOWN/);
+  }
+});
+
+test('a generic text failure does not describe a broken audio connection', () => {
+  const result = diagnostics.describe({ errorCode: 0, status: -1, mode: 'chat' });
+  assert.equal(result.kind, 'chat-request');
+  assert.doesNotMatch(result.title + result.message, /áudio|microfone/i);
+  assert.match(result.message, /não será reenviada automaticamente/);
+});
+
+for (const kind of ['authorization-timeout', 'authorization-unavailable']) {
+  test(`${kind} distinguishes authorization from a component load failure`, () => {
+    const result = diagnostics.describe({ kind });
+    assert.equal(result.kind, kind);
+    assert.equal(result.action, 'reload');
+    assert.match(result.message, /componente carregou/);
+  });
+}
+
 for (const status of [401, 403]) {
   test(`HTTP ${status} is an access error and suggests reloading`, () => {
     const description = diagnostics.describe({ status });
