@@ -1,0 +1,450 @@
+/* ==========================================================================
+   CV / Resume Stylesheet
+   Professional, minimalist, single-column layout
+   ========================================================================== */
+
+/* ---------- Color tokens ---------- */
+:root {
+  --cv-bg: #ffffff;
+  --cv-text: #1a1a1a;
+  --cv-text-secondary: #555555;
+  --cv-heading: #111111;
+  --cv-border: #cccccc;
+  --cv-link: #0056b3;
+  --cv-link-hover: #003d80;
+  --cv-section-border: #dddddd;
+  --cv-tag-bg: #f0f0f0;
+  --cv-tag-text: #333333;
+}
+
+/* Dark mode (system preference, unless light is forced) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --cv-bg: #1a1a1a;
+    --cv-text: #e0e0e0;
+    --cv-text-secondary: #aaaaaa;
+    --cv-heading: #f0f0f0;
+    --cv-border: #444444;
+    --cv-link: #6db3f2;
+    --cv-link-hover: #9dcbf7;
+    --cv-section-border: #333333;
+    --cv-tag-bg: #2a2a2a;
+    --cv-tag-text: #cccccc;
+  }
+}
+
+/* Dark mode (explicit attribute) */
+:root[data-theme="dark"] {
+  --cv-bg: #1a1a1a;
+  --cv-text: #e0e0e0;
+  --cv-text-secondary: #aaaaaa;
+  --cv-heading: #f0f0f0;
+  --cv-border: #444444;
+  --cv-link: #6db3f2;
+  --cv-link-hover: #9dcbf7;
+  --cv-section-border: #333333;
+  --cv-tag-bg: #2a2a2a;
+  --cv-tag-text: #cccccc;
+}
+
+/* ---------- Base ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--cv-bg);
+  color: var(--cv-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--cv-link);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--cv-link-hover);
+  text-decoration: underline;
+}
+
+/* ---------- Page container ---------- */
+.cv-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 32px 16px 48px;
+  position: relative;
+}
+
+/* ---------- Language switcher ---------- */
+.cv-lang-switch {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 12px;
+  color: var(--cv-text-secondary);
+}
+
+.cv-lang-switch a {
+  color: var(--cv-text-secondary);
+  text-decoration: none;
+  padding: 2px 4px;
+}
+
+.cv-lang-switch a:hover,
+.cv-lang-switch a.active {
+  color: var(--cv-heading);
+}
+
+.cv-lang-switch .separator {
+  margin: 0 2px;
+  color: var(--cv-border);
+}
+
+/* ---------- Header ---------- */
+.cv-header {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.cv-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--cv-heading);
+  margin: 0 0 8px;
+  line-height: 1.2;
+}
+
+.cv-header .cv-contact {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 16px;
+  font-size: 13px;
+  color: var(--cv-text-secondary);
+}
+
+.cv-header .cv-contact a {
+  color: var(--cv-text-secondary);
+}
+
+.cv-header .cv-contact a:hover {
+  color: var(--cv-link);
+}
+
+/* ---------- Section titles (h2) ---------- */
+.cv-summary h2,
+.cv-skills h2,
+.cv-experience h2,
+.cv-education h2,
+.cv-awards h2 {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--cv-heading);
+  border-bottom: 1.5px solid var(--cv-section-border);
+  padding-bottom: 4px;
+  margin: 24px 0 12px;
+}
+
+/* ---------- Summary ---------- */
+.cv-summary p {
+  margin: 0;
+  color: var(--cv-text);
+  line-height: 1.5;
+}
+
+/* ---------- Skills ---------- */
+.cv-skills h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cv-heading);
+  margin: 10px 0 4px;
+}
+
+.cv-skills p,
+.cv-skills ul {
+  margin: 0 0 6px;
+  color: var(--cv-text);
+}
+
+.cv-skills ul {
+  padding-left: 20px;
+}
+
+.cv-skills ul li {
+  margin-bottom: 2px;
+}
+
+/* ---------- Experience ---------- */
+.cv-job {
+  margin-bottom: 16px;
+}
+
+.cv-job-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.cv-job-header .cv-job-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cv-heading);
+  margin: 0;
+}
+
+.cv-job-header .cv-job-dates {
+  font-size: 13px;
+  color: var(--cv-text-secondary);
+  white-space: nowrap;
+}
+
+.cv-company {
+  font-size: 13px;
+  color: var(--cv-text-secondary);
+  margin: 2px 0 6px;
+  font-style: italic;
+}
+
+.cv-job ul {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}
+
+.cv-job ul li {
+  margin-bottom: 4px;
+  line-height: 1.45;
+}
+
+/* ---------- Education ---------- */
+.cv-edu {
+  margin-bottom: 12px;
+}
+
+.cv-edu .cv-edu-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cv-heading);
+  margin: 0;
+}
+
+.cv-edu .cv-edu-institution {
+  font-size: 13px;
+  color: var(--cv-text-secondary);
+  margin: 2px 0 0;
+}
+
+.cv-edu .cv-edu-dates {
+  font-size: 13px;
+  color: var(--cv-text-secondary);
+  margin: 0;
+}
+
+/* ---------- Awards ---------- */
+.cv-awards ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.cv-awards ul li {
+  margin-bottom: 6px;
+  line-height: 1.45;
+}
+
+/* ---------- Visibility helpers ---------- */
+.screen-only {
+  display: block;
+}
+
+.print-only {
+  display: none;
+}
+
+/* ==========================================================================
+   Print styles
+   ========================================================================== */
+@page {
+  margin: 0.4in 0.5in;
+}
+
+@media print {
+  *,
+  *::before,
+  *::after {
+    color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  :root,
+  :root[data-theme="dark"] {
+    --cv-bg: #ffffff;
+    --cv-text: #000000;
+    --cv-text-secondary: #333333;
+    --cv-heading: #000000;
+    --cv-border: #999999;
+    --cv-link: #000000;
+    --cv-link-hover: #000000;
+    --cv-section-border: #999999;
+    --cv-tag-bg: #f5f5f5;
+    --cv-tag-text: #000000;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+    font-size: 10pt;
+    margin: 0;
+    padding: 0;
+    line-height: 1.35;
+  }
+
+  .cv-page {
+    max-width: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  a {
+    color: #000000;
+    text-decoration: none;
+  }
+
+  /* --- Compact spacing for 2-page fit --- */
+  .cv-header {
+    margin-bottom: 6px;
+  }
+
+  .cv-header h1 {
+    font-size: 16pt;
+    margin-bottom: 2px;
+  }
+
+  .cv-header .cv-contact {
+    font-size: 8.5pt;
+    gap: 2px 8px;
+  }
+
+  .cv-summary h2,
+  .cv-skills h2,
+  .cv-experience h2,
+  .cv-education h2,
+  .cv-awards h2 {
+    font-size: 9pt;
+    margin: 10px 0 4px;
+    padding-bottom: 2px;
+    border-bottom-width: 1px;
+  }
+
+  .cv-summary p {
+    font-size: 9pt;
+    line-height: 1.25;
+    margin-bottom: 0;
+  }
+
+  .cv-skills h3 {
+    font-size: 9pt;
+    margin: 4px 0 1px;
+  }
+
+  .cv-skills p,
+  .cv-skills ul {
+    font-size: 9pt;
+    margin-bottom: 2px;
+  }
+
+  .cv-job {
+    margin-bottom: 6px;
+    break-inside: avoid;
+  }
+
+  .cv-job-header .cv-job-title {
+    font-size: 9.5pt;
+  }
+
+  .cv-job-header .cv-job-dates {
+    font-size: 8.5pt;
+  }
+
+  .cv-company {
+    font-size: 8.5pt;
+    margin: 0 0 2px;
+  }
+
+  .cv-job ul {
+    margin: 1px 0 0;
+    padding-left: 14px;
+  }
+
+  .cv-job ul li {
+    font-size: 9pt;
+    margin-bottom: 1px;
+    line-height: 1.25;
+  }
+
+  .cv-edu {
+    margin-bottom: 4px;
+    break-inside: avoid;
+  }
+
+  .cv-edu h3 {
+    font-size: 9.5pt;
+    margin: 0 0 0;
+  }
+
+  .cv-edu p {
+    font-size: 8.5pt;
+    margin: 0;
+    line-height: 1.25;
+  }
+
+  .cv-edu .cv-edu-name {
+    font-size: 9.5pt;
+  }
+
+  .cv-edu .cv-edu-institution,
+  .cv-edu .cv-edu-dates {
+    font-size: 8.5pt;
+    margin: 0;
+  }
+
+  .cv-awards ul {
+    padding-left: 14px;
+  }
+
+  .cv-awards ul li {
+    font-size: 9pt;
+    margin-bottom: 2px;
+    line-height: 1.25;
+  }
+
+  /* --- Hide screen-only, show print-only --- */
+  .screen-only {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .cv-lang-switch {
+    display: none !important;
+  }
+
+  /* --- Remove decorative effects --- */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}
