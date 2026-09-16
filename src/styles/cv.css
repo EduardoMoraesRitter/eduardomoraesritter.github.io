@@ -59,7 +59,7 @@ body {
   padding: 0;
   background: var(--cv-bg);
   color: var(--cv-text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: Calibri, "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   font-size: 14px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
@@ -133,11 +133,12 @@ a:hover {
 }
 
 .cv-header .cv-contact a {
-  color: var(--cv-text-secondary);
+  color: var(--cv-link);
 }
 
 .cv-header .cv-contact a:hover {
-  color: var(--cv-link);
+  color: var(--cv-link-hover);
+  text-decoration: underline;
 }
 
 /* ---------- Section titles (h2) ---------- */
@@ -215,17 +216,23 @@ a:hover {
   font-size: 13px;
   color: var(--cv-text-secondary);
   margin: 2px 0 6px;
+  font-weight: 700;
   font-style: italic;
 }
 
 .cv-job ul {
   margin: 4px 0 0;
-  padding-left: 20px;
+  padding-left: 28px;
+  list-style-type: disc;
 }
 
 .cv-job ul li {
   margin-bottom: 4px;
   line-height: 1.45;
+}
+
+.cv-job ul li::marker {
+  font-size: 1.1em;
 }
 
 /* ---------- Education ---------- */
@@ -255,7 +262,8 @@ a:hover {
 /* ---------- Awards ---------- */
 .cv-awards ul {
   margin: 0;
-  padding-left: 20px;
+  padding-left: 28px;
+  list-style-type: disc;
 }
 
 .cv-awards ul li {
@@ -384,7 +392,7 @@ a:hover {
 
   .cv-job ul {
     margin: 1px 0 0;
-    padding-left: 14px;
+    padding-left: 22px;
   }
 
   .cv-job ul li {
@@ -420,7 +428,7 @@ a:hover {
   }
 
   .cv-awards ul {
-    padding-left: 14px;
+    padding-left: 22px;
   }
 
   .cv-awards ul li {
