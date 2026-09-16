@@ -1,0 +1,24 @@
+---
+---
+
+<section class="social-project" id="projetos" aria-labelledby="social-project-title">
+  <div class="container">
+    <a class="project-link" href="/laboratorio/grafo-documental/">
+      <div class="project-copy">
+        <p class="project-kicker" data-i18n="social.kicker">PROJETO INTERATIVO · IA APLICADA</p>
+        <h2 id="social-project-title" data-i18n="social.title">Do PDF ao grafo.</h2>
+        <p class="project-description" data-i18n="social.description">Explore um PDF transformado em grafo com Gemini e Neo4j. Compare a extração original com a revisão e confira as evidências de cada conexão.</p>
+        <span class="project-stack">Astro / AntV G6 / Gemini / Neo4j</span>
+        <span class="project-cta" data-i18n="social.cta">Explorar o laboratório ↗</span>
+      </div>
+      <svg class="project-art" viewBox="0 0 360 250" aria-hidden="true" fill="none">
+        <g stroke="currentColor" stroke-width="1"><path d="M90 130 Q140 130 180 65 M90 130 Q140 130 180 190 M180 65 Q210 65 265 32 M180 65 Q220 65 290 85 M180 190 Q220 190 285 162 M180 190 Q220 190 255 222"/><circle cx="90" cy="130" r="26" opacity=".2"/><circle cx="90" cy="130" r="13"/><circle cx="180" cy="65" r="18"/><circle cx="180" cy="190" r="18"/></g>
+        <g fill="currentColor"><circle cx="265" cy="32" r="5"/><circle cx="290" cy="85" r="5"/><circle cx="285" cy="162" r="5"/><circle cx="255" cy="222" r="5"/><circle cx="90" cy="130" r="5"/></g>
+      </svg>
+    </a>
+  </div>
+</section>
+
+<style>
+  .social-project{position:relative;padding:30px 0 70px;scroll-margin-top:90px}.project-link{display:grid;grid-template-columns:1fr 320px;gap:35px;align-items:center;border:1px solid var(--border-hover);border-radius:12px;padding:35px 40px;background:var(--bg-surface);transition:border-color .2s}.project-link:hover{border-color:var(--accent)}.project-link:focus-visible{outline:3px solid var(--accent);outline-offset:5px}.project-kicker{font-size:10px;letter-spacing:2px;color:var(--accent);margin-bottom:14px}.project-copy h2{font-family:var(--font-display-editorial);font-size:clamp(30px,3vw,43px);font-weight:400;line-height:1.1;margin-bottom:14px;color:var(--text-1)}.project-description{font-size:14px;max-width:490px;opacity:.8;line-height:1.65}.project-stack{display:block;font-size:11px;letter-spacing:1px;margin-top:18px;opacity:.7}.project-cta{display:block;margin-top:22px;color:var(--accent);font-size:14px}.project-art{width:100%;color:var(--accent)}@media(max-width:700px){.project-link{grid-template-columns:1fr;padding:26px;gap:0}.project-art{display:none}.social-project{padding-bottom:40px}}
+</style>
