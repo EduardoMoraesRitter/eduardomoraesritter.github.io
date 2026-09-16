@@ -130,11 +130,72 @@ import '../styles/global.css';
       </div>
     </section>
 
-    <!-- ── 03. Stack ────────────────────────────────────────── -->
-    <section class="section reveal-section" id="stack" aria-labelledby="gecx-stack-title">
+    <!-- ── 03. Arquitetura ──────────────────────────────────── -->
+    <section class="section reveal-section" id="arquitetura" aria-labelledby="gecx-arch-title">
       <div class="container">
         <div class="section-header">
           <span class="section-index">03</span>
+          <h2 id="gecx-arch-title" data-i18n="gecx.arch.title">Arquitetura</h2>
+        </div>
+        <p class="gcx-arch-lead reveal-item" data-i18n="gecx.arch.lead">O navegador nunca fala direto com a API. Ele pede um token ao broker, abre uma sessão no CES, e é dessa sessão que saem as consultas à base, as chamadas de ferramenta e a decisão de passar para uma pessoa.</p>
+
+        <figure class="gcx-arch reveal-item" style="--delay:.1s">
+          <svg viewBox="0 0 900 520" role="img" aria-labelledby="gecx-arch-svg-title">
+            <title id="gecx-arch-svg-title" data-i18n="gecx.arch.alt">Fluxo do navegador até o agente, e do agente até a base de conhecimento, as ferramentas de chamado e o transbordo humano.</title>
+
+            <defs>
+              <marker id="gcxArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--text-3)"/>
+              </marker>
+            </defs>
+
+            <g class="gcx-arch-flow" stroke="var(--text-3)" stroke-width="1.5" marker-end="url(#gcxArrow)">
+              <line x1="450" y1="104" x2="450" y2="146"/>
+              <line x1="450" y1="224" x2="450" y2="266"/>
+              <path d="M450 356 L450 386 L150 386 L150 416" fill="none"/>
+              <line x1="450" y1="356" x2="450" y2="416"/>
+              <path d="M450 356 L450 386 L750 386 L750 416" fill="none"/>
+            </g>
+
+            <g class="gcx-arch-box">
+              <rect x="320" y="28" width="260" height="76" rx="10"/>
+              <text x="450" y="60" class="gcx-arch-name" data-i18n="gecx.arch.n1">Navegador</text>
+              <text x="450" y="82" class="gcx-arch-desc" data-i18n="gecx.arch.d1">voz e texto na mesma sessão</text>
+
+              <rect x="320" y="148" width="260" height="76" rx="10"/>
+              <text x="450" y="180" class="gcx-arch-name" data-i18n="gecx.arch.n2">Token broker</text>
+              <text x="450" y="202" class="gcx-arch-desc" data-i18n="gecx.arch.d2">reCAPTCHA, sem chave na página</text>
+            </g>
+
+            <g class="gcx-arch-box gcx-arch-box-accent">
+              <rect x="290" y="268" width="320" height="88" rx="10"/>
+              <text x="450" y="302" class="gcx-arch-name" data-i18n="gecx.arch.n3">Gemini Enterprise CX</text>
+              <text x="450" y="326" class="gcx-arch-desc" data-i18n="gecx.arch.d3">uma sessão, dois modos</text>
+            </g>
+
+            <g class="gcx-arch-box">
+              <rect x="20" y="418" width="260" height="76" rx="10"/>
+              <text x="150" y="450" class="gcx-arch-name" data-i18n="gecx.arch.n4">Base de conhecimento</text>
+              <text x="150" y="472" class="gcx-arch-desc" data-i18n="gecx.arch.d4">data store indexado</text>
+
+              <rect x="320" y="418" width="260" height="76" rx="10"/>
+              <text x="450" y="450" class="gcx-arch-name" data-i18n="gecx.arch.n5">Ferramentas</text>
+              <text x="450" y="472" class="gcx-arch-desc" data-i18n="gecx.arch.d5">consulta e abertura de chamado</text>
+
+              <rect x="620" y="418" width="260" height="76" rx="10"/>
+              <text x="750" y="450" class="gcx-arch-name" data-i18n="gecx.arch.n6">Transbordo</text>
+              <text x="750" y="472" class="gcx-arch-desc" data-i18n="gecx.arch.d6">quando precisa de uma pessoa</text>
+            </g>
+          </svg>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ── 04. Stack ────────────────────────────────────────── -->
+    <section class="section reveal-section" id="stack" aria-labelledby="gecx-stack-title">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-index">04</span>
           <h2 id="gecx-stack-title" data-i18n="gecx.stack.title">Stack</h2>
         </div>
         <ul class="gcx-stack">
@@ -170,7 +231,7 @@ import '../styles/global.css';
     <section class="section reveal-section" id="limites" aria-labelledby="gecx-limits-title">
       <div class="container">
         <div class="section-header">
-          <span class="section-index">04</span>
+          <span class="section-index">05</span>
           <h2 id="gecx-limits-title" data-i18n="gecx.limits.title">Limites e privacidade</h2>
         </div>
         <ul class="gcx-limits">
@@ -188,7 +249,7 @@ import '../styles/global.css';
     <section class="section gcx-demo-section is-visible" id="demonstracao" aria-labelledby="gecx-demo-title">
       <div class="container">
         <div class="section-header">
-          <span class="section-index">05</span>
+          <span class="section-index">06</span>
           <h2 id="gecx-demo-title" data-i18n="gecx.demo.title">Demonstração</h2>
         </div>
         <p class="gcx-demo-lead" data-i18n="gecx.demo.lead">Agora o agente. Escolha <strong>voz</strong> para falar com ele ou <strong>chat</strong> para escrever. É o mesmo agente e a mesma conversa nos dois casos.</p>
@@ -367,6 +428,14 @@ import '../styles/global.css';
     }
     .gcx-steps h3 { font-family: var(--font-display); font-size: 1.02rem; font-weight: 400; letter-spacing: -0.01em; margin-bottom: 10px; }
     .gcx-steps p { font-size: 0.87rem; line-height: 1.7; color: color-mix(in srgb, var(--text-1) 68%, transparent); }
+
+    .gcx-arch-lead { max-width: 60ch; font-size: 0.93rem; line-height: 1.75; color: color-mix(in srgb, var(--text-1) 70%, transparent); margin-bottom: 34px; }
+    .gcx-arch { margin: 0; padding: 30px 26px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-surface); }
+    .gcx-arch svg { display: block; width: 100%; height: auto; }
+    .gcx-arch-box rect { fill: var(--bg); stroke: var(--border-hover); stroke-width: 1; }
+    .gcx-arch-box-accent rect { stroke: var(--accent); }
+    .gcx-arch-name { font-family: var(--font-display); font-size: 17px; fill: var(--text-1); text-anchor: middle; }
+    .gcx-arch-desc { font-family: var(--font-body); font-size: 13px; fill: color-mix(in srgb, var(--text-1) 66%, transparent); text-anchor: middle; }
 
     .gcx-stack { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
     .gcx-stack li { padding: 20px 22px; border: 1px solid var(--border); border-left: 2px solid var(--accent); border-radius: 0 10px 10px 0; background: var(--bg-surface); }

@@ -331,6 +331,7 @@ header {
     text-transform: uppercase;
     color: var(--text-2);
     position: relative;
+    white-space: nowrap;
     transition: color var(--dur) var(--ease);
 }
 
