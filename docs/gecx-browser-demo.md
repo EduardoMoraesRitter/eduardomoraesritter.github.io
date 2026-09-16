@@ -1,12 +1,13 @@
 # Demonstração GECX no navegador
 
-Notas de implementação e diagnóstico da página `/gemini-cx-teste/`.
+Notas de implementação e diagnóstico da página `/gecx/`.
 Contratos do SDK e documentação oficial consultados em 11/09/2026. Este documento não constitui uma confirmação de validação final nem de disponibilidade do serviço Google.
 
 ## Componentes
 
-- `src/pages/gemini-cx-teste.astro`: interface, chamada, microfone, chat e preferência de idioma.
-- `public/gemini-cx-demo/diagnostics.js`: classificação de erros e registo local limitado.
+- `src/pages/gecx.astro`: explicação do projeto, interface, chamada, microfone, chat e preferência de idioma. Usa os tokens do portfólio e o esquema `data-i18n` (PT/EN).
+- `src/components/GeminiCxProject.astro`: cartão na home que leva para `/gecx/`. A home não carrega mais o chat.
+- `public/gemini-cx-demo/diagnostics.js`: classificação de erros e registo local limitado. `describe(detail, lang)` aceita `'pt'` (predefinição) ou `'en'`; a classificação e os códigos não mudam com o idioma.
 - `public/gemini-cx-demo/session-auth.js`: espera limitada por autorização válida, incluindo tokens restaurados pelo SDK.
 - `tests/gecx-diagnostics.test.mjs`: testes automáticos da classificação e proteção do registo.
 - `tests/gecx-session-auth.test.mjs`: regressões de autorização após recarregar, expiração e nova sessão.

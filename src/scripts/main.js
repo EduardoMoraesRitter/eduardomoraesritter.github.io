@@ -43,9 +43,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const label = document.getElementById('langLabel');
         if (label) label.textContent = lang === 'pt' ? 'EN' : 'PT';
 
-        document.title = lang === 'pt'
+        /* Páginas internas declaram o próprio título em data-title-pt / data-title-en */
+        const pageTitle = document.documentElement.dataset[lang === 'pt' ? 'titlePt' : 'titleEn'];
+
+        document.title = pageTitle || (lang === 'pt'
             ? 'Eduardo Ritter — Desenvolvedor & Criativo'
-            : 'Eduardo Ritter — Developer & Creative';
+            : 'Eduardo Ritter — Developer & Creative');
 
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');

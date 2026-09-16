@@ -5,13 +5,14 @@
 import Nav     from '../components/Nav.astro';
 import Hero    from '../components/Hero.astro';
 import Architecture from '../components/Architecture.astro';
+import SocialGraphProject from '../components/SocialGraphProject.astro';
+import GeminiCxProject from '../components/GeminiCxProject.astro';
 import About   from '../components/About.astro';
 import Experience from '../components/Experience.astro';
 import Recognition from '../components/Recognition.astro';
 import Services from '../components/Services.astro';
 import Contact from '../components/Contact.astro';
 import Footer  from '../components/Footer.astro';
-import GeminiCxSideDemo from '../components/GeminiCxSideDemo.astro';
 
 import '../styles/global.css';
 ---
@@ -51,6 +52,8 @@ import '../styles/global.css';
   <main>
     <Hero />
     <Architecture />
+    <SocialGraphProject />
+    <GeminiCxProject />
     <About />
     <Experience />
     <Recognition />
@@ -59,9 +62,6 @@ import '../styles/global.css';
   </main>
 
   <Footer />
-
-  <!-- Segunda opção de demonstração: painel lateral compacto do GECX. -->
-  <GeminiCxSideDemo />
 
   <!-- Script principal — Astro processa e otimiza automaticamente -->
   <script>

@@ -1,0 +1,43 @@
+---
+// src/components/GeminiCxProject.astro
+// ────────────────────────────────────
+// Cartão na home que leva para a página dedicada do agente de
+// atendimento em Gemini Enterprise CX. O chat em si vive em /gecx/,
+// nunca na home.
+---
+
+<section class="gecx-project" id="projeto-gecx" aria-labelledby="gecx-project-title">
+  <div class="container">
+    <a class="project-link" href="/gecx/">
+      <div class="project-copy">
+        <p class="project-kicker" data-i18n="gecx.card.kicker">PROJETO INTERATIVO · ATENDIMENTO COM IA</p>
+        <h2 id="gecx-project-title" data-i18n="gecx.card.title">Um helpdesk que atende por voz.</h2>
+        <p class="project-description" data-i18n="gecx.card.description">Agente de suporte interno construído no Gemini Enterprise CX. Entenda como ele consulta a base de conhecimento, verifica chamados e decide quando passar para uma pessoa, e depois converse com ele por voz ou texto.</p>
+        <span class="project-stack">Gemini Enterprise CX / CX Agent Studio / Vertex AI Search / Astro</span>
+        <span class="project-cta" data-i18n="gecx.card.cta">Conhecer o projeto e testar ↗</span>
+      </div>
+      <svg class="project-art" viewBox="0 0 360 250" aria-hidden="true" fill="none">
+        <g stroke="currentColor" stroke-width="1">
+          <circle cx="180" cy="125" r="34"/>
+          <circle cx="180" cy="125" r="56" opacity=".45"/>
+          <circle cx="180" cy="125" r="78" opacity=".22"/>
+          <path d="M88 125h-38M310 125h-38M180 33v-8M180 225v-8"/>
+          <path d="M104 96h44v34h-16l-12 12v-12h-16z"/>
+          <path d="M212 158h44v34h-16l-12 12v-12h-16z" opacity=".55"/>
+        </g>
+        <g fill="currentColor">
+          <rect x="172" y="108" width="16" height="22" rx="8"/>
+          <circle cx="50" cy="125" r="4"/>
+          <circle cx="310" cy="125" r="4"/>
+        </g>
+        <g stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+          <path d="M166 132v5a14 14 0 0 0 28 0v-5M180 151v9"/>
+        </g>
+      </svg>
+    </a>
+  </div>
+</section>
+
+<style>
+  .gecx-project{position:relative;padding:0 0 70px;scroll-margin-top:90px}.project-link{display:grid;grid-template-columns:1fr 320px;gap:35px;align-items:center;border:1px solid var(--border-hover);border-radius:12px;padding:35px 40px;background:var(--bg-surface);transition:border-color .2s}.project-link:hover{border-color:var(--accent)}.project-link:focus-visible{outline:3px solid var(--accent);outline-offset:5px}.project-kicker{font-size:10px;letter-spacing:2px;color:var(--accent);margin-bottom:14px}.project-copy h2{font-family:var(--font-display-editorial);font-size:clamp(30px,3vw,43px);font-weight:400;line-height:1.1;margin-bottom:14px;color:var(--text-1)}.project-description{font-size:14px;max-width:490px;opacity:.8;line-height:1.65}.project-stack{display:block;font-size:11px;letter-spacing:1px;margin-top:18px;opacity:.7}.project-cta{display:block;margin-top:22px;color:var(--accent);font-size:14px}.project-art{width:100%;color:var(--accent)}@media(max-width:700px){.project-link{grid-template-columns:1fr;padding:26px;gap:0}.project-art{display:none}.gecx-project{padding-bottom:40px}}
+</style>

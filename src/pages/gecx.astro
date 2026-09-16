@@ -1,0 +1,940 @@
+---
+// src/pages/gecx.astro
+// ────────────────────
+// Página dedicada ao projeto de atendimento com IA (Gemini Enterprise CX).
+// Ordem obrigatória: primeiro a explicação do produto, depois a demonstração.
+// O chat não aparece mais na home.
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+
+import '../styles/global.css';
+---
+
+<!DOCTYPE html>
+<html
+  lang="pt-BR"
+  data-theme="dark"
+  data-lang="pt"
+  data-title-pt="Helpdesk com IA — Eduardo Ritter"
+  data-title-en="AI Helpdesk — Eduardo Ritter"
+>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Helpdesk com IA — Eduardo Ritter</title>
+  <meta name="description" content="Agente de helpdesk construído no Gemini Enterprise CX: o que resolve, como funciona, que stack usa e uma demonstração por voz ou chat no navegador." />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <!-- Aplica tema antes de renderizar (evita flash) -->
+  <script is:inline>
+    (function () {
+      var s = localStorage.getItem('theme');
+      var d = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', s || (d ? 'dark' : 'light'));
+    })();
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Display:wght@400;500&family=Google+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <script is:inline defer src="/gemini-cx-demo/diagnostics.js"></script>
+  <script is:inline defer src="/gemini-cx-demo/session-auth.js"></script>
+  <script is:inline defer src="https://www.gstatic.com/chat-messenger/sdk/prod/latest/chat-messenger.js"></script>
+  <link rel="stylesheet" href="https://www.gstatic.com/chat-messenger/sdk/prod/latest/themes/chat-messenger-default.css" />
+</head>
+
+<body>
+
+  <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+  <Nav base="/" />
+
+  <main class="gcx-page">
+
+    <!-- ── Abertura ─────────────────────────────────────────── -->
+    <section class="gcx-hero">
+      <div class="container">
+        <p class="label gcx-kicker" data-i18n="gecx.kicker">PROJETO · ATENDIMENTO COM IA</p>
+        <h1 class="gcx-title" data-i18n="gecx.title">Um helpdesk que atende por voz.</h1>
+        <p class="gcx-lead" data-i18n="gecx.lead">Agente de suporte interno construído no Gemini Enterprise CX, a plataforma de Customer Experience do Google. Esta página explica o que ele faz e como foi montado. A demonstração fica no fim, quando você já souber o que está testando.</p>
+        <ul class="gcx-facts">
+          <li data-i18n="gecx.fact1">Voz e texto na mesma sessão</li>
+          <li data-i18n="gecx.fact2">Respostas fundamentadas numa base própria</li>
+          <li data-i18n="gecx.fact3">Ambiente de teste com dados fictícios</li>
+        </ul>
+        <a class="gcx-jump" href="#demonstracao" data-i18n="gecx.jump">Pular para a demonstração ↓</a>
+      </div>
+    </section>
+
+    <!-- ── 01. O que é ──────────────────────────────────────── -->
+    <section class="section reveal-section" id="o-que-e" aria-labelledby="gecx-what-title">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-index">01</span>
+          <h2 id="gecx-what-title" data-i18n="gecx.what.title">O que é</h2>
+        </div>
+        <div class="gcx-two-col">
+          <div class="gcx-prose">
+            <p data-i18n="gecx.what.p1">Gemini Enterprise CX é a plataforma de atendimento do Google. O agente é descrito no CX Agent Studio, recebe as fontes de conhecimento e as ferramentas que pode chamar, e vira um deployment publicado. O navegador conversa com esse deployment pelo widget web oficial, que cuida da autorização, do streaming de áudio e da reprodução das respostas.</p>
+            <p data-i18n="gecx.what.p2">O agente deste projeto é um helpdesk interno. Ele nasceu como prova de conceito para resolver o primeiro nível de suporte: acesso ao portal, redefinição de senha, VPN fora do ar e situação de um chamado. Quando a orientação não resolve, ele encaminha para uma fila humana.</p>
+          </div>
+          <div class="gcx-aside">
+            <article class="gcx-card">
+              <h3 data-i18n="gecx.who.title">Para quem</h3>
+              <p data-i18n="gecx.who.text">Times de suporte interno que recebem os mesmos pedidos todo dia e querem tirar esse volume da fila humana sem perder o caminho de escalonamento.</p>
+            </article>
+            <article class="gcx-card">
+              <h3 data-i18n="gecx.solves.title">O que resolve</h3>
+              <p data-i18n="gecx.solves.text">Respostas apoiadas em documentos reais em vez de texto genérico, o mesmo agente atendendo por voz e por escrita, e um critério explícito para saber quando parar de tentar e chamar uma pessoa.</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 02. Como funciona ────────────────────────────────── -->
+    <section class="section reveal-section" id="como-funciona" aria-labelledby="gecx-how-title">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-index">02</span>
+          <h2 id="gecx-how-title" data-i18n="gecx.how.title">Como funciona</h2>
+        </div>
+        <ol class="gcx-steps">
+          <li class="reveal-item" style="--delay:.05s">
+            <h3 data-i18n="gecx.how.s1.title">Autorização sem chave na página</h3>
+            <p data-i18n="gecx.how.s1.text">O SDK do Google pede o token a um token broker com reCAPTCHA. Esta página não guarda credencial e não fala direto com a API do serviço.</p>
+          </li>
+          <li class="reveal-item" style="--delay:.1s">
+            <h3 data-i18n="gecx.how.s2.title">Uma sessão, dois modos</h3>
+            <p data-i18n="gecx.how.s2.text">A voz usa o fluxo bidirecional do CES, com o microfone capturado pelo próprio SDK. O texto usa o caminho de chat da mesma sessão. Trocar de modo muda só a interface, sem recomeçar a conversa.</p>
+          </li>
+          <li class="reveal-item" style="--delay:.15s">
+            <h3 data-i18n="gecx.how.s3.title">Consulta à base de conhecimento</h3>
+            <p data-i18n="gecx.how.s3.text">As respostas vêm de um data store indexado com o material do helpdesk: acesso ao portal, identidade, conectividade e critérios de transbordo. Cada resposta se apoia nesse conteúdo em vez de inventar o procedimento.</p>
+          </li>
+          <li class="reveal-item" style="--delay:.2s">
+            <h3 data-i18n="gecx.how.s4.title">Ferramentas e chamados</h3>
+            <p data-i18n="gecx.how.s4.text">O agente consulta a situação de um chamado e pede confirmação antes de abrir um novo. Depois de um erro nada é reenviado automaticamente, porque um pedido sem resposta visível pode já ter sido executado do outro lado.</p>
+          </li>
+          <li class="reveal-item" style="--delay:.25s">
+            <h3 data-i18n="gecx.how.s5.title">Quando chamar uma pessoa</h3>
+            <p data-i18n="gecx.how.s5.text">O agente encaminha quando o usuário pede uma pessoa, quando há risco de segurança, quando o problema é crítico ou quando duas tentativas de orientação não resolvem o caso.</p>
+          </li>
+          <li class="reveal-item" style="--delay:.3s">
+            <h3 data-i18n="gecx.how.s6.title">Idioma como instrução</h3>
+            <p data-i18n="gecx.how.s6.text">Português do Brasil, inglês dos EUA, espanhol da Espanha e italiano estão configurados no agente. A escolha do seletor vai como instrução da conversa, não como troca de modelo de voz nem como tradutor.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ── 03. Stack ────────────────────────────────────────── -->
+    <section class="section reveal-section" id="stack" aria-labelledby="gecx-stack-title">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-index">03</span>
+          <h2 id="gecx-stack-title" data-i18n="gecx.stack.title">Stack</h2>
+        </div>
+        <ul class="gcx-stack">
+          <li class="reveal-item" style="--delay:.05s">
+            <strong>Gemini Enterprise CX</strong>
+            <span data-i18n="gecx.stack.i1">API CES v1beta. Agente, deployment, versões e sessões, tudo gerenciável por API.</span>
+          </li>
+          <li class="reveal-item" style="--delay:.1s">
+            <strong>CX Agent Studio</strong>
+            <span data-i18n="gecx.stack.i2">Instruções do agente, idiomas suportados, voz e regras de segurança.</span>
+          </li>
+          <li class="reveal-item" style="--delay:.15s">
+            <strong>Vertex AI Search</strong>
+            <span data-i18n="gecx.stack.i3">Data store que indexa a base de conhecimento consultada durante a conversa.</span>
+          </li>
+          <li class="reveal-item" style="--delay:.2s">
+            <strong>Widget chat-messenger</strong>
+            <span data-i18n="gecx.stack.i4">Componente web oficial do Google: autorização, captura de áudio, streaming e eventos.</span>
+          </li>
+          <li class="reveal-item" style="--delay:.25s">
+            <strong>Astro + JavaScript</strong>
+            <span data-i18n="gecx.stack.i5">Interface desta página, sem framework: esfera de áudio, estados, chat próprio e recuperação de erro.</span>
+          </li>
+          <li class="reveal-item" style="--delay:.3s">
+            <strong>Módulo de diagnóstico</strong>
+            <span data-i18n="gecx.stack.i6">Classifica os códigos de erro do SDK e guarda um registro curto, só na memória do navegador.</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── 04. Limites ──────────────────────────────────────── -->
+    <section class="section reveal-section" id="limites" aria-labelledby="gecx-limits-title">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-index">04</span>
+          <h2 id="gecx-limits-title" data-i18n="gecx.limits.title">Limites e privacidade</h2>
+        </div>
+        <ul class="gcx-limits">
+          <li data-i18n="gecx.limits.i1">Os dados desta demonstração são fictícios. Não escreva senha, dado pessoal ou informação confidencial.</li>
+          <li data-i18n="gecx.limits.i2">Cada chamada de voz tem limite de quatro minutos, contado a partir da confirmação da ligação.</li>
+          <li data-i18n="gecx.limits.i3">O transbordo para atendimento humano é simulado. Não existe fila real nem número de telefone.</li>
+          <li data-i18n="gecx.limits.i4">O áudio é processado pelo Google e a conversa pode ser registrada conforme a configuração do projeto.</li>
+          <li data-i18n="gecx.limits.i5">O registro de diagnóstico fica só na memória desta aba. Ele não guarda áudio, mensagens, nomes nem tokens.</li>
+          <li data-i18n="gecx.limits.i6">Português de Portugal não consta da lista oficial de vozes. Escolher português entrega a voz de português do Brasil.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── 05. Demonstração ─────────────────────────────────── -->
+    <section class="section gcx-demo-section is-visible" id="demonstracao" aria-labelledby="gecx-demo-title">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-index">05</span>
+          <h2 id="gecx-demo-title" data-i18n="gecx.demo.title">Demonstração</h2>
+        </div>
+        <p class="gcx-demo-lead" data-i18n="gecx.demo.lead">Agora o agente. Escolha <strong>voz</strong> para falar com ele ou <strong>chat</strong> para escrever. É o mesmo agente e a mesma conversa nos dois casos.</p>
+
+        <div id="demo" class="gcx-demo" data-mode="voice" aria-label="Assistente Helpdesk">
+          <div class="gcx-settings-row">
+            <label for="language" data-i18n="gecx.demo.language">Idioma da conversa</label>
+            <select id="language" aria-describedby="language-hint">
+              <option value="auto" data-i18n="gecx.demo.lang.auto">Automático</option>
+              <option value="pt-BR">Português (Brasil)</option>
+              <option value="en-US">English (US)</option>
+              <option value="es-ES">Español (España)</option>
+            </select>
+            <p id="language-hint" data-i18n="gecx.demo.langHintAuto">Fale no idioma desejado.</p>
+          </div>
+
+          <div class="gcx-workspace">
+            <div id="voice-view" class="gcx-voice-view" role="tabpanel" aria-labelledby="voice-tab">
+              <div class="gcx-orb-wrap">
+                <div id="orb" class="gcx-orb" aria-hidden="true"><canvas id="orb-canvas" width="480" height="480"></canvas></div>
+                <div class="gcx-call-switch">
+                  <button id="start" class="gcx-call-button" type="button" aria-label="Iniciar chamada" title="Iniciar chamada" data-i18n-aria="gecx.demo.start" disabled><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 3H4a1 1 0 0 0-1 1c0 9.4 7.6 17 17 17a1 1 0 0 0 1-1v-2.6a1 1 0 0 0-.8-1l-3.3-.7a1 1 0 0 0-1 .3l-1.8 1.8a14.7 14.7 0 0 1-7.9-7.9L8 8.1a1 1 0 0 0 .3-1l-.7-3.3a1 1 0 0 0-1-.8Z"/></svg></button>
+                  <button id="stop" class="gcx-call-button" type="button" aria-label="Terminar chamada" title="Terminar chamada" data-i18n-aria="gecx.demo.stop" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.2 10.5a17 17 0 0 1 19.6 0c.8.6 1.1 1.6.7 2.5l-1 2.1c-.2.5-.8.8-1.3.6l-3.8-1.1c-.5-.1-.8-.6-.8-1.1v-2.1a14 14 0 0 0-7.2 0v2.1c0 .5-.3 1-.8 1.1l-3.8 1.1c-.5.2-1.1-.1-1.3-.6l-1-2.1c-.4-.9-.1-1.9.7-2.5Z"/></svg></button>
+                </div>
+              </div>
+              <div class="gcx-conversation">
+                <div class="gcx-status-line"><span id="status" role="status">A preparar o assistente…</span><span id="timer" aria-label="Duração da chamada"></span></div>
+                <p id="transcript" class="gcx-transcript" aria-live="polite" aria-atomic="true">Autoriza o microfone e fala naturalmente.</p>
+              </div>
+            </div>
+
+            <div id="chat-view" class="gcx-chat-view" role="tabpanel" aria-labelledby="chat-tab" hidden>
+              <div id="chat-log" class="gcx-chat-log" role="log" aria-label="Mensagens da conversa" aria-live="polite"><p id="chat-empty" class="gcx-chat-empty" data-i18n="gecx.demo.chatEmpty">Escreva para o mesmo assistente.<br />Use apenas dados fictícios neste teste.</p></div>
+              <p id="chat-status" role="status"></p>
+              <form id="chat-form" class="gcx-chat-form"><label class="gcx-sr-only" for="chat-input" data-i18n="gecx.demo.yourMessage">A sua mensagem</label><textarea id="chat-input" rows="2" maxlength="4000" placeholder="Escreva a sua mensagem…" data-i18n-placeholder="gecx.demo.chatPlaceholder" required></textarea><button id="chat-send" type="submit" data-i18n="gecx.demo.send" disabled>Enviar</button></form>
+            </div>
+
+            <div id="sdk-host" class="gcx-sdk-host" aria-hidden="true" inert>
+              <chat-messenger id="voice" language-code="pt" disable-viewport-management url-allowlist="*"><chat-messenger-container chat-title="Assistente Helpdesk" no-titlebar enable-audio-input-only></chat-messenger-container></chat-messenger>
+            </div>
+          </div>
+
+          <section id="error" aria-label="Estado da ligação" hidden>
+            <div role="alert"><strong id="error-title"></strong><p id="error-message"></p></div>
+            <div class="gcx-recovery-actions"><button id="retry" type="button">Voltar a ligar</button><button id="reload" type="button" data-i18n="gecx.demo.reload">Atualizar página</button></div>
+          </section>
+
+          <div class="gcx-toolbar">
+            <div class="gcx-agent"><div class="gcx-avatar" aria-hidden="true"><span></span></div><div class="gcx-agent-name">Assistente Helpdesk<span class="gcx-agent-provider">Google · Gemini Enterprise CX</span></div></div>
+            <div class="gcx-modes" role="tablist" aria-label="Modo de conversa">
+              <button id="voice-tab" type="button" role="tab" aria-selected="true" aria-controls="voice-view" data-i18n="gecx.demo.tabVoice">Voz</button>
+              <button id="chat-tab" type="button" role="tab" aria-selected="false" aria-controls="chat-view" tabindex="-1" data-i18n="gecx.demo.tabChat">Chat</button>
+            </div>
+            <div class="gcx-toolbar-actions">
+              <button id="mute" class="gcx-mute-button" type="button" aria-label="Silenciar microfone" aria-pressed="false" title="Silenciar microfone" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/><path id="mute-slash" d="m3 3 18 18" hidden/></svg></button>
+              <button id="help-toggle" class="gcx-help-button" type="button" aria-expanded="false" aria-controls="help-panel" data-i18n="gecx.demo.help">Ajuda e idiomas</button>
+            </div>
+          </div>
+        </div>
+
+        <section id="help-panel" class="gcx-help-panel" aria-label="Sugestões para o teste" hidden>
+          <div><h3 data-i18n="gecx.help.h1">Comece uma conversa</h3><p data-i18n="gecx.help.p1">Clique no telefone e permita o acesso ao microfone. Experimente: “Olá, sou o Eduardo. Preciso de ajuda com o acesso à VPN.” Use fones para evitar eco.</p></div>
+          <div><h3 data-i18n="gecx.help.h2">Explore o assistente</h3><p data-i18n="gecx.help.p2">Você pode pedir ajuda, consultar um chamado ou mudar para Chat e escrever. A passagem para um atendente humano nesta demonstração é simulada.</p></div>
+          <div><h3 data-i18n="gecx.help.h3">Microfone e ligação são coisas diferentes</h3><p data-i18n="gecx.help.p3">A esfera reage à captação local e ao áudio do assistente. Movimento não garante resposta do Google. O estado indica quando estamos aguardando. O mudo permite continuar ouvindo, sem enviar a sua voz, e não suspende o tempo da chamada.</p></div>
+          <div><h3 data-i18n="gecx.help.h4">Se a conversa parar</h3><p data-i18n="gecx.help.p4">Cada chamada tem limite de quatro minutos, contado a partir da ligação. A mensagem de erro distingue inatividade, microfone, acesso e limites quando o Google fornece essa informação. “Voltar a ligar” começa uma nova conversa, sem repetir pedidos automaticamente nem abrir o microfone sem o seu clique.</p></div>
+          <details class="gcx-wide">
+            <summary data-i18n="gecx.help.langSummary">Idiomas, vozes e português de Portugal</summary>
+            <p data-i18n="gecx.help.lang1">O seletor envia uma preferência de idioma como instrução da conversa. Ele não troca o modelo de voz nem funciona como tradutor separado. Em Automático, fale direto no idioma desejado. O comportamento depende das instruções e dos idiomas suportados pelo agente.</p>
+            <p data-i18n="gecx.help.lang2">Português de Portugal (pt-PT) não consta da lista oficial de voz do CX Agent Studio. Consta português do Brasil (pt-BR). Preferir palavras como “telemóvel” não garante sotaque português. Para chat escrito, os modelos Gemini cobrem mais idiomas.</p>
+            <ul>
+              <li data-i18n="gecx.help.langGa"><strong>Disponibilidade geral:</strong> português do Brasil; inglês dos EUA; francês da França e do Canadá; alemão da Alemanha; espanhol da Espanha e dos EUA.</li>
+              <li data-i18n="gecx.help.langPreview"><strong>Preview:</strong> inglês do Reino Unido, Austrália, Canadá e Índia; espanhol do México; neerlandês; mandarim, dinamarquês, finlandês, hindi, hinglish, indonésio, italiano, japonês, coreano, marata, polonês, romeno, spanglish, sueco, tâmil, telugo, turco e vietnamita.</li>
+            </ul>
+            <p class="gcx-sources"><span data-i18n="gecx.help.langChecked">Lista consultada em 11/09/2026.</span> <a href="https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/reference/language" target="_blank" rel="noopener noreferrer">Idiomas oficiais</a> · <a href="https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/settings" target="_blank" rel="noopener noreferrer">Definições de idioma e voz</a></p>
+          </details>
+        </section>
+
+        <details class="gcx-diagnostics">
+          <summary data-i18n="gecx.diag.summary">Diagnóstico deste teste</summary>
+          <p data-i18n="gecx.diag.text">Eventos desta página, mantidos apenas em memória. Não inclui áudio, mensagens, nomes, credenciais nem tokens. Copie este registro se precisar reportar um erro.</p>
+          <button id="copy-diagnostics" type="button" data-i18n="gecx.diag.copy">Copiar diagnóstico</button><span id="copy-status" role="status"></span>
+          <pre id="diagnostic-output">Ainda sem eventos.</pre>
+        </details>
+
+        <p class="gcx-demo-footnote"><span data-i18n="gecx.demo.footnote">Use dados fictícios. O áudio é processado pelo Google e a conversa pode ser registrada. O consumo do serviço pode gerar custos.</span> <span class="gcx-limit" data-i18n="gecx.demo.limit">Limite por chamada: 4 minutos</span></p>
+      </div>
+    </section>
+
+  </main>
+
+  <Footer />
+
+  <script>
+    import '../scripts/main.js';
+  </script>
+
+  <style is:global>
+    /* ==========================================================
+       Página GECX. Reaproveita os tokens do portfólio
+       (--bg, --bg-surface, --border, --text-1, --accent…)
+       e funciona nos temas claro e escuro.
+       ========================================================== */
+
+    [data-theme="dark"]  { color-scheme: dark; }
+    [data-theme="light"] { color-scheme: light; }
+
+    /* As regras de classe abaixo definem display, então o [hidden] do
+       navegador precisa continuar vencendo (vista de chat, painel de
+       ajuda, botões de terminar e silenciar). */
+    [hidden] { display: none !important; }
+
+    .gcx-page { position: relative; z-index: 1; }
+
+    /* ── Abertura ─────────────────────────────────────────── */
+    .gcx-hero { padding: calc(var(--header-h) + clamp(56px, 9vw, 110px)) 0 clamp(30px, 5vw, 56px); }
+    .gcx-kicker { display: block; margin-bottom: 22px; color: var(--accent); }
+    .gcx-title {
+      font-family: var(--font-display-editorial);
+      font-size: clamp(2.4rem, 6.4vw, 4.6rem);
+      font-weight: 300;
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+      max-width: 16ch;
+    }
+    .gcx-lead {
+      max-width: 62ch;
+      margin-top: 26px;
+      font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+      line-height: 1.75;
+      color: color-mix(in srgb, var(--text-1) 72%, transparent);
+    }
+    .gcx-facts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 34px; }
+    .gcx-facts li {
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      color: color-mix(in srgb, var(--text-1) 66%, transparent);
+      background: var(--bg-surface);
+    }
+    .gcx-jump {
+      display: inline-block;
+      margin-top: 34px;
+      padding-bottom: 3px;
+      border-bottom: 1px solid var(--accent);
+      color: var(--accent);
+      font-size: 0.82rem;
+      letter-spacing: 0.06em;
+      transition: opacity 0.25s var(--ease);
+    }
+    .gcx-jump:hover { opacity: 0.7; }
+
+    /* ── Seções de conteúdo ───────────────────────────────── */
+    .gcx-page .section { padding: clamp(46px, 6vw, 78px) 0; }
+    .gcx-page .section-header { margin-bottom: 40px; }
+
+    .gcx-two-col { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr); gap: clamp(28px, 4vw, 56px); align-items: start; }
+    .gcx-prose p { max-width: 62ch; font-size: 0.97rem; line-height: 1.8; color: color-mix(in srgb, var(--text-1) 76%, transparent); }
+    .gcx-prose p + p { margin-top: 20px; }
+
+    .gcx-aside { display: grid; gap: 16px; }
+    .gcx-card { padding: 24px 26px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-surface); }
+    .gcx-card h3 { font-family: var(--font-display); font-size: 0.78rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+    .gcx-card p { font-size: 0.88rem; line-height: 1.7; color: color-mix(in srgb, var(--text-1) 72%, transparent); }
+
+    .gcx-steps { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; counter-reset: gcxstep; }
+    .gcx-steps li { counter-increment: gcxstep; padding: 28px 26px 30px; background: var(--bg); }
+    .gcx-steps li::before {
+      content: counter(gcxstep, decimal-leading-zero);
+      display: block;
+      margin-bottom: 14px;
+      font-size: 0.66rem;
+      letter-spacing: 0.14em;
+      color: var(--accent);
+    }
+    .gcx-steps h3 { font-family: var(--font-display); font-size: 1.02rem; font-weight: 400; letter-spacing: -0.01em; margin-bottom: 10px; }
+    .gcx-steps p { font-size: 0.87rem; line-height: 1.7; color: color-mix(in srgb, var(--text-1) 68%, transparent); }
+
+    .gcx-stack { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
+    .gcx-stack li { padding: 20px 22px; border: 1px solid var(--border); border-left: 2px solid var(--accent); border-radius: 0 10px 10px 0; background: var(--bg-surface); }
+    .gcx-stack strong { display: block; font-family: var(--font-display); font-size: 0.93rem; font-weight: 500; margin-bottom: 8px; }
+    .gcx-stack span { display: block; font-size: 0.83rem; line-height: 1.65; color: color-mix(in srgb, var(--text-1) 66%, transparent); }
+
+    .gcx-limits { display: grid; gap: 14px; max-width: 78ch; }
+    .gcx-limits li { position: relative; padding-left: 26px; font-size: 0.9rem; line-height: 1.7; color: color-mix(in srgb, var(--text-1) 74%, transparent); }
+    .gcx-limits li::before { content: ''; position: absolute; left: 0; top: 0.66em; width: 12px; height: 1px; background: var(--accent); }
+
+    /* ── Demonstração ─────────────────────────────────────── */
+    .gcx-demo-section { padding-bottom: clamp(60px, 8vw, 100px); scroll-margin-top: calc(var(--header-h) + 12px); }
+    .gcx-demo-lead { max-width: 62ch; margin-bottom: 32px; font-size: 0.95rem; line-height: 1.75; color: color-mix(in srgb, var(--text-1) 76%, transparent); }
+    .gcx-demo-lead strong { color: var(--text-1); font-weight: 500; }
+
+    .gcx-demo {
+      --d-line: var(--border);
+      --d-muted: color-mix(in srgb, var(--text-1) 58%, transparent);
+      --d-raised: var(--bg-elevated);
+      --d-solid: var(--text-1);
+      --d-solid-ink: var(--bg);
+      position: relative;
+      border: 1px solid var(--d-line);
+      border-radius: 20px;
+      background: var(--bg-surface);
+      font-size: 0.9rem;
+    }
+    .gcx-demo button,
+    .gcx-demo select,
+    .gcx-demo textarea { font: inherit; font-family: var(--font-body); color: var(--text-1); }
+    .gcx-demo button { cursor: pointer; background: none; border: 0; }
+    .gcx-demo button:disabled { cursor: wait; opacity: 0.45; }
+    .gcx-demo :focus-visible,
+    .gcx-help-panel :focus-visible,
+    .gcx-diagnostics :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+    .gcx-settings-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 18px 24px 0; font-size: 0.82rem; color: var(--d-muted); }
+    .gcx-settings-row label { color: var(--text-1); }
+    #language { min-height: 40px; max-width: 100%; padding: 8px 12px; border: 1px solid var(--d-line); border-radius: 10px; background: var(--bg); }
+    #language:disabled { opacity: 0.6; }
+
+    .gcx-workspace { position: relative; min-width: 0; height: clamp(470px, 62svh, 600px); }
+
+    .gcx-voice-view { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; padding: 32px 24px 12px; }
+    .gcx-orb-wrap { --voice-level: 0; --signal-level: 0; position: relative; isolation: isolate; flex: none; width: clamp(190px, 32vw, 290px); aspect-ratio: 1; margin-bottom: 20px; }
+    .gcx-orb-wrap::before,
+    .gcx-orb-wrap::after { content: ''; position: absolute; inset: 0; border: 1.5px solid #509a99; border-radius: 50%; pointer-events: none; opacity: calc(var(--signal-level) * .5); transform: scale(calc(1 + var(--voice-level) * .2)); }
+    .gcx-orb-wrap::after { opacity: calc(var(--signal-level) * .25); transform: scale(calc(1 + var(--voice-level) * .34)); }
+    .gcx-orb-wrap[data-activity="speaking"]::before,
+    .gcx-orb-wrap[data-activity="speaking"]::after { border-color: #4b9dcc; }
+    .gcx-orb { position: relative; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; transform: scale(calc(1 + var(--voice-level) * .105)); transition: opacity 200ms; background: radial-gradient(ellipse at 70% 27%, #d9ffd9, transparent 46%), radial-gradient(ellipse at 17% 23%, #438b56, transparent 60%), #6dc8e7; }
+    .gcx-orb canvas { display: block; width: 100%; height: 100%; border-radius: inherit; }
+    .gcx-orb[data-active="true"] canvas { animation: gcxOrbit 12s ease-in-out infinite alternate; }
+    .gcx-orb[data-muted="true"] { opacity: .6; }
+    @keyframes gcxOrbit { from { transform: rotate(-7deg) scale(1.07); } to { transform: rotate(9deg) scale(1.14); } }
+
+    .gcx-call-switch { position: absolute; z-index: 1; bottom: -26px; left: 50%; transform: translateX(-50%); padding: 8px; border-radius: 50%; background: var(--bg-surface); }
+    .gcx-call-button { width: 58px; height: 58px; display: grid; place-items: center; padding: 0; border-radius: 50%; color: var(--d-solid-ink); background: var(--d-solid); transition: opacity 150ms var(--ease-out); }
+    .gcx-call-button:hover:not(:disabled) { opacity: .82; }
+    .gcx-call-button svg { width: 23px; height: 23px; }
+    #stop { color: #fff; background: #a82d32; }
+    #stop:hover { opacity: .85; }
+
+    .gcx-conversation { width: min(100%, 580px); min-height: 88px; text-align: center; }
+    .gcx-status-line { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 24px; margin-bottom: 8px; }
+    #status { font-size: 0.93rem; font-weight: 500; line-height: 1.5; }
+    #timer { font-size: 0.86rem; font-variant-numeric: tabular-nums; color: var(--d-muted); }
+    #timer:not(:empty)::before { content: '·'; margin-right: 10px; }
+    .gcx-transcript { max-height: 108px; overflow-y: auto; scrollbar-width: thin; padding-inline: 4px; font-size: 0.92rem; color: var(--d-muted); line-height: 1.6; overflow-wrap: anywhere; }
+
+    .gcx-toolbar { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 20px 12px; padding: 20px; border-top: 1px solid var(--d-line); }
+    .gcx-agent { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .gcx-avatar { width: 42px; height: 42px; flex: none; padding: 5px; background: var(--bg); border: 1px solid var(--d-line); border-radius: 50%; }
+    .gcx-avatar span { display: block; height: 100%; border-radius: 50%; background: radial-gradient(ellipse at 75% 15%, #e0fedf, transparent 48%), radial-gradient(ellipse at 10% 10%, #528b42, transparent 65%), #75cbe7; }
+    .gcx-agent-name { font-size: 0.92rem; font-weight: 500; line-height: 1.4; }
+    .gcx-agent-provider { display: block; margin-top: 2px; font-size: 0.72rem; color: var(--d-muted); }
+
+    .gcx-modes { display: flex; gap: 4px; padding: 4px; background: var(--d-raised); border-radius: 999px; }
+    .gcx-modes button { min-width: 62px; min-height: 40px; padding: 8px 16px; border: 1px solid transparent; border-radius: 999px; color: var(--d-muted); }
+    .gcx-modes button[aria-selected="true"] { background: var(--bg); border-color: var(--d-line); color: var(--text-1); }
+    .gcx-toolbar-actions { grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 10px; }
+    .gcx-help-button,
+    .gcx-mute-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 10px 18px; border-radius: 999px; font-size: 0.83rem; white-space: nowrap; }
+    .gcx-help-button { color: var(--d-solid-ink); background: var(--d-solid); }
+    .gcx-help-button:hover { opacity: .85; }
+    .gcx-mute-button { border: 1px solid var(--d-line); }
+    .gcx-mute-button svg { width: 18px; height: 18px; }
+    .gcx-mute-button[aria-pressed="true"] { background: var(--d-raised); }
+
+    #error { margin: 0 20px 16px; padding: 16px; border-radius: 12px; line-height: 1.55; font-size: 0.9rem; overflow-wrap: anywhere; color: #8d3138; background: #fbe7e6; }
+    [data-theme="dark"] #error { color: #ffbdb8; background: #2a1414; }
+    #error[data-kind="response-timeout"],
+    #error[data-kind="chat-response-timeout"] { color: #6f5013; background: #f7ecd4; }
+    [data-theme="dark"] #error[data-kind="response-timeout"],
+    [data-theme="dark"] #error[data-kind="chat-response-timeout"] { color: #ecc978; background: #2a2314; }
+    #error p { margin: 4px 0 12px; }
+    .gcx-recovery-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .gcx-recovery-actions button,
+    .gcx-chat-form button,
+    .gcx-diagnostics button { min-height: 40px; padding: 8px 16px; border: 1px solid var(--d-line); border-radius: 10px; color: var(--text-1); background: var(--bg); }
+    .gcx-recovery-actions button:hover,
+    .gcx-chat-form button:hover:not(:disabled),
+    .gcx-diagnostics button:hover { border-color: var(--accent); }
+
+    .gcx-chat-view { display: flex; flex-direction: column; height: 100%; padding: 24px 24px 0; gap: 12px; }
+    .gcx-chat-log { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 14px; scrollbar-width: thin; }
+    .gcx-chat-message { max-width: min(85%, 620px); padding: 12px 16px; border: 1px solid var(--d-line); border-radius: 14px; background: var(--bg); line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .gcx-chat-message[data-role="user"] { align-self: flex-end; border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
+    .gcx-chat-message strong { display: block; font-size: 0.72rem; margin-bottom: 3px; color: var(--d-muted); }
+    .gcx-chat-empty { margin: auto; color: var(--d-muted); text-align: center; line-height: 1.7; }
+    .gcx-chat-form { display: flex; gap: 8px; align-items: flex-end; }
+    .gcx-chat-form textarea { flex: 1; min-width: 0; min-height: 54px; max-height: 120px; resize: vertical; padding: 12px; border: 1px solid var(--d-line); border-radius: 10px; background: var(--bg); }
+    #chat-status { min-height: 22px; color: var(--d-muted); font-size: 0.84rem; }
+    .gcx-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+    /* Mantém uma única vista do SDK montada: trocar de modo nunca reconstrói a lista interna. */
+    .gcx-sdk-host { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); opacity: 0; pointer-events: none; contain: layout paint; }
+    chat-messenger { display: block; width: 100%; height: 100%; --chat-messenger-font-family: var(--font-body); --chat-messenger-color--primary: #246b57; --chat-messenger-internal-chat-border-radius: 0; }
+    chat-messenger-container { display: block; width: 100%; height: 100%; --chat-messenger-internal-visual-viewport-height: 100%; }
+
+    /* ── Ajuda e diagnóstico ──────────────────────────────── */
+    .gcx-help-panel { display: grid; gap: 24px; margin-top: 26px; padding: 26px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-surface); }
+    .gcx-help-panel h3 { font-family: var(--font-display); font-size: 0.93rem; font-weight: 500; margin-bottom: 8px; }
+    .gcx-help-panel p { font-size: 0.86rem; line-height: 1.7; color: color-mix(in srgb, var(--text-1) 70%, transparent); }
+    .gcx-help-panel details { grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 18px; }
+    .gcx-help-panel summary,
+    .gcx-diagnostics summary { cursor: pointer; min-height: 34px; font-weight: 500; line-height: 1.7; }
+    .gcx-help-panel details p { margin-top: 10px; }
+    .gcx-help-panel ul { margin-top: 12px; display: grid; gap: 8px; }
+    .gcx-help-panel li { position: relative; padding-left: 18px; font-size: 0.84rem; line-height: 1.7; color: color-mix(in srgb, var(--text-1) 70%, transparent); }
+    .gcx-help-panel li::before { content: ''; position: absolute; left: 0; top: 0.7em; width: 8px; height: 1px; background: var(--accent); }
+    .gcx-help-panel li strong { color: var(--text-1); font-weight: 500; }
+    .gcx-sources a { color: var(--accent); text-underline-offset: 4px; text-decoration: underline; }
+
+    .gcx-diagnostics { margin-top: 20px; padding: 18px 20px; border: 1px solid var(--border); border-radius: 14px; }
+    .gcx-diagnostics p { margin: 10px 0 12px; color: color-mix(in srgb, var(--text-1) 66%, transparent); line-height: 1.65; font-size: 0.84rem; max-width: 80ch; }
+    .gcx-diagnostics pre { max-height: 250px; margin-top: 12px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg-surface); border: 1px solid var(--border); padding: 12px; border-radius: 8px; font-size: 0.72rem; line-height: 1.6; }
+    #copy-status { margin-left: 10px; font-size: 0.8rem; color: color-mix(in srgb, var(--text-1) 66%, transparent); }
+
+    .gcx-demo-footnote { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; margin-top: 22px; font-size: 0.73rem; line-height: 1.7; color: var(--text-2); }
+    .gcx-demo-footnote span:first-child { max-width: 86ch; }
+    .gcx-limit { white-space: nowrap; }
+
+    /* ── Responsivo ───────────────────────────────────────── */
+    @media (min-width: 760px) {
+      .gcx-toolbar { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); padding: 22px 30px; }
+      .gcx-toolbar-actions { grid-column: auto; justify-content: flex-end; }
+      .gcx-help-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 40px; padding: 30px 32px; }
+    }
+    @media (max-width: 900px) {
+      .gcx-two-col { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .gcx-title { max-width: none; }
+      .gcx-demo { border-radius: 16px; }
+      .gcx-settings-row { padding: 16px 16px 0; }
+      .gcx-voice-view { padding: 24px 16px 12px; }
+      .gcx-chat-view { padding: 18px 16px 0; }
+      .gcx-toolbar { grid-template-columns: 1fr; justify-items: center; padding: 18px 16px; gap: 16px; }
+      .gcx-toolbar-actions { grid-column: auto; flex-wrap: wrap; }
+      .gcx-agent { justify-content: center; }
+      #error { margin: 0 16px 14px; }
+      .gcx-steps li { padding: 24px 20px; }
+      .gcx-help-panel { padding: 22px 18px; }
+      .gcx-diagnostics { padding: 16px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .gcx-orb, .gcx-call-button { transition: none; }
+      .gcx-orb { transform: none; }
+      .gcx-orb-wrap::before, .gcx-orb-wrap::after { display: none; }
+      .gcx-orb[data-active="true"] canvas { animation: none; }
+    }
+  </style>
+
+  <script is:inline>
+    /* Textos de execução da demonstração. O conteúdo estático usa o
+       esquema data-i18n do portfólio; aqui só ficam as frases geradas
+       em tempo de execução pelo estado da chamada. */
+    const COPY = {
+      pt: {
+        booting: 'A preparar o assistente…',
+        transcriptIdle: 'Autorize o microfone e fale naturalmente.',
+        ready: 'Iniciar uma conversa',
+        sdkFailed: 'O assistente não carregou',
+        sdkFailedHint: 'Atualize a página para tentar de novo.',
+        preparingCall: 'A preparar uma nova conversa…',
+        micPrompt: 'Autorize o microfone quando o navegador pedir.',
+        connecting: 'A ligar…',
+        listening: 'A ouvir',
+        micActive: 'Microfone ativo. Pode começar a falar.',
+        speaking: 'Assistente a falar',
+        speakingMuted: 'Assistente a falar · microfone silenciado',
+        muted: 'Microfone silenciado',
+        hearing: 'A captar a sua voz',
+        waiting: 'A aguardar resposta do Google',
+        ended: 'Chamada terminada',
+        endedError: 'Não foi possível continuar a chamada',
+        limitReached: 'Limite de teste atingido (4 min)',
+        dropped: 'Ligação interrompida',
+        remoteEnded: 'O assistente terminou a conversa',
+        restarting: 'A iniciar uma nova conversa',
+        modeEnded: 'Chamada terminada ao mudar de modo',
+        reloading: 'A atualizar',
+        closed: 'Página fechada',
+        retryVoice: 'Voltar a ligar',
+        retryChat: 'Nova conversa',
+        muteOn: 'Silenciar microfone',
+        muteOff: 'Ativar microfone',
+        you: 'Você',
+        agent: 'Assistente',
+        chatWaiting: 'A aguardar resposta…',
+        chatReceived: 'Resposta recebida.',
+        chatSlow: 'A resposta está a demorar. A mensagem não foi reenviada.',
+        chatNoText: 'O pedido terminou sem resposta de texto. Consulte o diagnóstico ou inicie uma nova conversa.',
+        chatIncomplete: 'A mensagem não foi concluída. Não será reenviada automaticamente.',
+        chatPreparing: 'A preparar uma nova conversa…',
+        chatReady: 'Nova conversa pronta. Escreva a sua mensagem.',
+        langHintAuto: 'Fale no idioma desejado.',
+        langHintSet: 'Preferência enviada na próxima conversa ou mensagem.',
+        copyOk: 'Diagnóstico copiado.',
+        copyFail: 'Não foi possível copiar. Selecione o registro manualmente.',
+        noEvents: 'Ainda sem eventos.',
+      },
+      en: {
+        booting: 'Getting the assistant ready…',
+        transcriptIdle: 'Allow the microphone and speak naturally.',
+        ready: 'Start a conversation',
+        sdkFailed: 'The assistant did not load',
+        sdkFailedHint: 'Reload the page to try again.',
+        preparingCall: 'Preparing a new conversation…',
+        micPrompt: 'Allow the microphone when the browser asks.',
+        connecting: 'Connecting…',
+        listening: 'Listening',
+        micActive: 'Microphone is live. You can start talking.',
+        speaking: 'Assistant speaking',
+        speakingMuted: 'Assistant speaking · microphone muted',
+        muted: 'Microphone muted',
+        hearing: 'Picking up your voice',
+        waiting: 'Waiting for an answer from Google',
+        ended: 'Call ended',
+        endedError: 'The call could not continue',
+        limitReached: 'Test limit reached (4 min)',
+        dropped: 'Connection dropped',
+        remoteEnded: 'The assistant ended the conversation',
+        restarting: 'Starting a new conversation',
+        modeEnded: 'Call ended when the mode changed',
+        reloading: 'Reloading',
+        closed: 'Page closed',
+        retryVoice: 'Call again',
+        retryChat: 'New conversation',
+        muteOn: 'Mute microphone',
+        muteOff: 'Unmute microphone',
+        you: 'You',
+        agent: 'Assistant',
+        chatWaiting: 'Waiting for an answer…',
+        chatReceived: 'Answer received.',
+        chatSlow: 'The answer is taking a while. The message was not resent.',
+        chatNoText: 'The request finished without a text answer. Check the diagnostics or start a new conversation.',
+        chatIncomplete: 'The message did not complete. It will not be resent automatically.',
+        chatPreparing: 'Preparing a new conversation…',
+        chatReady: 'New conversation ready. Type your message.',
+        langHintAuto: 'Speak in the language you want.',
+        langHintSet: 'Preference sent with the next conversation or message.',
+        copyOk: 'Diagnostics copied.',
+        copyFail: 'Could not copy. Select the log manually.',
+        noEvents: 'No events yet.',
+      },
+    };
+    const uiLang = () => (document.documentElement.getAttribute('data-lang') === 'en' ? 'en' : 'pt');
+    const t = key => COPY[uiLang()][key];
+
+    const demo=document.getElementById('demo'), start=document.getElementById('start'), stop=document.getElementById('stop');
+    const messenger=document.getElementById('voice'), container=messenger.querySelector('chat-messenger-container');
+    const voiceView=document.getElementById('voice-view'), chatView=document.getElementById('chat-view');
+    const voiceTab=document.getElementById('voice-tab'), chatTab=document.getElementById('chat-tab');
+    const status=document.getElementById('status'), timer=document.getElementById('timer'), transcript=document.getElementById('transcript');
+    const error=document.getElementById('error'), mute=document.getElementById('mute'), orb=document.getElementById('orb'), orbWrap=orb.parentElement;
+    const language=document.getElementById('language'), retry=document.getElementById('retry'), reload=document.getElementById('reload');
+    const chatInput=document.getElementById('chat-input'), chatSend=document.getElementById('chat-send'), chatStatus=document.getElementById('chat-status'), chatLog=document.getElementById('chat-log');
+    let active=false, ready=false, muted=false, tick, limit, startedAt=0, mediaStream, generation=0;
+    let meterContext, meterSource, meterAnalyser, meterSamples, meterFrame, connected=false;
+    let outputLevel=0, outputAt=0, userAt=0, smoothLevel=0, lastMeterPaint=0;
+    let journal, pendingStart=false, phase='idle', connectTimer, hasSession=false, preferenceSent=false;
+    let lastEnd={kind:'none',at:0}, pendingResponseAt=0, chatBusy=false, chatGeneration=0, chatResponseCount=0, chatTimer;
+    let lastErrorDetail=null;
+    const preferences={
+      'pt-BR':'Please conduct this conversation in Portuguese (Brazil).',
+      'en-US':'Please conduct this conversation in English (United States).',
+      'es-ES':'Please conduct this conversation in Spanish (Spain).',
+    };
+    status.textContent=t('booting');
+    transcript.textContent=t('transcriptIdle');
+    document.getElementById('diagnostic-output').textContent=t('noEvents');
+    retry.textContent=t('retryVoice');
+    function record(event,detail={}){
+      if(!window.GecxDiagnostics)return;
+      journal??=GecxDiagnostics.createJournal(40);
+      journal.add(event,{attempt:generation,mode:demo.dataset.mode,language:language.value,...detail});
+      document.getElementById('diagnostic-output').textContent=JSON.stringify({app:'gecx-browser-demo',sdk:'prod/latest',events:journal.entries()},null,2);
+    }
+    function controls(){
+      start.disabled=!ready||pendingStart||chatBusy||!navigator.onLine;
+      retry.disabled=!ready||pendingStart||chatBusy||!navigator.onLine;
+      retry.hidden=error.dataset.action==='reload'||(pendingStart&&!active);
+      chatSend.disabled=!ready||pendingStart||chatBusy||active||!navigator.onLine;
+      language.disabled=active||pendingStart||chatBusy;
+    }
+    function clearError(){error.hidden=true;error.dataset.kind='';lastErrorDetail=null;}
+    function presentError(detail){
+      const info=GecxDiagnostics.describe({...detail,mode:demo.dataset.mode},uiLang());
+      // The SDK can emit a generic follow-up after the detailed service error.
+      if(!error.hidden&&['capacity','access'].includes(error.dataset.kind)&&['stream','chat-request'].includes(info.kind))return;
+      lastErrorDetail=detail;
+      error.dataset.kind=info.kind;error.dataset.action=info.action;document.getElementById('error-title').textContent=info.title;
+      document.getElementById('error-message').textContent=info.message;
+      retry.hidden=info.action==='reload';retry.textContent=demo.dataset.mode==='chat'?t('retryChat'):t('retryVoice');
+      error.hidden=false;controls();
+    }
+
+    // Original procedural texture, drawn once. Audio animates the containing orb.
+    function drawOrb() {
+      const canvas=document.getElementById('orb-canvas'), ctx=canvas.getContext('2d');
+      if (!ctx) return;
+      const n=canvas.width, picture=ctx.createImageData(n,n), data=picture.data;
+      const mix=(a,b,f)=>a.map((v,i)=>v*(1-f)+b[i]*f);
+      for(let y=0;y<n;y++) for(let x=0;x<n;x++) {
+        const u=(x+.5)/n*2-1,v=(y+.5)/n*2-1,r=u*u+v*v;
+        if(r>1) continue;
+        const z=Math.sqrt(1-r),i=(y*n+x)*4;
+        const green=Math.exp(-((u+.37)**2/.65+(v+.57)**2/.7));
+        const lime=Math.exp(-((u-.26)**2/.3+(v+.56)**2/.27));
+        const light=Math.exp(-((u-.57)**2/.36+(v+.12)**2/.22));
+        let c=mix([64,163,224],[57,116,68],green*.96);
+        c=mix(c,[169,218,143],lime*.9); c=mix(c,[222,255,251],light*.94);
+        const rim=Math.pow(1-z,3)*22,grain=(Math.sin(x*127.1+y*311.7)*43758.5453%1)*14,shade=.94+z*.09+u*.035;
+        for(let k=0;k<3;k++) data[i+k]=Math.max(0,Math.min(255,c[k]*shade+rim+grain));
+        data[i+3]=Math.min(255,(1-r)*n*128);
+      }
+      ctx.putImageData(picture,0,0);
+    }
+    drawOrb();
+    function resetOrb(){
+      orb.dataset.active='false';orb.dataset.muted='false';orbWrap.dataset.activity='idle';
+      orbWrap.style.setProperty('--voice-level','0');orbWrap.style.setProperty('--signal-level','0');
+    }
+    function stopMeter(){
+      cancelAnimationFrame(meterFrame);meterFrame=undefined;
+      meterSource?.disconnect();meterSource=undefined;meterAnalyser=undefined;meterSamples=undefined;
+      if(meterContext&&meterContext.state!=='closed')meterContext.close().catch(()=>{});
+      meterContext=undefined;outputLevel=0;outputAt=0;userAt=0;smoothLevel=0;lastMeterPaint=0;
+    }
+    function startMeter(stream){
+      stopMeter();
+      try{
+        // Analysis only: never connect this microphone source to the speakers.
+        meterContext=new (window.AudioContext||window.webkitAudioContext)();
+        meterContext.resume().catch(()=>{});
+        meterSource=meterContext.createMediaStreamSource(stream);
+        meterAnalyser=meterContext.createAnalyser();meterAnalyser.fftSize=512;
+        meterSamples=new Float32Array(meterAnalyser.fftSize);meterSource.connect(meterAnalyser);
+      }catch{/* The call and output feedback can continue without local metering. */}
+      function paint(now){
+        if(!active)return;
+        meterFrame=requestAnimationFrame(paint);
+        if(now-lastMeterPaint<32)return;lastMeterPaint=now;
+        let rms=0;
+        if(meterAnalyser&&!muted){meterAnalyser.getFloatTimeDomainData(meterSamples);for(const n of meterSamples)rms+=n*n;rms=Math.sqrt(rms/meterSamples.length);}
+        if(rms>.007)userAt=now;
+        const userSpeaking=!muted&&userAt>0&&now-userAt<350;
+        const assistantSpeaking=outputAt>0&&now-outputAt<250;
+        const voiceEnergy=Math.min(1,Math.sqrt(rms)*3.3);
+        const incoming=assistantSpeaking?outputLevel:0;
+        const breath=connected&&!muted ? .055+Math.sin(now/600)*.025 : 0;
+        const target=Math.max(voiceEnergy,incoming,breath);
+        smoothLevel+=(target-smoothLevel)*(target>smoothLevel ? .4 : .15);
+        orbWrap.style.setProperty('--voice-level',smoothLevel.toFixed(3));
+        orbWrap.style.setProperty('--signal-level',Math.min(1,smoothLevel*1.6).toFixed(3));
+        const waiting=pendingResponseAt>0&&Date.now()-pendingResponseAt>2500;
+        const activity=assistantSpeaking?'speaking':muted?'muted':userSpeaking?'hearing':waiting?'waiting':'listening';
+        if(orbWrap.dataset.activity!==activity){
+          orbWrap.dataset.activity=activity;
+          if(connected)status.textContent=assistantSpeaking?(muted?t('speakingMuted'):t('speaking')):muted?t('muted'):userSpeaking?t('hearing'):waiting?t('waiting'):t('listening');
+        }
+      }
+      meterFrame=requestAnimationFrame(paint);
+    }
+    function finish(message=t('ended'),kind='user') {
+      if(!active)return;
+      lastEnd={kind,at:Date.now()};active=false;connected=false;phase='idle';generation+=1;
+      clearInterval(tick);clearTimeout(limit);clearTimeout(connectTimer);tick=undefined;pendingResponseAt=0;stopMeter();
+      record('call-ended',{kind});
+      try{messenger.presenter?.terminateBidiClient?.();}catch{/* Always release our microphone tracks. */}
+      mediaStream?.getTracks().forEach(track=>track.stop());mediaStream=undefined;
+      const returnFocus=document.activeElement===stop||document.activeElement===mute;
+      start.hidden=false;stop.hidden=true;mute.hidden=true;status.textContent=message;resetOrb();controls();
+      if(returnFocus)start.focus({preventScroll:true});
+    }
+    function showError(detail={},force=false) {
+      record('error',detail);
+      const lateError=['disconnect','error'].includes(lastEnd.kind)&&Date.now()-lastEnd.at<5000;
+      if(!force&&!active&&!chatBusy&&!lateError)return;
+      finish(t('endedError'),'error');
+      if(chatBusy){chatStatus.textContent=t('chatIncomplete');}
+      presentError(detail);
+    }
+    function waitForToken(reset=false){
+      return GecxSessionAuth.waitForAuthorization({
+        readState:()=>chatSdk.getContext()?.state,
+        eventTarget:window,
+        ...(reset?{reset:()=>messenger.startNewSession()}:{}),
+      });
+    }
+    async function prepareSession(){
+      await waitForToken(hasSession);hasSession=true;preferenceSent=false;record('session-ready');
+    }
+    async function applyVoicePreference(){
+      if(!active||!connected||!mediaStream||preferenceSent)return;
+      preferenceSent=true;
+      if(!preferences[language.value])return;
+      record('language-preference');pendingResponseAt=Date.now();
+      try{await messenger.sendQuery(preferences[language.value]);}catch(failure){showError(failure);}
+    }
+    function initialize(){
+      if(ready)return;
+      if(!window.GecxDiagnostics||!window.GecxSessionAuth)return;
+      chatSdk.registerContext(chatSdk.prebuilts.ces.createContext({
+        deploymentName:'projects/501912525936/locations/us/apps/ed178bc4-49d8-4b9c-8422-dd76d3e1a445/deployments/36b553cc-337a-41ff-b788-f22789f63d08',
+        tokenBroker:{enableTokenBroker:true,enableRecaptcha:true},enableWelcomeEvent:false,
+      }));
+      ready=true;controls();status.textContent=t('ready');record('sdk-ready');
+    }
+    window.addEventListener('chat-messenger-access-token-resolved',()=>record('authorization-ready'));
+    window.addEventListener('chat-messenger-loaded',initialize,{once:true});
+    setTimeout(()=>{if(!ready){status.textContent=t('sdkFailed');transcript.textContent=t('sdkFailedHint');if(window.GecxDiagnostics)presentError({kind:'sdk-load'});}},20000);
+    async function startCall(){
+      if(active||!ready||pendingStart||chatBusy)return;
+      clearError();
+      if(!navigator.onLine){showError({kind:'offline'},true);return;}
+      if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia){showError({name:'SecurityError'},true);return;}
+      pendingStart=true;phase='preparing';lastEnd={kind:'none',at:0};
+      active=true;muted=false;start.hidden=true;stop.hidden=false;stop.focus({preventScroll:true});
+      orb.dataset.active='true';const attempt=++generation;
+      controls();record('call-start');status.textContent=t('preparingCall');transcript.textContent=t('micPrompt');timer.textContent='';
+      connectTimer=setTimeout(()=>{if(active&&attempt===generation)showError({kind:'connect-timeout'});},45000);
+      try{
+        await prepareSession();
+        if(attempt!==generation||!active)return;
+        if(typeof messenger.presenter?.toggleBidiSession!=='function')throw {kind:'sdk-load'};
+        phase='connecting';status.textContent=t('connecting');
+        const stream=await messenger.presenter.toggleBidiSession(true);
+        if(attempt!==generation||!active){stream?.getTracks().forEach(track=>track.stop());if(!active)messenger.presenter?.terminateBidiClient?.();return;}
+        if(!stream){showError({kind:'empty-stream'});return;}
+        mediaStream=stream;startMeter(stream);mute.hidden=false;mute.setAttribute('aria-pressed','false');mute.setAttribute('aria-label',t('muteOn'));mute.title=t('muteOn');document.getElementById('mute-slash').setAttribute('hidden','');
+        stream.getAudioTracks().forEach(track=>track.addEventListener('ended',()=>{if(active&&mediaStream===stream)showError({name:'NotReadableError'});}));
+        await applyVoicePreference();
+      }catch(failure){if(attempt===generation)showError(failure);}
+      finally{pendingStart=false;controls();}
+    }
+    start.addEventListener('click',startCall);
+    stop.addEventListener('click',()=>{const pending=pendingStart;finish();if(pending)presentError({kind:'pending-cancel'});else clearError();});
+    mute.addEventListener('click',()=>{
+      if(!active||!mediaStream)return;
+      muted=!muted;mediaStream.getAudioTracks().forEach(track=>track.enabled=!muted);
+      record(muted?'microphone-muted':'microphone-unmuted');
+      mute.setAttribute('aria-pressed',String(muted));mute.setAttribute('aria-label',muted?t('muteOff'):t('muteOn'));mute.title=mute.getAttribute('aria-label');
+      document.getElementById('mute-slash').toggleAttribute('hidden',!muted);orb.dataset.muted=String(muted);orbWrap.dataset.activity='';status.textContent=muted?t('muted'):t('listening');
+    });
+    messenger.addEventListener('chat-messenger-connect-bidi',()=>{
+      if(!active||phase==='preparing')return;
+      connected=true;phase='connected';clearTimeout(connectTimer);record('connected');status.textContent=t('listening');transcript.textContent=t('micActive');
+      if(!tick){
+        startedAt=Date.now();timer.textContent='0:00';
+        limit=setTimeout(()=>finish(t('limitReached'),'limit'),240000);
+        tick=setInterval(()=>{
+          const s=Math.floor((Date.now()-startedAt)/1000);timer.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+          if(pendingResponseAt&&Date.now()-pendingResponseAt>20000&&error.hidden){record('response-slow');presentError({kind:'response-timeout'});}
+          if(s>=240)finish(t('limitReached'),'limit');
+        },1000);
+      }
+      applyVoicePreference();
+    });
+    function responseArrived(){pendingResponseAt=0;if(error.dataset.kind==='response-timeout')clearError();}
+    messenger.addEventListener('chat-messenger-bidi-transcript-updated',({detail})=>{if(active&&detail?.transcript){transcript.textContent=t('you')+': '+detail.transcript;pendingResponseAt=Date.now();}});
+    messenger.addEventListener('chat-messenger-bidi-utterance-updated',({detail})=>{if(active&&detail?.utterance){transcript.textContent=detail.utterance;responseArrived();}});
+    messenger.addEventListener('chat-messenger-audio-playback-payload',({detail})=>{
+      if(!active||!detail?.audio?.length)return;
+      const mean=detail.audio.reduce((sum,n)=>sum+n,0)/detail.audio.length;
+      outputLevel=Math.min(1,Math.sqrt(mean/100)*1.8);if(mean>1.5){outputAt=performance.now();responseArrived();}
+    });
+    messenger.addEventListener('chat-messenger-disconnect-bidi',()=>{
+      record('disconnected');if(!active||phase==='preparing')return;
+      finish(t('dropped'),'disconnect');presentError({kind:'stream'});
+    });
+    messenger.addEventListener('chat-messenger-session-ended',()=>{
+      record('agent-ended');
+      if(active){finish(t('remoteEnded'),'remote');clearError();}
+      else if(lastEnd.kind==='disconnect'&&Date.now()-lastEnd.at<2000){status.textContent=t('remoteEnded');clearError();lastEnd.kind='remote';}
+    });
+    messenger.addEventListener('chat-messenger-error',e=>showError(e.detail||{}));
+    messenger.addEventListener('chat-messenger-error-v2',e=>showError(e.detail||{}));
+    function addChatMessage(role,text){
+      document.getElementById('chat-empty')?.remove();
+      const item=document.createElement('div');item.className='gcx-chat-message';item.dataset.role=role;
+      const who=document.createElement('strong');who.textContent=role==='user'?t('you'):t('agent');
+      const body=document.createElement('span');body.textContent=text;item.append(who,body);chatLog.append(item);chatLog.scrollTop=chatLog.scrollHeight;
+    }
+    messenger.addEventListener('chat-messenger-response-received',({detail})=>{
+      if(!chatBusy||demo.dataset.mode!=='chat')return;
+      const text=(detail?.messages||[]).filter(m=>m.type==='text'&&typeof m.text==='string').map(m=>m.text).join('\n');
+      if(text){chatResponseCount++;addChatMessage('agent',text);chatStatus.textContent=t('chatReceived');if(['response-timeout','chat-response-timeout'].includes(error.dataset.kind))clearError();}
+    });
+    document.getElementById('chat-form').addEventListener('submit',async event=>{
+      event.preventDefault();const text=chatInput.value.trim();if(!text||chatBusy||active||pendingStart||!ready)return;
+      if(!navigator.onLine){showError({kind:'offline'},true);return;}
+      clearError();chatBusy=true;const attempt=++chatGeneration;const responseBefore=chatResponseCount;controls();chatStatus.textContent=t('chatWaiting');addChatMessage('user',text);chatInput.value='';record('chat-request');
+      chatTimer=setTimeout(()=>{if(chatBusy&&attempt===chatGeneration){chatStatus.textContent=t('chatSlow');presentError({kind:'chat-response-timeout'});}},20000);
+      try{
+        await waitForToken();if(attempt!==chatGeneration)return;hasSession=true;
+        const prefix=!preferenceSent&&preferences[language.value]?preferences[language.value]+'\n\n':'';preferenceSent=true;
+        await messenger.sendQuery(prefix+text);
+        if(attempt===chatGeneration&&responseBefore===chatResponseCount&&error.hidden)chatStatus.textContent=t('chatNoText');
+      }catch(failure){if(attempt===chatGeneration)showError(failure);}
+      finally{if(attempt===chatGeneration){chatBusy=false;clearTimeout(chatTimer);controls();}}
+    });
+    retry.addEventListener('click',async()=>{
+      if(pendingStart||chatBusy)return;
+      if(demo.dataset.mode==='voice'){finish(t('restarting'),'retry');startCall();}
+      else{clearError();pendingStart=true;controls();chatStatus.textContent=t('chatPreparing');try{await prepareSession();chatStatus.textContent=t('chatReady');chatLog.replaceChildren();}catch(failure){showError(failure,true);}finally{pendingStart=false;controls();}}
+    });
+    reload.addEventListener('click',()=>{finish(t('reloading'),'reload');location.reload();});
+    language.addEventListener('change',()=>{preferenceSent=false;record('language-selected');document.getElementById('language-hint').textContent=language.value==='auto'?t('langHintAuto'):t('langHintSet');});
+    function setMode(mode){
+      if(mode===demo.dataset.mode)return;
+      if(chatBusy||pendingStart)return;
+      finish(t('modeEnded'),'mode');clearError();
+      const voiceMode=mode==='voice';demo.dataset.mode=mode;voiceView.hidden=!voiceMode;chatView.hidden=voiceMode;record('mode-changed');
+      for(const[tab,selected]of[[voiceTab,voiceMode],[chatTab,!voiceMode]]){tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;}
+    }
+    voiceTab.addEventListener('click',()=>setMode('voice'));chatTab.addEventListener('click',()=>setMode('chat'));
+    document.querySelector('.gcx-modes').addEventListener('keydown',event=>{
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+      event.preventDefault();const mode=event.key==='Home'?'voice':event.key==='End'?'chat':demo.dataset.mode==='voice'?'chat':'voice';setMode(mode);(mode==='voice'?voiceTab:chatTab).focus();
+    });
+    document.getElementById('help-toggle').addEventListener('click',event=>{
+      const panel=document.getElementById('help-panel');panel.hidden=!panel.hidden;event.currentTarget.setAttribute('aria-expanded',String(!panel.hidden));
+      if(!panel.hidden)panel.scrollIntoView({block:'nearest',behavior:'instant'});
+    });
+    document.getElementById('copy-diagnostics').addEventListener('click',async()=>{
+      const feedback=document.getElementById('copy-status');
+      try{await navigator.clipboard.writeText(document.getElementById('diagnostic-output').textContent);feedback.textContent=t('copyOk');}catch{feedback.textContent=t('copyFail');}
+    });
+    window.addEventListener('offline',()=>{record('offline');if(active||chatBusy)showError({kind:'offline'},true);controls();});
+    window.addEventListener('online',()=>{record('online');controls();});
+    window.addEventListener('error',event=>{if(event.filename?.startsWith('https://www.gstatic.com/chat-messenger/'))record('sdk-ui-exception');});
+    window.addEventListener('pagehide',()=>finish(t('closed'),'pagehide'));
+
+    /* Troca de idioma do portfólio: reescreve o que é gerado em tempo de execução. */
+    new MutationObserver(() => {
+      if(!active&&!chatBusy&&!pendingStart){
+        status.textContent=ready?t('ready'):t('booting');
+        transcript.textContent=t('transcriptIdle');
+      }
+      retry.textContent=demo.dataset.mode==='chat'?t('retryChat'):t('retryVoice');
+      document.getElementById('language-hint').textContent=language.value==='auto'?t('langHintAuto'):t('langHintSet');
+      if(!journal)document.getElementById('diagnostic-output').textContent=t('noEvents');
+      if(lastErrorDetail&&!error.hidden)presentError(lastErrorDetail);
+    }).observe(document.documentElement,{attributes:true,attributeFilter:['data-lang']});
+  </script>
+
+</body>
+</html>
