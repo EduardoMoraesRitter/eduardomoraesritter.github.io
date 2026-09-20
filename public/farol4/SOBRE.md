@@ -226,3 +226,7 @@ A interface mostra capturas analisadas, mantidas e descartadas; o manifesto regi
 ### Transmitir somente o áudio
 
 Escolha o vídeo no painel de prints e clique em **Extrair áudio e usar no Farol**. Web Audio e MediaRecorder recodificam o áudio localmente em tempo real, sem enviar o vídeo a servidores. O ZIP contém apenas o áudio e um manifesto; é selecionado automaticamente para transmissão. O formato varia conforme o navegador (M4A, WebM ou Ogg). Mantenha a aba ativa durante toda a duração do vídeo. É possível cancelar. Vídeos sem áudio podem resultar em silêncio; baixe a cópia para conferir antes de transmitir. O limite continua sendo 100 MB.
+
+### Prints compactos e prévia
+
+O padrão Original mantém resolução e formato selecionados (JPEG 92% ou PNG). Compacto cria JPEG 85%, com dimensão maior limitada a 1600 pixels, mantendo proporção e sem ampliar imagens pequenas. Só substitui a captura se ficar menor. É compressão com perdas; para texto pequeno, confira a prévia ou mantenha Original/PNG. A prévia compara somente o primeiro print, com dimensões, tamanhos e economia. O resultado final informa economia das imagens mantidas, separada do descarte de semelhantes. O botão Enviar só o áudio de um vídeo fica visível junto à seleção de arquivo no transmissor.
