@@ -71,3 +71,5 @@ $('previewPrints').onclick=async()=>{
 window.addEventListener('pagehide',clearPrintsPreview);
 
 $('openAudioTools').onclick=()=>{$('videoPrintsPanel').open=true;$('printsVideo').scrollIntoView({block:'center'});$('printsVideo').focus();};
+
+window.addEventListener('farol3-reset',()=>{printsController?.abort();file=null;clearPrintsPreview();if(printsDownloadUrl)URL.revokeObjectURL(printsDownloadUrl);printsDownloadUrl=null;$('downloadPrints').hidden=true;$('printsVideo').value='';$('printsStatus').textContent='Escolha um vídeo para começar.';});

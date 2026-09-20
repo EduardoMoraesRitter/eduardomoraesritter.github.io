@@ -116,7 +116,7 @@
     <button id="mRecv" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Receber</button>
   </div>
 
-<section class="panel panel-pad" style="margin-bottom:16px" aria-label="Conexão entre aparelhos"><strong id="roomStatus">Supabase · não conectado</strong><p id="roomPeer" class="hint">Escolha um arquivo para criar a sala. No receptor, leia o primeiro QR.</p><p id="roomError" role="alert" hidden></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="roomReconnect" class="btn">Conectar / reconectar</button><button id="roomQr" class="btn" disabled>Mostrar QR de conexão</button><button id="roomCameraStop" class="btn" disabled>Parar câmera</button><button id="roomPause" class="btn" disabled>Pausar nos dois aparelhos</button></div><label style="display:block;margin-top:10px"><input id="roomAuto" type="checkbox" checked> Iniciar quando o receptor estiver pronto</label><details><summary>Conexão manual</summary><label>Código da sala <input id="roomCode" style="width:100%" autocomplete="off"></label><button id="roomJoin" class="btn">Entrar na sala</button></details></section>
+<section class="panel panel-pad" style="margin-bottom:16px" aria-label="Conexão entre aparelhos"><strong id="roomStatus">Supabase · não conectado</strong><p id="roomPeer" class="hint">Escolha um arquivo para criar a sala. No receptor, leia o primeiro QR.</p><p id="roomError" role="alert" hidden></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="roomReset" class="btn">Começar do zero</button><button id="roomReconnect" class="btn">Conectar / reconectar</button><button id="roomQr" class="btn" disabled>Mostrar QR de conexão</button><button id="roomCameraStop" class="btn" disabled>Parar câmera</button><button id="roomPause" class="btn" disabled>Pausar nos dois aparelhos</button></div><label style="display:block;margin-top:10px"><input id="roomAuto" type="checkbox" checked> Iniciar quando o receptor estiver pronto</label><details><summary>Conexão manual</summary><label>Código da sala <input id="roomCode" style="width:100%" autocomplete="off"></label><button id="roomJoin" class="btn">Entrar na sala</button></details></section>
   <!-- ENVIAR -->
   <section id="sendView" class="grid">
     <div class="panel panel-pad">
@@ -154,6 +154,7 @@
     <div class="panel panel-pad">
       <p class="eyebrow">Receptor · RGB + reconstrução</p>
       <label class="field"><span class="lab">Câmera</span><select id="camSelect"><option>Liberar câmera…</option></select></label>
+<label style="display:block;margin-bottom:8px"><input id="autoZoom3" type="checkbox" checked> Ajustar visão automaticamente</label><p id="cameraGuidance3" class="hint" role="status">Centralize o QR para ajustar o zoom.</p>
       <button class="btn" id="startCam" style="margin-bottom:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Ligar câmera</button>
       <div class="filemeta" id="syncBanner" style="background:var(--ok-soft);border-color:var(--ok)"><div class="row"><span class="k">Sincronização</span><span class="v" id="syncTxt" style="color:var(--ok)">—</span></div></div>
       <div class="filemeta" id="recvMeta">
@@ -352,6 +353,7 @@
   /* ===================== SENDER ===================== */
   var packed=null, blocks=null, K=0, blockSize=400, fileName='', fileType='', origSize=0, cdf=null;
   var linkFileId='',rLinkId='';
+  var loadGeneration=0,restoreGeneration=0;
   var playTimer=null, seed=0, sendDrops=0, sendFrames=0;
   var chunkEl=$('chunk'), fpsEl=$('fps');
   chunkEl.oninput=function(){ $('chunkVal').textContent=chunkEl.value; if(packed) prepare(); };
@@ -369,9 +371,9 @@
     if(f.size>100000000){alert('Limite: 100 MB por arquivo.');return;}
     stopPlay();linkFileId='';window.dispatchEvent(new Event('farol3-loading'));
     fileName=f.name; fileType=f.type||'';
-    var rd=new FileReader();
+    var generation=++loadGeneration;var rd=new FileReader();
     rd.onload=function(ev){
-      var raw=new Uint8Array(ev.target.result); origSize=raw.length;
+      if(generation!==loadGeneration)return;var raw=new Uint8Array(ev.target.result); origSize=raw.length;
       try{ var compressed=window.pako?pako.gzip(raw):raw;packed=compressed.length<raw.length?compressed:raw; }catch(e){ packed=raw; }
       $('fileChip').hidden=false; $('fileName').textContent=fileName;
       $('fileMeta').textContent=(packed.length<origSize)?fmtBytes(origSize)+' → '+fmtBytes(packed.length)+' (zip)':fmtBytes(origSize);
@@ -440,7 +442,7 @@
   var actx=null, hitTimer=null;
   var readTimes=[], recvStart=0, saveDirty=false, DB=null;
   var camSelect=$('camSelect'), reticle=$('reticle');
-  var seenSeeds={};
+  var seenSeeds={},digitalZoom=1;
 
   function setRState(cls,txt){ $('rStateM').className='meter state'+(cls?' '+cls:''); $('rState').textContent=txt; }
   function showErr(t){ var e=$('recvErr'); if(t){e.textContent=t;e.classList.add('show');} else e.classList.remove('show'); }
@@ -457,12 +459,13 @@
     try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); }catch(e){}
     var v=deviceId?{deviceId:{exact:deviceId}}:{facingMode:{ideal:'environment'}}; v.width={ideal:1920}; v.height={ideal:1080};
     navigator.mediaDevices.getUserMedia({video:v}).then(function(s){
-      stream=s; video.srcObject=s; video.style.display='block'; reticle.classList.add('on'); reticle.classList.remove('hit');
+      stream=s;digitalZoom=1;video.style.transform='';$('autoZoom3').checked=true; video.srcObject=s; video.style.display='block'; reticle.classList.add('on'); reticle.classList.remove('hit');
       $('recvPh').style.display='none'; video.play(); readTimes=[]; setRState('rx','Procurando…');
       try{ var tr=s.getVideoTracks()[0], caps=tr.getCapabilities?tr.getCapabilities():{};
         if(caps.focusMode&&caps.focusMode.indexOf('continuous')>=0) tr.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(function(){});
         var zw=$('zoomWrap'), zi=$('zoom');
-        if(caps.zoom&&(caps.zoom.max||0)>(caps.zoom.min||1)){ zi.min=caps.zoom.min; zi.max=caps.zoom.max; zi.step=caps.zoom.step||0.1; var init=Math.min(caps.zoom.max,Math.max(caps.zoom.min,2)); zi.value=init; $('zoomVal').textContent=(+init).toFixed(1)+'×'; tr.applyConstraints({advanced:[{zoom:init}]}).catch(function(){}); zi.oninput=function(){ var z=parseFloat(zi.value); $('zoomVal').textContent=z.toFixed(1)+'×'; tr.applyConstraints({advanced:[{zoom:z}]}).catch(function(){}); }; zw.hidden=false; } else zw.hidden=true;
+        zi.min=1;zi.max=3;zi.step=.05;zi.value=1;$('zoomVal').textContent='1×';zw.hidden=false;
+        zi.oninput=function(){$('autoZoom3').checked=false;digitalZoom=Number(zi.value);video.style.transform='scale('+digitalZoom+')';$('zoomVal').textContent=digitalZoom.toFixed(2)+'×';};
       }catch(e){}
       return navigator.mediaDevices.enumerateDevices();
     }).then(function(devs){
@@ -502,20 +505,21 @@
       var vw=video.videoWidth, vh=video.videoHeight, sc=Math.min(1,900/Math.max(vw,vh));
       var w=Math.round(vw*sc), h=Math.round(vh*sc);
       if(scanCanvas.width!==w){scanCanvas.width=w; scanCanvas.height=h;}
-      sctx.drawImage(video,0,0,w,h);
-      var fullImg=sctx.getImageData(0,0,w,h);
+      var sw=vw/digitalZoom,sh=vh/digitalZoom;sctx.drawImage(video,(vw-sw)/2,(vh-sh)/2,sw,sh,0,0,w,h);
+      var fullImg=sctx.getImageData(0,0,w,h),qrLocation=null;
 
       // try as mono first (metadata frames are mono)
       var mono=jsQR(fullImg.data,w,h,{inversionAttempts:'attemptBoth'});
-      if(mono&&mono.data) gotCode(mono.data);
+      if(mono&&mono.data){qrLocation=mono.location;gotCode(mono.data);}
 
       // extract R, G, B channels and decode each
       if(chanCanvas.width!==w){chanCanvas.width=w; chanCanvas.height=h;}
       for(var ch=0;ch<3;ch++){
         var chanImg=extractChannel(fullImg,w,h,ch);
         var code=jsQR(chanImg.data,w,h,{inversionAttempts:'attemptBoth'});
-        if(code&&code.data) gotCode(code.data);
+        if(code&&code.data){qrLocation=code.location;gotCode(code.data);}
       }
+      if(window.farol3Camera)window.farol3Camera.guide(fullImg,qrLocation);
     }
     requestAnimationFrame(loop);
   }
@@ -585,7 +589,8 @@
   document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden') saveSession(); });
   window.addEventListener('pagehide', saveSession);
   function restoreSession(){
-    idbGet('session').then(function(s){
+    var generation=restoreGeneration;idbGet('session').then(function(s){
+      if(generation!==restoreGeneration)return;
       if(!s||!s.flags||!s.data) return;
       rLinkId=s.id||'';rName=s.name; rType=s.type||''; rSize=s.size; rOrig=s.orig||s.size; rGz=s.gz||0; rK=s.K; rBS=s.bs;
       dec=new Decoder(rK,rBS); seenSeeds={};
@@ -607,6 +612,16 @@
   window.farol3Engine={
     state:function(){return {role:mSend.getAttribute('aria-selected')==='true'?'send':'receive',sending:!!playTimer,camera:!!stream,id:linkFileId,receivedId:rLinkId,count:dec?dec.count:0,total:rK,done:!!dec&&dec.done(),name:fileName,bs:blockSize,totalSend:K};},
     source:function(){return packed;},identify:function(id){linkFileId=id;},
+    zoom:function(value){if(value===undefined)return digitalZoom;digitalZoom=Math.max(1,Math.min(3,value));$('zoom').value=digitalZoom;video.style.transform='scale('+digitalZoom+')';$('zoomVal').textContent=digitalZoom.toFixed(2)+'×';},
+    reset:async function(){
+      window.dispatchEvent(new Event('farol3-reset'));loadGeneration++;restoreGeneration++;stopPlay();stopCamera();saveDirty=false;
+      $('discardBtn').click();rLinkId='';packed=null;blocks=null;K=0;linkFileId='';fileName='';fileType='';origSize=0;cdf=null;seed=0;sendDrops=0;sendFrames=0;
+      $('file').value='';$('fileChip').hidden=true;$('playBtn').disabled=true;$('resumeControls').hidden=true;
+      rgbCtx.clearRect(0,0,rgbCanvas.width,rgbCanvas.height);rgbCanvas.style.display='none';$('sendPh').style.display='flex';
+      $('recvPh').innerHTML='Ligue a câmera e leia o QR de conexão.';$('recvPh').style.display='flex';
+      $('sK').textContent='—';$('sDrops').textContent='0';$('sNextSeed').textContent='0';
+      await idbDel('session');
+    },
     cameraStop:stopCamera,start:startPlay,stop:function(){stopPlay(true);},
     show:function(text){renderMono(text,225,29,72);rgbCanvas.style.display='block';$('sendPh').style.display='none';},
     receiveBytes:function(){return dec&&dec.done()?dec.assemble(rSize):null;},
@@ -619,7 +634,8 @@
   window.addEventListener('beforeunload',function(e){ if(dec && !dec.done() && dec.count>0){ e.preventDefault(); e.returnValue=''; } });
 })();
 </script>
-<script type="module" src="./media-tools.mjs?v=20260921-1"></script>
-<script type="module" src="./room.mjs?v=20260921-2"></script>
+<script type="module" src="./media-tools.mjs?v=20260921-3"></script>
+<script type="module" src="./room.mjs?v=20260921-3"></script>
+<script type="module" src="./camera-auto.mjs?v=20260921-3"></script>
 </body>
 </html>

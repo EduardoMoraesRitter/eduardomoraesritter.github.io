@@ -1,9 +1,10 @@
-import {ReturnChannel} from './realtime.mjs?v=20260921-2';
+import {ReturnChannel} from './realtime.mjs?v=20260921-3';
 import {PauseState} from '../farol4/pause-state.mjs?v=20260909-3';
 import {digest,newPairCode,b64,unb64} from '../farol4/protocol.mjs?v=20260920-1';
 const $=id=>document.getElementById(id),engine=window.farol3Engine;
 const pause=new PauseState(crypto.randomUUID());
 let config,target='',code='',connecting=false,epoch=0,lastPeer=0,peer='',armed=false,verified='',verifying=false,ack=false,lastTry=0,completed=false;
+let resetting=false,resetAck=null;
 const channel=new ReturnChannel(onMessage,onState,(...args)=>window.supabase.createClient(...args));
 const configuration=fetch('../farol4/config.json').then(r=>{if(!r.ok)throw Error('Configuração do Supabase indisponível.');return r.json();});
 // The request can fail before the user starts a transfer; connect() displays that failure.
@@ -29,10 +30,10 @@ function showQr(){
  $('roomPeer').textContent='Leia este QR no receptor para entrar na mesma sala.';
 }
 async function connect(){
- if(connecting)return;
+ if(connecting||resetting)return;
  connecting=true;lastTry=Date.now();status();
  try{
-  config=await configuration;
+  config=await configuration;if(resetting)return;
   if(navigator.onLine===false)throw Error('Sem internet neste aparelho.');
   if(!/^[a-f0-9]{64}$/.test(code))throw Error('Leia o QR de conexão ou informe o código da sala.');
   $('roomCode').value=code;
@@ -59,10 +60,11 @@ async function prepared(){
 }
 function ready(){const state=engine.state();if(state.role==='receive'&&state.camera&&target&&!pause.value.paused)send('ready',{count:state.receivedId===target?state.count:0});}
 async function readPair(text){
+ if(resetting)return;const revision=epoch;
  try{
   if(text.length>3000)return;
   const data=JSON.parse(new TextDecoder().decode(unb64(text.slice(5))));
-  const expected=await configuration;
+  const expected=await configuration;if(resetting||revision!==epoch)return;
   if(data.url!==expected.url||!/^[a-f0-9]{64}$/.test(data.code)||!validId(data.file))return;
   if(engine.state().role!=='receive')return;
   if(code===data.code&&target===data.file){ready();return;}
@@ -86,11 +88,14 @@ async function report(){
  }else send('missing',{count:state.count,total:state.total,drops:state.count});
 }
 function onMessage(m){
+ if(resetting&&m.type!=='reset_ack')return;
  const state=engine.state();if(!['send','receive'].includes(m.role)||m.role===state.role)return;
  // Manual joining learns the file only from an authenticated sender in this room.
  if(!target&&state.role==='receive'&&validId(m.file))target=m.file;
  if(m.file!==target||!target)return;
  if(peer&&peer!==m.from&&Date.now()-lastPeer<12000)return;
+ if(m.type==='reset_ack'){resetAck?.();return;}
+ if(m.type==='reset'){resetAll(false);return;}
  peer=m.from;lastPeer=Date.now();status();
  if(m.type==='pause_state'){
   if(pause.accept(m)){ack=true;if(m.paused)engine.stop();else if(state.role==='send')engine.start();}
@@ -115,8 +120,28 @@ window.farol3Link={
  hasTarget:()=>!!target,beforeModeChange:()=>{if(target)changePause(true);},readPair,paused:()=>pause.value.paused,
  acceptMeta:meta=>!target||(meta.id===target&&Number.isInteger(meta.K)&&meta.K>0&&meta.K<=1000000&&meta.bs>=100&&meta.bs<=800&&meta.size>=0&&meta.size<=100000000),
  toggle:()=>{armed=false;if(target)changePause(engine.state().sending||!pause.value.paused&&engine.state().role==='receive');else if(engine.state().sending)engine.stop();else engine.start();},
- cameraStopped:()=>{if(target)changePause(true);},cameraReady:ready
+ cameraStopped:()=>{if(target&&!resetting)changePause(true);},cameraReady:ready
 };
+async function resetAll(local=true){
+ if(resetting)return;
+ if(local&&!confirm('Começar do zero nos dois aparelhos? Isso encerra a sala e remove os blocos recebidos. Salve o arquivo antes de continuar.'))return;
+ resetting=true;++epoch;armed=false;$('roomReset').disabled=true;
+ let confirmed=false;
+ try{
+  engine.stop();
+  if(local&&channel.ready&&target){
+   const response=new Promise(resolve=>{resetAck=()=>resolve(true);});
+   pause.change(true);await syncPause();await send('reset');
+   confirmed=await Promise.race([response,new Promise(resolve=>setTimeout(()=>resolve(false),2000))]);
+  }else if(!local){await send('reset_ack');confirmed=true;}
+  target='';code='';peer='';lastPeer=0;verified='';completed=false;pause.reset();ack=false;
+  await channel.close();channel.roomId=null;await engine.reset();
+  $('roomCode').value='';$('roomError').hidden=true;status();
+  $('roomPeer').textContent=confirmed?'Sala encerrada. Pronto para começar do zero nos dois aparelhos.':'Limpeza local concluída. Sem confirmação do outro aparelho; use Começar do zero nele também.';
+ }catch(e){error('Não foi possível concluir a limpeza: '+e.message);}
+ finally{resetAck=null;resetting=false;$('roomReset').disabled=false;}
+}
+$('roomReset').onclick=()=>resetAll(true);
 window.addEventListener('farol3-loading',()=>{++epoch;armed=false;if(target)changePause(true);target='';peer='';lastPeer=0;channel.close();status();});
 window.addEventListener('farol3-prepared',prepared);
 window.addEventListener('farol3-pause-preparation',()=>{if(target)changePause(true);});
@@ -134,6 +159,7 @@ $('roomJoin').onclick=()=>{
 };
 $('roomCameraStop').onclick=()=>engine.cameraStop();
 setInterval(()=>{
+ if(resetting)return;
  if(lastPeer&&Date.now()-lastPeer>12000&&engine.state().sending){changePause(true);error('Contato com o receptor perdido. Transmissão pausada.');}
  if(channel.ready){send('hello');syncPause();ready();report();}
  else if(code&&Date.now()-lastTry>10000&&!connecting)connect();

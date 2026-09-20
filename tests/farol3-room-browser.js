@@ -27,5 +27,14 @@ async page=>{
  await s.waitForFunction(old=>document.querySelector('#roomCode').value!==old&&document.querySelector('#roomStatus').textContent.startsWith('Supabase · conectado · Sala:'),oldCode);
  await r.locator('#startCam').click();await r.waitForFunction(()=>window.farol3Engine.state().camera);r.once('dialog',d=>d.accept());await frame();await s.waitForFunction(()=>window.farol3Engine.state().sending);
  await r.locator('#roomCameraStop').click();await s.waitForFunction(()=>window.farol3Link.paused()&&!window.farol3Engine.state().sending);
- await context.close();return {opticalPair:true,autoStart:true,sameRoom:true,sharedPause:true,reconnectPreservesPause:true,verifiedCompletion:true,newFileRoom:true,cameraStopPausesPeer:true};
+ s.once('dialog',d=>d.dismiss());await s.locator('#roomReset').click();if(!(await s.locator('#roomCode').inputValue()))throw Error('Cancel reset cleared room');
+ s.once('dialog',d=>d.accept());await s.locator('#roomReset').click();
+ await s.waitForFunction(()=>!document.querySelector('#roomCode').value&&!window.farol3Engine.source());
+ await r.waitForFunction(()=>!document.querySelector('#roomCode').value&&window.farol3Engine.state().count===0&&!window.farol3Engine.state().camera);
+ await r.reload();await r.waitForTimeout(300);if(await r.evaluate(()=>window.farol3Engine.state().count))throw Error('Reset progress restored');
+ await r.locator('#mRecv').click();await r.locator('#startCam').click();await r.waitForFunction(()=>window.farol3Engine.state().camera);
+ await r.locator('#roomCameraStop').click();await r.waitForTimeout(1600);
+ await r.evaluate(()=>{const data=new Uint8ClampedArray(100*100*4).fill(128);window.farol3Camera.guide({data,width:100,height:100},{topLeftCorner:{x:35,y:35},topRightCorner:{x:65,y:35},bottomLeftCorner:{x:35,y:65},bottomRightCorner:{x:65,y:65}});});
+ if(await r.evaluate(()=>window.farol3Engine.zoom())<=1)throw Error('Auto zoom did not increase during initial sync');
+ await context.close();return {opticalPair:true,autoStart:true,sameRoom:true,sharedPause:true,reconnectPreservesPause:true,verifiedCompletion:true,newFileRoom:true,cameraStopPausesPeer:true,resetBoth:true,autoZoomBeforePairing:true};
 }
