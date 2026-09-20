@@ -1,3 +1,4 @@
+import {TransferStats,validStats,statsText} from './transfer-stats.mjs?v=20260921-4';
 import {ReturnChannel} from './realtime.mjs?v=20260921-3';
 import {PauseState} from '../farol4/pause-state.mjs?v=20260909-3';
 import {digest,newPairCode,b64,unb64} from '../farol4/protocol.mjs?v=20260920-1';
@@ -5,6 +6,19 @@ const $=id=>document.getElementById(id),engine=window.farol3Engine;
 const pause=new PauseState(crypto.randomUUID());
 let config,target='',code='',connecting=false,epoch=0,lastPeer=0,peer='',armed=false,verified='',verifying=false,ack=false,lastTry=0,completed=false;
 let resetting=false,resetAck=null;
+const stats=new TransferStats();let lastStats=null,remoteStatsAt=0;
+function clearStats(){stats.reset();lastStats=null;remoteStatsAt=0;$('transferStats').hidden=true;}
+function renderStats(value){$('transferStats').hidden=false;$('transferStats').textContent=statsText(value);}
+function receiverStats(){
+ const s=engine.state();if(s.role!=='receive'||!s.total)return null;
+ const value=stats.update({id:s.receivedId||'legacy',count:s.count,total:s.total,bs:s.receiveBS,size:s.receiveSize,active:s.camera&&!pause.value.paused,done:s.done},performance.now());
+ if(value){lastStats=value;renderStats(value);}return value;
+}
+setInterval(()=>{
+ if(resetting)return;
+ if(engine.state().role==='receive'){if(!engine.state().total){clearStats();return;}receiverStats();}
+ else if(remoteStatsAt&&Date.now()-remoteStatsAt>12000&&lastStats&&!lastStats.done){$('transferStats').textContent='Sem atualização do receptor · previsão indisponível. Último progresso: '+(lastStats.bytes/1000000).toFixed(2)+' MB';}
+},1000);
 const channel=new ReturnChannel(onMessage,onState,(...args)=>window.supabase.createClient(...args));
 const configuration=fetch('../farol4/config.json').then(r=>{if(!r.ok)throw Error('Configuração do Supabase indisponível.');return r.json();});
 // The request can fail before the user starts a transfer; connect() displays that failure.
@@ -51,7 +65,7 @@ function onState(state,reason){
 async function prepared(){
  const generation=++epoch,source=engine.source();
  if(!source)return;
- armed=false;engine.stop();target='';peer='';lastPeer=0;pause.reset();verified='';ack=false;completed=false;
+ clearStats();armed=false;engine.stop();target='';peer='';lastPeer=0;pause.reset();verified='';ack=false;completed=false;
  try{
   const hash=await digest(source);if(generation!==epoch)return;
   target=hash+':'+engine.state().bs;engine.identify(target);code=newPairCode();armed=true;
@@ -73,19 +87,19 @@ async function readPair(text){
    if(!confirm('Começar outro arquivo? Salve o anterior antes de continuar. Os blocos anteriores serão removidos.'))return;
    engine.discard();
   }
-  ++epoch;target=data.file;code=data.code;peer='';lastPeer=0;pause.reset();verified='';ack=false;completed=false;
+  if(target!==data.file)clearStats();++epoch;target=data.file;code=data.code;peer='';lastPeer=0;pause.reset();verified='';ack=false;completed=false;
   await connect();ready();
  }catch{/* A damaged optical QR must not change the current room. */}
 }
 async function report(){
  const state=engine.state();if(state.role!=='receive'||!target||state.receivedId!==target||!channel.ready)return;
  if(state.done){
-  if(verified===target){send('done',{count:state.count,hash:target.split(':')[0]});return;}
+  if(verified===target){send('done',{count:state.count,hash:target.split(':')[0],stats:receiverStats()});return;}
   if(verifying)return;verifying=true;const id=target;
-  try{const hash=await digest(engine.receiveBytes());if(target!==id)return;if(hash===id.split(':')[0]){verified=id;$('saveBtn').disabled=false;send('done',{count:state.count,hash});$('roomPeer').textContent='Arquivo completo · SHA-256 confirmado.';}else{changePause(true);error('A integridade do arquivo não confere. Descarte a recepção e tente novamente.');}}
+  try{const hash=await digest(engine.receiveBytes());if(target!==id)return;if(hash===id.split(':')[0]){verified=id;$('saveBtn').disabled=false;send('done',{count:state.count,hash,stats:receiverStats()});$('roomPeer').textContent='Arquivo completo · SHA-256 confirmado.';}else{changePause(true);error('A integridade do arquivo não confere. Descarte a recepção e tente novamente.');}}
   catch(e){changePause(true);error('Não foi possível conferir o arquivo: '+e.message);}
   finally{verifying=false;}
- }else send('missing',{count:state.count,total:state.total,drops:state.count});
+ }else send('missing',{count:state.count,total:state.total,drops:state.count,stats:receiverStats()});
 }
 function onMessage(m){
  if(resetting&&m.type!=='reset_ack')return;
@@ -107,6 +121,7 @@ function onMessage(m){
   if(!pause.value.paused)$('roomPeer').textContent=completed||verified===target?'Arquivo completo · SHA-256 confirmado.':'Outro aparelho confirmado nesta sala.';return;
  }
  if(state.role!=='send')return;
+ if(['missing','done'].includes(m.type)&&validStats(m.stats)){lastStats=m.stats;remoteStatsAt=Date.now();renderStats(m.stats);}
  if(m.type==='ready'){
   $('roomPeer').textContent='Receptor conectado · câmera pronta.';
   if(armed&&$('roomAuto').checked&&!pause.value.paused){armed=false;engine.start();}
@@ -135,14 +150,14 @@ async function resetAll(local=true){
    confirmed=await Promise.race([response,new Promise(resolve=>setTimeout(()=>resolve(false),2000))]);
   }else if(!local){await send('reset_ack');confirmed=true;}
   target='';code='';peer='';lastPeer=0;verified='';completed=false;pause.reset();ack=false;
-  await channel.close();channel.roomId=null;await engine.reset();
+  await channel.close();channel.roomId=null;await engine.reset();clearStats();
   $('roomCode').value='';$('roomError').hidden=true;status();
   $('roomPeer').textContent=confirmed?'Sala encerrada. Pronto para começar do zero nos dois aparelhos.':'Limpeza local concluída. Sem confirmação do outro aparelho; use Começar do zero nele também.';
  }catch(e){error('Não foi possível concluir a limpeza: '+e.message);}
  finally{resetAck=null;resetting=false;$('roomReset').disabled=false;}
 }
 $('roomReset').onclick=()=>resetAll(true);
-window.addEventListener('farol3-loading',()=>{++epoch;armed=false;if(target)changePause(true);target='';peer='';lastPeer=0;channel.close();status();});
+window.addEventListener('farol3-loading',()=>{clearStats();++epoch;armed=false;if(target)changePause(true);target='';peer='';lastPeer=0;channel.close();status();});
 window.addEventListener('farol3-prepared',prepared);
 window.addEventListener('farol3-pause-preparation',()=>{if(target)changePause(true);});
 $('roomPause').onclick=()=>{armed=false;changePause(!pause.value.paused);};

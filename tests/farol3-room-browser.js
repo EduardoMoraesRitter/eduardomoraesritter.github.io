@@ -21,6 +21,8 @@ async page=>{
  for(let i=0;i<60;i++){await frame();if(await r.locator('#saveBtn').isEnabled())break;await s.waitForTimeout(300);}
  await r.waitForFunction(()=>!document.querySelector('#saveBtn').disabled);
  await s.waitForFunction(()=>!window.farol3Engine.state().sending);
+ await s.waitForFunction(()=>document.querySelector('#transferStats').textContent.includes('Concluído'));
+ await r.waitForFunction(()=>document.querySelector('#transferStats').textContent.includes('Concluído'));
  const download=r.waitForEvent('download');await r.locator('#saveBtn').click();await (await download).saveAs('output/playwright/farol3-room-received.bin');
  const oldCode=await s.locator('#roomCode').inputValue();
  await s.evaluate(()=>{const dt=new DataTransfer();dt.items.add(new File([new Uint8Array(1600).fill(17)],'second.bin'));const input=document.querySelector('#file');input.files=dt.files;input.dispatchEvent(new Event('change'));});

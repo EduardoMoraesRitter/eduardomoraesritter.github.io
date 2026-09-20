@@ -41,3 +41,7 @@ O contador remoto mostra blocos reconstruídos; fountain codes continuam gerando
 O ajuste automático de visão funciona desde o QR inicial: quando reconhece um QR pequeno e centralizado, aumenta gradualmente o zoom digital até 3×. O controle manual desativa o automático; reabrir a câmera reativa o ajuste. O zoom não substitui foco ou boa iluminação.
 
 “Começar do zero” está disponível nos dois modos e pede confirmação. Encerra a sala, para câmera e transmissão e apaga o progresso local do Farol 3. Com o outro aparelho conectado, também solicita o reinício remoto. Sem confirmação do outro lado, informa que apenas a limpeza local foi confirmada. Não limpa dados de outros sites.
+
+## Velocidade e previsão
+
+Os dois lados mostram bytes reconstruídos, velocidade útil recente, tempo decorrido (incluindo pausas), tempo em atividade e previsão restante. A medição usa até 30 segundos de progresso novo; blocos restaurados não contam como velocidade nova. Após 12 segundos sem avanço, a previsão fica indisponível. O transmissor recebe os números pelo canal da sala e sinaliza ausência de atualização. São bytes do conteúdo transmitido, possivelmente comprimido; não gotas emitidas. O cronômetro desta medição reinicia ao recarregar a página ou trocar o arquivo. A previsão em fountain codes oscila porque a reconstrução pode ocorrer em saltos.
