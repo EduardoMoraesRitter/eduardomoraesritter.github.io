@@ -210,3 +210,9 @@ Dividir em partes reduz a memória e facilita a recuperação, mas não aumenta 
 SHA-256 incremental: hash-wasm 4.12.0, distribuído localmente em `vendor/sha256.umd.min.js`, origem https://cdn.jsdelivr.net/npm/hash-wasm@4.12.0/dist/sha256.umd.min.js ; licença MIT em `vendor/LICENSE-hash-wasm.txt`.
 
 Validação: `tests/farol4-parts-browser.js` exercita 100 MB e 250.000 blocos no IndexedDB real do Chromium, retomada aos 25%, rejeição de duplicatas/corrupção, hash e Blob final. É um teste de processamento/armazenamento, não uma transmissão óptica física de 100 MB.
+
+## Vídeo para prints no navegador
+
+Em Enviar arquivo, abra **Vídeo → prints em ZIP**, escolha um vídeo, intervalo em segundos ou minutos e JPEG/PNG. **Gerar ZIP e usar no Farol** captura as imagens localmente e seleciona o ZIP para transmissão; também oferece download. Nenhum vídeo é enviado para processamento externo. O navegador precisa conseguir decodificar o formato/codec; MP4 H.264 é uma opção comum.
+
+O limite do ZIP é 100 MB e o máximo é 5.000 capturas por execução. Aumente o intervalo para reduzir o tamanho. Mantenha a aba aberta. Os prints mantêm a resolução do vídeo, mas não incluem áudio nem os quadros entre os instantes escolhidos. JPEG usa qualidade 92%; PNG evita perdas adicionais na captura. O manifesto no ZIP registra os instantes solicitados. O download usa a pasta escolhida/configurada pelo navegador, sem criar uma pasta arbitrária na Área de Trabalho.
