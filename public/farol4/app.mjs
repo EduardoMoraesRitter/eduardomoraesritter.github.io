@@ -1,3 +1,4 @@
+import {videoAudio} from './video-audio.mjs?v=20260920-6';
 import {videoPrints} from './video-prints.mjs?v=20260920-5';
 import {recoveryAction} from './adaptive-recovery.mjs?v=20260920-3';
 import {FileSender,PartReceiver,PART_SIZE} from './parts.mjs?v=20260920-1';
@@ -1081,7 +1082,7 @@ $('generatePrints').onclick=async()=>{
   if(!source){$('printsStatus').textContent='Escolha o vídeo de origem.';return;}
   const controller=new AbortController();printsController=controller;
   if(sender)setPaused(true);
-  for(const id of ['generatePrints','file','newSend','blockSize'])$(id).disabled=true;
+  for(const id of ['generatePrints','extractAudio','file','newSend','blockSize'])$(id).disabled=true;
   $('cancelPrints').hidden=false;
   try{
     const result=await videoPrints(source,{interval:Number($('printsInterval').value)*Number($('printsUnit').value),png:$('printsFormat').value==='png',deduplicate:$('printsDedupe').checked,sensitivity:$('printsSensitivity').value,signal:controller.signal,onProgress:text=>{$('printsStatus').textContent=text;}});
@@ -1093,6 +1094,24 @@ $('generatePrints').onclick=async()=>{
     $('printsStatus').textContent=`${result.count} prints · ${result.analyzed} analisadas · ${result.discarded} descartadas · ZIP de ${(file.size/1e6).toFixed(1)} MB selecionado para transmitir. Você também pode baixar uma cópia.`;
     await prepare();
   }catch(e){$('printsStatus').textContent=e.name==='AbortError'?'Geração cancelada.':e.message;}
-  finally{printsController=null;$('cancelPrints').hidden=true;for(const id of ['generatePrints','file','newSend','blockSize'])$(id).disabled=false;}
+  finally{printsController=null;$('cancelPrints').hidden=true;for(const id of ['generatePrints','extractAudio','file','newSend','blockSize'])$(id).disabled=false;}
 };
 window.addEventListener('pagehide',()=>{printsController?.abort();if(printsDownloadUrl)URL.revokeObjectURL(printsDownloadUrl);});
+
+$('extractAudio').onclick=async()=>{
+  if(printsController)return;
+  const source=$('printsVideo').files[0];
+  if(!source){$('printsStatus').textContent='Escolha o vídeo de origem.';return;}
+  const controller=new AbortController();printsController=controller;if(sender)setPaused(true);
+  for(const id of ['generatePrints','extractAudio','file','newSend','blockSize'])$(id).disabled=true;
+  $('cancelPrints').hidden=false;$('printsStatus').textContent='Preparando extração de áudio…';
+  try{
+    const zip=await videoAudio(source,{signal:controller.signal,onProgress:text=>{$('printsStatus').textContent=text;}});
+    if(printsDownloadUrl)URL.revokeObjectURL(printsDownloadUrl);printsDownloadUrl=URL.createObjectURL(zip);
+    $('downloadPrints').href=printsDownloadUrl;$('downloadPrints').download=zip.name;$('downloadPrints').hidden=false;
+    file=zip;try{const transfer=new DataTransfer();transfer.items.add(file);$('file').files=transfer.files;}catch{$('file').value='';}
+    $('printsStatus').textContent=`Áudio em ZIP · ${(zip.size/1e6).toFixed(1)} MB · selecionado para transmitir. Baixe uma cópia para conferir o som.`;
+    await prepare();
+  }catch(e){$('printsStatus').textContent=e.name==='AbortError'?'Extração cancelada.':e.message;}
+  finally{printsController=null;$('cancelPrints').hidden=true;for(const id of ['generatePrints','extractAudio','file','newSend','blockSize'])$(id).disabled=false;}
+};

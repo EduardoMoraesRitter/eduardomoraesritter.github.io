@@ -222,3 +222,7 @@ O limite do ZIP é 100 MB e o máximo é 5.000 capturas por execução. Aumente 
 Opção desativada inicialmente. Quando ativada, compara cada captura com a última imagem mantida e sempre preserva a primeira. A comparação usa uma prévia com largura máxima de 960 pixels e diferenças globais e por regiões de 16×16 pixels. Conservadora (padrão), Equilibrada e Descartar mais ajustam a tolerância. É uma aproximação visual: detalhes muito pequenos podem ser descartados. Revise o ZIP para conteúdos importantes.
 
 A interface mostra capturas analisadas, mantidas e descartadas; o manifesto registra o filtro e os instantes mantidos. Testes cobrem cenas repetidas/mudanças de cena no navegador e mudanças localizadas em imagens sintéticas.
+
+### Transmitir somente o áudio
+
+Escolha o vídeo no painel de prints e clique em **Extrair áudio e usar no Farol**. Web Audio e MediaRecorder recodificam o áudio localmente em tempo real, sem enviar o vídeo a servidores. O ZIP contém apenas o áudio e um manifesto; é selecionado automaticamente para transmissão. O formato varia conforme o navegador (M4A, WebM ou Ogg). Mantenha a aba ativa durante toda a duração do vídeo. É possível cancelar. Vídeos sem áudio podem resultar em silêncio; baixe a cópia para conferir antes de transmitir. O limite continua sendo 100 MB.
