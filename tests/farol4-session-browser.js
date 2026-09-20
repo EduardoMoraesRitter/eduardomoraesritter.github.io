@@ -2,14 +2,14 @@
 async page=>{
  for(const p of page.context().pages())if(p!==page)await p.close();
  await page.setViewportSize({width:1366,height:768});
- await page.goto('http://127.0.0.1:4322/farol4/index.html');
+ await page.goto('http://127.0.0.1:4331/farol4/index.html');
  const r=await page.context().newPage();await r.setViewportSize({width:390,height:844});
  await r.addInitScript(()=>{
   const c=document.createElement('canvas');c.width=c.height=900;
   window.__frame=async url=>{const i=new Image();i.src=url;await i.decode();const x=c.getContext('2d');x.fillStyle='white';x.fillRect(0,0,900,900);x.imageSmoothingEnabled=false;x.drawImage(i,50,50,800,800);};
   navigator.mediaDevices.getUserMedia=async()=>{const s=c.captureStream(12);setInterval(()=>{c.getContext('2d').fillRect(0,0,1,1);s.getVideoTracks()[0].requestFrame();},80);return s;};
  });
- r.on('dialog',d=>d.accept());await r.goto('http://127.0.0.1:4322/farol4/index.html');await r.waitForTimeout(400);
+ r.on('dialog',d=>d.accept());await r.goto('http://127.0.0.1:4331/farol4/index.html');await r.waitForTimeout(400);
  if(await r.locator('#discard').isEnabled()){await r.locator('.recoveryDetails summary').click();await r.locator('#discard').click();}
  await r.locator('#camera').click();await r.waitForFunction(()=>!document.getElementById('zoom').disabled);
  await page.locator('#file').setInputFiles('output/playwright/farol4-source.bin');await page.waitForFunction(()=>!document.getElementById('showPair').disabled);

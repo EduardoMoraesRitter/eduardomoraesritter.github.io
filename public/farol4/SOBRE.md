@@ -196,3 +196,17 @@ No desktop, o QR ocupa quase toda a altura e as informações ficam na lateral. 
 ## Tempo acumulado da recepção
 
 O receptor mostra bytes/MB recebidos, tempo total desde o primeiro bloco, tempo com a câmera ativa em recepção e tempo em pausas/interrupções. O tempo total inclui o intervalo entre fechar e reabrir a página; a recepção ativa exclui pausa, câmera desligada e página oculta. Câmera ligada sem novos blocos ainda conta como tempo de recepção ativa. A contagem é persistida junto ao progresso e congelada ao verificar a conclusão. Arquivos antigos não têm histórico retroativo; a interface informa essa limitação.
+
+## Arquivos de até 100 MB (20/09/2026)
+
+O limite é 100.000.000 bytes. MP4 e outros arquivos são transmitidos sem conversão: o resultado é um único arquivo, idêntico ao original. Não são criados vídeos separados. O transmissor calcula o SHA-256 lendo fatias de até 1 MiB e lê somente os blocos necessários durante a transmissão.
+
+O receptor salva páginas de aproximadamente 1 MiB no IndexedDB, com no máximo duas páginas no cache JavaScript. O mapa de blocos e as páginas alteradas são gravados na mesma transação; a retomada usa apenas o progresso salvo. A divisão indicada na interface agrupa logicamente cada 8 MiB. A conferência final também lê uma página por vez. O download reúne Blobs, sem montar um Uint8Array do arquivo inteiro; o uso de memória e disco do download depende do navegador.
+
+Recepções antigas continuam compatíveis com o armazenamento anterior. Atualize ambos os aparelhos para usar arquivos acima do limite anterior. O navegador precisa ter espaço disponível; limpar os dados do site apaga a retomada. Feche outras abas antigas caso impeçam a atualização do IndexedDB.
+
+Dividir em partes reduz a memória e facilita a recuperação, mas não aumenta a velocidade do canal óptico. A estimativa de tempo deve se basear nos bytes novos recebidos.
+
+SHA-256 incremental: hash-wasm 4.12.0, distribuído localmente em `vendor/sha256.umd.min.js`, origem https://cdn.jsdelivr.net/npm/hash-wasm@4.12.0/dist/sha256.umd.min.js ; licença MIT em `vendor/LICENSE-hash-wasm.txt`.
+
+Validação: `tests/farol4-parts-browser.js` exercita 100 MB e 250.000 blocos no IndexedDB real do Chromium, retomada aos 25%, rejeição de duplicatas/corrupção, hash e Blob final. É um teste de processamento/armazenamento, não uma transmissão óptica física de 100 MB.

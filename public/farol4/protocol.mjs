@@ -1,6 +1,6 @@
 // Farol 4: numbered RGB blocks. No file contents are sent through Realtime.
-export const MAX_BYTES = 32 * 1024 * 1024;
-export const MAX_BLOCKS = 131072;
+export const MAX_BYTES = 100_000_000;
+export const MAX_BLOCKS = 390625;
 export const BATCH = 512;
 const enc = new TextEncoder();
 export function b64(bytes) {
@@ -28,7 +28,7 @@ export function validMeta(m) {
 }
 export class Sender {
   static async create(bytes,name,bs=400) {
-    if (!(bytes instanceof Uint8Array) || bytes.length>MAX_BYTES) throw Error('Limite: 32 MiB por arquivo.');
+    if (!(bytes instanceof Uint8Array) || bytes.length>MAX_BYTES) throw Error('Limite: 100 MB por arquivo.');
     const hash=await digest(bytes);
     const meta={v:4,id:`${hash}:${bs}`,hash,name:name.slice(0,180),size:bytes.length,bs,total:Math.max(1,Math.ceil(bytes.length/bs))};
     if(!validMeta(meta)) throw Error('Configuração de blocos inválida.');

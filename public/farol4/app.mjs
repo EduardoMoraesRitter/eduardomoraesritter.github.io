@@ -1,8 +1,9 @@
+import {FileSender,PartReceiver,PART_SIZE} from './parts.mjs?v=20260920-1';
 import {TransferClock,elapsed,dataSize} from './transfer-clock.mjs?v=20260909-5';
 
 import {cameraConstraints,syncCameraAspect} from './camera-view.mjs?v=20260914-1';
 
-import {Sender,Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from './protocol.mjs?v=20260909-8';
+import {Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from './protocol.mjs?v=20260920-1';
 
 import {ReturnChannel} from './realtime.mjs?v=20260909-3';
 
@@ -26,6 +27,7 @@ const notice=text=>{$('notice').textContent=text;};
 
 let mode='send',sender=null,receiver=null,file=null,timer=null,frame=0,stream=null,raf=0;
 
+let frameReading=false,frameEpoch=0;
 let loadGeneration=0,verification=null,dirty=false,db=null,storageReady=false,storageTouched=false;
 
 let peerLastSeen=0,feedbackPeer=null;
@@ -180,23 +182,23 @@ function render(texts) {
 
 }
 
-function stop(){if(timer)clearInterval(timer);timer=null;autoArmed=false;$('play').textContent='Transmitir';}
+function stop(){frameEpoch++;if(timer)clearInterval(timer);timer=null;autoArmed=false;$('play').textContent='Transmitir';}
 
-function nextFrame(){
+async function nextFrame(){
 
-  if(!sender)return;
-
+  if(!sender||frameReading)return;
+  const current=sender,epoch=frameEpoch;frameReading=true;
   try{
 
     if(frame++%12===0)render([sender.metadata()]);
 
-    else {const packets=[sender.next(),sender.next(),sender.next()].filter(Boolean);render(packets.length?packets:[sender.metadata()]);}
+    else {const packets=(await Promise.all([current.next(),current.next(),current.next()])).filter(Boolean);if(sender!==current||epoch!==frameEpoch)return;render(packets.length?packets:[sender.metadata()]);}
 
     $('sentBlocks').textContent=sender.sent;
 
     $('nextBlock').textContent=sender.remotePlan?(sender.repairs.length?sender.repairs[0]+1:'Aguardando pedido'):(sender.repairs[0]??sender.cursor%sender.meta.total)+1;
 
-  }catch(e){stop();notice('Não foi possível gerar o QR: '+e.message);}
+  }catch(e){stop();notice('Não foi possível gerar o QR: '+e.message);}finally{frameReading=false;}
 
 }
 
@@ -250,7 +252,7 @@ async function prepare(){calibration.cancel();
 
   if(!file)return;
 
-  if(file.size>MAX_BYTES){notice('Escolha um arquivo de até 32 MiB.');return;}
+  if(file.size>MAX_BYTES){notice('Escolha um arquivo de até 100 MB.');return;}
 
   notice('Preparando arquivo e calculando sua identificação…');
 
@@ -260,7 +262,7 @@ async function prepare(){calibration.cancel();
 
     if(generation!==loadGeneration)return;
 
-    const candidate=await Sender.create(new Uint8Array(await file.arrayBuffer()),file.name,Number($('blockSize').value));
+    const candidate=await FileSender.create(file,file.name,Number($('blockSize').value),(done,total)=>{if(generation===loadGeneration)notice(`Preparando em partes: ${Math.round(done/Math.max(1,total)*100)}%`);});
 
     if(generation!==loadGeneration)return;
 
@@ -270,7 +272,7 @@ async function prepare(){calibration.cancel();
 
     if(restoredRoom)sender.cursor=restoredRoom.cursor%sender.meta.total;
 
-    $('sendName').textContent=file.name;$('totalBlocks').textContent=sender.meta.total;
+    $('sendName').textContent=file.name; $('partInfo').textContent=`${Math.max(1,Math.ceil(file.size/PART_SIZE))} parte(s) internas · arquivo único no final · sem conversão`; $('totalBlocks').textContent=sender.meta.total;
 
     $('nextBlock').textContent=sender.cursor+1;$('sentBlocks').textContent='0';$('startBlock').max=sender.meta.total;$('startBlock').value=String(sender.cursor+1);
 
@@ -399,7 +401,7 @@ async function verifyReceiver(){
 
       // A complete but wrong file must not be saved or acknowledged. Ask for all blocks again.
 
-      receiver=new Receiver(r.meta);updateReceiver();dirty=true;
+      await r.dispose?.();receiver=new PartReceiver(r.meta,db);updateReceiver();dirty=true;
 
       notice('A verificação falhou. Os blocos serão solicitados novamente; mantenha a câmera ligada.');
 
@@ -409,7 +411,8 @@ async function verifyReceiver(){
 
 }
 
-function receivePacket(packet){
+async function receivePacket(packet){
+  await initialization;
 
   if(calibration.receive(packet))return;
 
@@ -449,7 +452,7 @@ function receivePacket(packet){
 
     if(receiver&&receiver.meta.id!==meta.id){offerNewReception(packet);return;}
 
-    if(!receiver){receiver=new Receiver(meta);storageTouched=true;dirty=true;updateReceiver();notice('Arquivo reconhecido. Recebendo blocos RGB.');feedback();}
+    if(!receiver){const estimate=await navigator.storage?.estimate?.();if(estimate&&estimate.quota-estimate.usage<meta.size*1.15)throw Error('Espaço insuficiente no navegador para este arquivo.');receiver=new PartReceiver(meta,db);storageTouched=true;dirty=true;updateReceiver();notice('Arquivo reconhecido. Recebendo blocos RGB.');feedback();}
 
     pairTarget=meta.id;
 
@@ -461,7 +464,7 @@ function receivePacket(packet){
 
   if(receiver&&!receiver.verified&&!pauseState.value.paused){
 
-    const accepted=receiver.accept(packet);
+    const target=receiver;const accepted=await target.accept(packet);if(receiver!==target)return;
 
     if(accepted){lastProgressAt=performance.now();dirty=true;if(receiver.count===receiver.meta.total)verifyReceiver();}
 
@@ -579,7 +582,8 @@ $('camera').onclick=async()=>{
 
 let lastScan=0;
 
-function scanFrame(time){
+async function scanFrame(time){
+  const scanningStream=stream;
 
   if(!stream)return;
 
@@ -605,7 +609,7 @@ function scanFrame(time){
 
         for(let i=0;i<pixels.length;i+=4){pixels[i]=pixels[i+1]=pixels[i+2]=img.data[i+ch];pixels[i+3]=255;}
 
-        const qr=window.jsQR(pixels,scan.width,scan.height,{inversionAttempts:'attemptBoth'});if(qr&&qr.data.startsWith('F4|')){location=qr.location;validRead=true;receivePacket(qr.data);}
+        const qr=window.jsQR(pixels,scan.width,scan.height,{inversionAttempts:'attemptBoth'});if(qr&&qr.data.startsWith('F4|')){location=qr.location;validRead=true;await receivePacket(qr.data);}
 
       }
 
@@ -631,19 +635,19 @@ function scanFrame(time){
 
     }
 
-  }catch(e){notice('Leitura interrompida: '+e.message);stopCamera();return;}
+  }catch(e){if(transferId())setPaused(true);notice('Leitura interrompida: '+e.message);stopCamera();return;}
 
-  if(stream)raf=requestAnimationFrame(scanFrame);
+  if(stream&&stream===scanningStream)raf=requestAnimationFrame(scanFrame);
 
 }
 
 $('copyMissing').onclick=async()=>{try{await navigator.clipboard.writeText($('missingList').value);notice('Lote de faltantes copiado.');}catch{ $('missingList').select();notice('Selecione e copie a lista de faltantes.');}};
 
-$('save').onclick=()=>{
+$('save').onclick=async()=>{
 
   if(!receiver?.verified)return;
 
-  const url=URL.createObjectURL(new Blob([receiver.bytes],{type:'application/octet-stream'}));const a=document.createElement('a');a.href=url;a.download=receiver.meta.name||'arquivo';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
+  const r=receiver;$('save').disabled=true;let blob;try{blob=r.fileBlob?await r.fileBlob():new Blob([r.bytes],{type:'application/octet-stream'});}catch(e){notice('Não foi possível preparar o arquivo: '+e.message);return;}finally{if(receiver===r)$('save').disabled=false;}if(receiver!==r)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=receiver.meta.name||'arquivo';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
 
 };
 
@@ -657,7 +661,7 @@ async function resetReception(keepCamera=false){
   if(receiver&&!confirm(receiver.verified?'Começar outro arquivo? Salve o arquivo verificado antes de continuar. A cópia no navegador será removida.':'Começar outro arquivo? Os blocos da recepção atual serão removidos.'))return false;
   resettingReception=true;
   try{
-    if(transferId())setPaused(true);forgetRoom();receiver=null;storageTouched=true;dirty=false;
+    if(transferId())setPaused(true);forgetRoom();const oldReceiver=receiver;receiver=null;storageTouched=true;dirty=false;await oldReceiver?.dispose?.();
     await connection.close();onConnectionState('CLOSED');pairTarget=null;lastPairCode='';$('pairCode').value='';pauseState.reset();pauseConfirmed=false;
     feedbackPeer=null;peerLastSeen=0;lastPairAttempt=0;opticalBlocked=false;transmissionDone=false;
     if(!keepCamera)stopCamera();await saveSnapshot(null);
@@ -670,7 +674,7 @@ async function resetReception(keepCamera=false){
     return true;
   }finally{resettingReception=false;}
 }
-$('newReceive').onclick=async()=>{const packet=pendingNewPacket;if(await resetReception(!!stream)){notice('Pronto para outro arquivo. Leia o QR de conexão do transmissor.');if(packet)receivePacket(packet);}};
+$('newReceive').onclick=async()=>{const packet=pendingNewPacket;if(await resetReception(!!stream)){notice('Pronto para outro arquivo. Leia o QR de conexão do transmissor.');if(packet)receivePacket(packet).catch(e=>notice(e.message));}};
 $('discard').onclick=async()=>{if(await resetReception())notice('Recepção descartada. Pronto para outro arquivo.');};
 $('newSend').onclick=()=>{$('file').value='';$('file').click();};
 
@@ -678,9 +682,9 @@ $('resetAll').onclick=async()=>{
   if(!confirm('Recomeçar o Farol 4 do zero? Isso remove os blocos, salas e configurações salvos neste navegador. Salve seu arquivo antes de continuar.'))return;
   $('resetAll').disabled=true;
   try{
-    await initialization;resettingReception=true;storageTouched=true;sessionEnabled=false;dirty=false;receiver=null;sender=null;restoredRoom=null;
+    await initialization;resettingReception=true;storageTouched=true;sessionEnabled=false;dirty=false;const oldReceiver=receiver;receiver=null;sender=null;restoredRoom=null;await oldReceiver?.dispose?.();
     stop();stopCamera();await connection.close();
-    if(db)await new Promise((resolve,reject)=>{const tx=db.transaction('sessions','readwrite');tx.objectStore('sessions').clear();tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});
+    if(db)await new Promise((resolve,reject)=>{const tx=db.transaction(['sessions','parts'],'readwrite');tx.objectStore('sessions').clear();tx.objectStore('parts').clear();tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});
     for(const storage of [localStorage,sessionStorage])for(const key of Object.keys(storage))if(key.startsWith('farol4'))storage.removeItem(key);
     if('caches' in window)for(const key of await caches.keys())if(/^farol4(?:[-:/]|$)/.test(key))await caches.delete(key);
     const url=new URL(location.href);url.hash='';url.search='?v=20260909-7&reset='+Date.now();location.replace(url.href);
@@ -691,9 +695,9 @@ async function openStore(){
 
   return new Promise(resolve=>{
 
-    const request=indexedDB.open('farol4',1);request.onupgradeneeded=()=>request.result.createObjectStore('sessions');
+    const request=indexedDB.open('farol4',2);request.onupgradeneeded=()=>{for(const name of ['sessions','parts'])if(!request.result.objectStoreNames.contains(name))request.result.createObjectStore(name);};request.onblocked=()=>notice('Feche outras abas do Farol 4 para atualizar o armazenamento.');
 
-    request.onerror=()=>resolve(null);request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>resolve(null);request.onsuccess=()=>{request.result.onversionchange=()=>request.result.close();resolve(request.result);};
 
   });
 
@@ -703,11 +707,11 @@ async function saveSnapshot(value){
 
   if(!db)return;
 
-  return new Promise(resolve=>{const tx=db.transaction('sessions','readwrite');const store=tx.objectStore('sessions');value?store.put(value,'current'):store.delete('current');tx.oncomplete=()=>resolve();tx.onerror=()=>{notice('Não foi possível salvar o progresso neste navegador.');resolve();};});
+  return new Promise(resolve=>{const tx=db.transaction(['sessions','parts'],'readwrite');const store=tx.objectStore('sessions');if(value)store.put(value,'current');else{store.delete('current');tx.objectStore('parts').clear();}tx.oncomplete=()=>resolve();tx.onerror=()=>{notice('Não foi possível salvar o progresso neste navegador.');resolve();};});
 
 }
 
-async function persist(){if(dirty&&storageReady&&receiver){dirty=false;updateTransferSummary();await saveSnapshot({...receiver.snapshot(),timing:receiveClock.snapshot()});}}
+async function persist(){if(dirty&&storageReady&&receiver){const r=receiver;dirty=false;updateTransferSummary();try{if(r.flush)await r.flush(receiveClock.snapshot());else await saveSnapshot({...r.snapshot(),timing:receiveClock.snapshot()});}catch(e){if(receiver===r){dirty=true;setPaused(true);notice('Não foi possível salvar os blocos. Libere espaço e tente continuar: '+e.message);}}}}
 
 async function restore(){
 
@@ -717,7 +721,7 @@ async function restore(){
 
     const saved=await new Promise(resolve=>{const q=db.transaction('sessions').objectStore('sessions').get('current');q.onsuccess=()=>resolve(q.result);q.onerror=()=>resolve(null);});
 
-    if(saved&&!storageTouched&&!receiver){receiver=Receiver.restore(saved);clockReceiver=receiver;receiveClock=new TransferClock(saved.timing);if(!saved.timing&&receiver.count>0)receiveClock.partial=true;updateReceiver();notice('Recepção anterior restaurada. Use o mesmo arquivo e tamanho de bloco no transmissor.');if(receiver.count===receiver.meta.total)verifyReceiver();}
+    if(saved&&!storageTouched&&!receiver){receiver=saved.storage==='parts-v1'?new PartReceiver(saved.meta,db,saved):Receiver.restore(saved);clockReceiver=receiver;receiveClock=new TransferClock(saved.timing);if(!saved.timing&&receiver.count>0)receiveClock.partial=true;updateReceiver();notice('Recepção anterior restaurada. Use o mesmo arquivo e tamanho de bloco no transmissor.');if(receiver.count===receiver.meta.total)verifyReceiver();}
 
   }catch{storageReady=true;notice('Progresso local indisponível; mantenha esta página aberta.');}
 
