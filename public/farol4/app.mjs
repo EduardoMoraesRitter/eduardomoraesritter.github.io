@@ -793,7 +793,7 @@ function showConnectionError(state,error){
   const reason=navigator.onLine===false?'O navegador está sem internet.':state==='TIMED_OUT'?'O Supabase não respondeu dentro do prazo.':state==='CLOSED'?'O canal de conexão foi fechado.':'Não foi possível abrir o canal do Supabase.';
   const help=detail?'Detalhe recebido: '+detail:'O navegador não informou a causa exata. Pode ser bloqueio de rede/WebSocket, VPN, configuração ou indisponibilidade do serviço.';
   $('connectionAlert').textContent=reason+' '+help+' Confira a internet, tente outra rede e toque em Reconectar ao Supabase. Código: '+state;
-  $('connectionAlert').hidden=false;
+  $('connectionAlert').hidden=false;notice('Falha na conexão com o Supabase. Veja o alerta acima e tente reconectar.');
 }
 function onConnectionState(state,error){
 
