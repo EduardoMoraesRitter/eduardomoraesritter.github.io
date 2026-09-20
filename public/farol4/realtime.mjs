@@ -28,9 +28,9 @@ export class ReturnChannel {
         if(this.peers.size>32&&!this.peers.has(m.from))return;
         this.peers.set(m.from,m.seq);this.onMessage(m);
       }catch{/* Unpaired, corrupted or invalid envelopes never affect transmission. */}
-    }).subscribe(status=>{
+    }).subscribe((status,error)=>{
       if(generation!==this.generation)return;
-      this.ready=status==='SUBSCRIBED';this.onState(status);
+      this.ready=status==='SUBSCRIBED';this.onState(status,error);
     });
   }
   async send(message) {

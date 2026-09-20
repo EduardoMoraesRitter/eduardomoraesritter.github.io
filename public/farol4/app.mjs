@@ -5,7 +5,7 @@ import {cameraConstraints,syncCameraAspect} from './camera-view.mjs?v=20260914-1
 
 import {Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from './protocol.mjs?v=20260920-1';
 
-import {ReturnChannel} from './realtime.mjs?v=20260909-3';
+import {ReturnChannel} from './realtime.mjs?v=20260920-2';
 
 import {analyzeFrame,autoZoom} from './camera.mjs?v=20260909-3';
 
@@ -779,14 +779,26 @@ function updateLinkStatus(){
 
   $('linkStatus').dataset.state=live?'paired':connection.ready?'waiting':errors.includes(connectionState)?'error':'offline';
 
-  $('retryConnection').disabled=connecting||! /^[a-f0-9]{64}$/i.test($('pairCode').value.trim());
+  $('retryConnection').disabled=connecting||connectionState==='CONNECTING';
+  $('retryConnection').textContent=connectionState==='CONNECTING'?'Conectando…':connection.roomId?'Reconectar ao Supabase':'Conectar ao Supabase';
 
   updateDiagnostics();
 
 }
 
-function onConnectionState(state){
+function showConnectionError(state,error){
+  let detail=typeof error==='string'?error:error?.message||error?.reason||'';
+  for(const secret of [$('supabaseKey').value,$('pairCode').value])if(secret)detail=detail.split(secret).join('[oculto]');
+  detail=detail.replace(/https?:\/\/\S+|wss?:\/\/\S+/g,'[endereço omitido]').slice(0,350);
+  const reason=navigator.onLine===false?'O navegador está sem internet.':state==='TIMED_OUT'?'O Supabase não respondeu dentro do prazo.':state==='CLOSED'?'O canal de conexão foi fechado.':'Não foi possível abrir o canal do Supabase.';
+  const help=detail?'Detalhe recebido: '+detail:'O navegador não informou a causa exata. Pode ser bloqueio de rede/WebSocket, VPN, configuração ou indisponibilidade do serviço.';
+  $('connectionAlert').textContent=reason+' '+help+' Confira a internet, tente outra rede e toque em Reconectar ao Supabase. Código: '+state;
+  $('connectionAlert').hidden=false;
+}
+function onConnectionState(state,error){
 
+  if(['CHANNEL_ERROR','TIMED_OUT','CLOSED','ERROR'].includes(state))showConnectionError(state,error);
+  if(state==='SUBSCRIBED'){$('connectionAlert').hidden=true;notice('Conectado ao Supabase. '+(transferId()?'Aguardando confirmação do outro aparelho.':'Agora escolha o arquivo ou leia o QR de conexão.'));}
   connectionState=state;if(state!=='SUBSCRIBED'){peerLastSeen=0;sameRole=false;pauseConfirmed=false;}updateLinkStatus();updatePauseUI();
 
   const labels={SUBSCRIBED:'Conexão pronta · aguardando o outro aparelho',CHANNEL_ERROR:'Falha na conexão · confira a configuração e tente novamente',TIMED_OUT:'Tempo esgotado · tentando reconectar',CLOSED:'Desconectado · transmissão óptica continua disponível'};
@@ -922,6 +934,8 @@ async function connect(create){
 
   try{
 
+    if(navigator.onLine===false)throw Error('Sem internet neste aparelho.');
+    if(!window.supabase?.createClient)throw Error('A biblioteca do Supabase não carregou. Recarregue a página.');
     config=publicConfig();const code=create?newPairCode():$('pairCode').value.trim().toLowerCase();
 
     sessionEnabled=true;
@@ -936,7 +950,7 @@ async function connect(create){
 
     rememberRoom();
 
-  }catch(e){connectionState='ERROR';$('connectionStatus').textContent=e.message;$('configuration').open=true;$('connectionDetails').open=true;notice('Não foi possível conectar: '+e.message);}finally{connecting=false;updateLinkStatus();}
+  }catch(e){connectionState='ERROR';showConnectionError('ERROR',e);$('connectionStatus').textContent=e.message;$('configuration').open=true;$('connectionDetails').open=true;notice('Não foi possível conectar: '+e.message);}finally{connecting=false;updateLinkStatus();}
 
 }
 
@@ -956,7 +970,7 @@ forgetButton.onclick=async()=>{
 
 };
 
-$('retryConnection').onclick=()=>connect(false);
+$('retryConnection').onclick=async()=>{await initialization;await connect(!$('pairCode').value.trim());};
 
 $('disconnect').onclick=async()=>{opticalBlocked=true;autoArmed=false;pairDisplayPending=false;await connection.close();connectionState='CLOSED';peerLastSeen=0;updateLinkStatus();$('disconnect').disabled=true;$('copyPair').disabled=true;$('showPair').disabled=true;$('connectionStatus').textContent='Modo óptico · sem conexão de retorno';feedbackPeer=null;};
 
