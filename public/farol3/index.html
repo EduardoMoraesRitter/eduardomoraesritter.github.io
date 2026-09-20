@@ -103,6 +103,7 @@
     .panel-pad{padding:14px} .modes{width:100%;margin-bottom:14px} .modes button{flex:1;justify-content:center;padding:11px 8px}
     h1{font-size:1.3rem} .stage{aspect-ratio:1/1} .meter{min-width:0}
   }
+#videoPrintsPanel{margin:14px 0;border:1px solid var(--border);border-radius:10px;padding:12px;min-width:0}#videoPrintsPanel summary{cursor:pointer;font-weight:600}#videoPrintsPanel select,#videoPrintsPanel input:not([type=checkbox]){width:100%;max-width:100%;padding:8px;background:var(--bg);color:inherit;border:1px solid var(--border);border-radius:6px}#videoPrintsPanel .actions{display:flex;flex-wrap:wrap;gap:8px}#videoPrintsPanel .hint,#printsStatus,#previewSize{font-size:13px;overflow-wrap:anywhere}#videoPrintsPanel .textButton{padding:10px;background:var(--bg);color:inherit;border:1px solid var(--border);border-radius:6px}#videoPrintsPanel .check{display:flex;gap:8px;margin:12px 0}#openAudioTools{margin-top:12px}#videoPrintsPanel [hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -120,6 +121,7 @@
     <div class="panel panel-pad">
       <p class="eyebrow">Transmissor · RGB + gotas</p>
       <div class="drop" id="drop" tabindex="0" role="button"><div class="ico">📄</div><div class="t">Escolher arquivo</div><div class="s">clique ou arraste</div><input type="file" id="file" hidden></div>
+      <button id="openAudioTools" class="btn secondary">Enviar só o áudio de um vídeo</button><details id="videoPrintsPanel"><summary>Vídeo → prints ou somente áudio</summary><p class="hint">Processado neste navegador. Escolha o intervalo; o ZIP fica selecionado para transmitir. Sem áudio.</p><label class="field"><span class="lab">Vídeo de origem</span><input id="printsVideo" type="file" accept="video/*"></label><button id="extractAudio" class="btn secondary">🎵 Extrair somente áudio → ZIP</button><p class="hint">Para enviar só o som, use o botão acima. Para prints, ajuste as opções abaixo.</p><label class="field"><span class="lab">Uma imagem a cada</span><input id="printsInterval" type="number" min="0.1" step="0.1" value="1"></label><label class="field"><span class="lab">Unidade</span><select id="printsUnit"><option value="1">Segundos</option><option value="60">Minutos</option></select></label><label class="field"><span class="lab">Formato das imagens</span><select id="printsFormat"><option value="jpeg">JPEG · menor tamanho</option><option value="png">PNG · sem perdas</option></select></label><label class="field"><span class="lab">Tamanho dos prints</span><select id="printsCompact"><option value="original">Original · manter resolução e formato</option><option value="compact">Compacto · escolher tamanho e qualidade</option></select></label><label class="field"><span class="lab">Maior dimensão no modo compacto</span><select id="printsDimension"><option value="800">800 px · menor arquivo</option><option value="1200" selected>1200 px · equilibrado</option><option value="1600">1600 px · mais detalhes</option></select></label><label class="field"><span class="lab">Qualidade JPEG no modo compacto</span><select id="printsQuality"><option value="0.5">50% · menor arquivo</option><option value="0.65">65% · econômico</option><option value="0.75" selected>75% · equilibrado</option><option value="0.85">85% · mais detalhes</option></select></label><button id="previewPrints" class="textButton">Comparar tamanho e qualidade do primeiro print</button><div id="printsPreview" hidden><p id="previewSize" class="hint" role="status"></p><span class="lab">Antes</span><img id="previewBefore" alt="Print antes da otimização" style="width:100%;height:auto"><span class="lab">Depois</span><img id="previewAfter" alt="Print depois da otimização" style="width:100%;height:auto"><p class="hint">A prévia usa apenas o primeiro print. Confira textos e detalhes; o resultado varia por imagem.</p></div><label class="check"><input id="printsDedupe" type="checkbox"><span>Descartar prints semelhantes</span></label><label class="field"><span class="lab">Comparação de imagens</span><select id="printsSensitivity" disabled><option value="careful">Conservadora · preservar pequenas mudanças</option><option value="balanced">Equilibrada</option><option value="strong">Descartar mais · pode perder detalhes</option></select></label><p class="hint">Compara com a última imagem mantida. Revise o ZIP: diferenças pequenas podem ser descartadas.</p><div class="actions"><button id="generatePrints" class="btn secondary">Gerar ZIP e usar no Farol</button><button id="cancelPrints" class="textButton" hidden>Cancelar</button></div><p id="printsStatus" class="hint" role="status">Áudio: extração em tempo real, sem imagens; mantenha a aba ativa. O ZIP final deve ter até 100 MB. Mantenha esta aba aberta durante a captura.</p><a id="downloadPrints" hidden>Baixar uma cópia do ZIP</a></details>
       <div id="fileChip" class="filechip" hidden><span class="nm" id="fileName">—</span><span class="mt" id="fileMeta"></span></div>
       <div style="margin-top:16px">
         <label class="field"><span class="lab">Bytes por bloco <span class="val" id="chunkVal">400</span></span><input type="range" id="chunk" min="100" max="800" step="20" value="400"></label>
@@ -357,15 +359,17 @@
   drop.ondragover=function(e){e.preventDefault();drop.classList.add('over')};
   drop.ondragleave=function(){drop.classList.remove('over')};
   drop.ondrop=function(e){e.preventDefault();drop.classList.remove('over'); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); };
+  window.addEventListener('farol3-pause-preparation',function(){stopPlay(true);});
   fileInput.onchange=function(e){ if(e.target.files[0]) loadFile(e.target.files[0]); };
 
   function loadFile(f){
+    if(f.size>100000000){alert('Limite: 100 MB por arquivo.');return;}
     stopPlay();
     fileName=f.name; fileType=f.type||'';
     var rd=new FileReader();
     rd.onload=function(ev){
       var raw=new Uint8Array(ev.target.result); origSize=raw.length;
-      try{ packed=window.pako?pako.gzip(raw):raw; }catch(e){ packed=raw; }
+      try{ var compressed=window.pako?pako.gzip(raw):raw;packed=compressed.length<raw.length?compressed:raw; }catch(e){ packed=raw; }
       $('fileChip').hidden=false; $('fileName').textContent=fileName;
       $('fileMeta').textContent=(packed.length<origSize)?fmtBytes(origSize)+' → '+fmtBytes(packed.length)+' (zip)':fmtBytes(origSize);
       prepare(); $('playBtn').disabled=false; setSendState('','Pronto');
@@ -600,5 +604,6 @@
   window.addEventListener('beforeunload',function(e){ if(dec && !dec.done() && dec.count>0){ e.preventDefault(); e.returnValue=''; } });
 })();
 </script>
+<script type="module" src="./media-tools.mjs?v=20260921-1"></script>
 </body>
 </html>
