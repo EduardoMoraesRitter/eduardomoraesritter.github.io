@@ -1,4 +1,4 @@
-import {videoPrints} from './video-prints.mjs?v=20260920-4';
+import {videoPrints} from './video-prints.mjs?v=20260920-5';
 import {recoveryAction} from './adaptive-recovery.mjs?v=20260920-3';
 import {FileSender,PartReceiver,PART_SIZE} from './parts.mjs?v=20260920-1';
 import {TransferClock,elapsed,dataSize} from './transfer-clock.mjs?v=20260909-5';
@@ -1073,6 +1073,7 @@ function arrangeSenderSidebar(){
 $('sendMode').addEventListener('click',arrangeSenderSidebar);$('receiveMode').addEventListener('click',arrangeSenderSidebar);window.addEventListener('resize',arrangeSenderSidebar);initialization.then(arrangeSenderSidebar);arrangeSenderSidebar();
 
 let printsController=null,printsDownloadUrl=null;
+$('printsDedupe').onchange=()=>{$('printsSensitivity').disabled=!$('printsDedupe').checked;};
 $('cancelPrints').onclick=()=>printsController?.abort();
 $('generatePrints').onclick=async()=>{
   if(printsController)return;
@@ -1083,13 +1084,13 @@ $('generatePrints').onclick=async()=>{
   for(const id of ['generatePrints','file','newSend','blockSize'])$(id).disabled=true;
   $('cancelPrints').hidden=false;
   try{
-    const result=await videoPrints(source,{interval:Number($('printsInterval').value)*Number($('printsUnit').value),png:$('printsFormat').value==='png',signal:controller.signal,onProgress:text=>{$('printsStatus').textContent=text;}});
+    const result=await videoPrints(source,{interval:Number($('printsInterval').value)*Number($('printsUnit').value),png:$('printsFormat').value==='png',deduplicate:$('printsDedupe').checked,sensitivity:$('printsSensitivity').value,signal:controller.signal,onProgress:text=>{$('printsStatus').textContent=text;}});
     if(printsDownloadUrl)URL.revokeObjectURL(printsDownloadUrl);
     printsDownloadUrl=URL.createObjectURL(result.zip);
     $('downloadPrints').href=printsDownloadUrl;$('downloadPrints').download=result.zip.name;$('downloadPrints').hidden=false;
     file=result.zip;
     try{const transfer=new DataTransfer();transfer.items.add(file);$('file').files=transfer.files;}catch{$('file').value='';}
-    $('printsStatus').textContent=`${result.count} prints · ZIP de ${(file.size/1e6).toFixed(1)} MB selecionado para transmitir. Você também pode baixar uma cópia.`;
+    $('printsStatus').textContent=`${result.count} prints · ${result.analyzed} analisadas · ${result.discarded} descartadas · ZIP de ${(file.size/1e6).toFixed(1)} MB selecionado para transmitir. Você também pode baixar uma cópia.`;
     await prepare();
   }catch(e){$('printsStatus').textContent=e.name==='AbortError'?'Geração cancelada.':e.message;}
   finally{printsController=null;$('cancelPrints').hidden=true;for(const id of ['generatePrints','file','newSend','blockSize'])$(id).disabled=false;}

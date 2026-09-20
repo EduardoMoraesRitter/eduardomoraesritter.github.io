@@ -216,3 +216,9 @@ Validação: `tests/farol4-parts-browser.js` exercita 100 MB e 250.000 blocos no
 Em Enviar arquivo, abra **Vídeo → prints em ZIP**, escolha um vídeo, intervalo em segundos ou minutos e JPEG/PNG. **Gerar ZIP e usar no Farol** captura as imagens localmente e seleciona o ZIP para transmissão; também oferece download. Nenhum vídeo é enviado para processamento externo. O navegador precisa conseguir decodificar o formato/codec; MP4 H.264 é uma opção comum.
 
 O limite do ZIP é 100 MB e o máximo é 5.000 capturas por execução. Aumente o intervalo para reduzir o tamanho. Mantenha a aba aberta. Os prints mantêm a resolução do vídeo, mas não incluem áudio nem os quadros entre os instantes escolhidos. JPEG usa qualidade 92%; PNG evita perdas adicionais na captura. O manifesto no ZIP registra os instantes solicitados. O download usa a pasta escolhida/configurada pelo navegador, sem criar uma pasta arbitrária na Área de Trabalho.
+
+### Descartar prints semelhantes
+
+Opção desativada inicialmente. Quando ativada, compara cada captura com a última imagem mantida e sempre preserva a primeira. A comparação usa uma prévia com largura máxima de 960 pixels e diferenças globais e por regiões de 16×16 pixels. Conservadora (padrão), Equilibrada e Descartar mais ajustam a tolerância. É uma aproximação visual: detalhes muito pequenos podem ser descartados. Revise o ZIP para conteúdos importantes.
+
+A interface mostra capturas analisadas, mantidas e descartadas; o manifesto registra o filtro e os instantes mantidos. Testes cobrem cenas repetidas/mudanças de cena no navegador e mudanças localizadas em imagens sintéticas.
