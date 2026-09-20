@@ -230,3 +230,5 @@ Escolha o vídeo no painel de prints e clique em **Extrair áudio e usar no Faro
 ### Prints compactos e prévia
 
 O padrão Original mantém resolução e formato selecionados (JPEG 92% ou PNG). Compacto cria JPEG 85%, com dimensão maior limitada a 1600 pixels, mantendo proporção e sem ampliar imagens pequenas. Só substitui a captura se ficar menor. É compressão com perdas; para texto pequeno, confira a prévia ou mantenha Original/PNG. A prévia compara somente o primeiro print, com dimensões, tamanhos e economia. O resultado final informa economia das imagens mantidas, separada do descarte de semelhantes. O botão Enviar só o áudio de um vídeo fica visível junto à seleção de arquivo no transmissor.
+
+Atualização: o modo compacto agora permite 800, 1200 ou 1600 px e qualidade JPEG de 50%, 65%, 75% ou 85%. Padrão compacto: 1200 px / 75%. A prévia estima o tamanho total usando somente o primeiro print e o intervalo escolhido, sem descontar semelhantes; não é garantia do tamanho final.

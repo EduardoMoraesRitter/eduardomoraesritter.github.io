@@ -1,5 +1,5 @@
 import {videoAudio} from './video-audio.mjs?v=20260920-6';
-import {videoPrints} from './video-prints.mjs?v=20260920-7';
+import {videoPrints} from './video-prints.mjs?v=20260921-1';
 import {recoveryAction} from './adaptive-recovery.mjs?v=20260920-3';
 import {FileSender,PartReceiver,PART_SIZE} from './parts.mjs?v=20260920-1';
 import {TransferClock,elapsed,dataSize} from './transfer-clock.mjs?v=20260909-5';
@@ -1085,7 +1085,7 @@ $('generatePrints').onclick=async()=>{
   for(const id of ['generatePrints','extractAudio','previewPrints','file','newSend','blockSize'])$(id).disabled=true;
   $('cancelPrints').hidden=false;
   try{
-    const result=await videoPrints(source,{interval:Number($('printsInterval').value)*Number($('printsUnit').value),png:$('printsFormat').value==='png',compact:$('printsCompact').value==='compact',deduplicate:$('printsDedupe').checked,sensitivity:$('printsSensitivity').value,signal:controller.signal,onProgress:text=>{$('printsStatus').textContent=text;}});
+    const result=await videoPrints(source,{interval:Number($('printsInterval').value)*Number($('printsUnit').value),png:$('printsFormat').value==='png',compact:$('printsCompact').value==='compact',maxDimension:Number($('printsDimension').value),quality:Number($('printsQuality').value),deduplicate:$('printsDedupe').checked,sensitivity:$('printsSensitivity').value,signal:controller.signal,onProgress:text=>{$('printsStatus').textContent=text;}});
     if(printsDownloadUrl)URL.revokeObjectURL(printsDownloadUrl);
     printsDownloadUrl=URL.createObjectURL(result.zip);
     $('downloadPrints').href=printsDownloadUrl;$('downloadPrints').download=result.zip.name;$('downloadPrints').hidden=false;
@@ -1118,7 +1118,7 @@ $('extractAudio').onclick=async()=>{
 
 let previewUrls=[];
 function clearPrintsPreview(){for(const url of previewUrls)URL.revokeObjectURL(url);previewUrls=[];$('printsPreview').hidden=true;}
-for(const id of ['printsVideo','printsFormat','printsCompact'])$(id).addEventListener('change',clearPrintsPreview);
+for(const id of ['printsVideo','printsFormat','printsCompact','printsDimension','printsQuality','printsInterval','printsUnit'])$(id).addEventListener('change',clearPrintsPreview);
 $('previewPrints').onclick=async()=>{
  if(printsController)return;
  const source=$('printsVideo').files[0];if(!source){$('printsStatus').textContent='Escolha o vídeo de origem.';return;}
@@ -1126,10 +1126,10 @@ $('previewPrints').onclick=async()=>{
  for(const id of ['generatePrints','extractAudio','previewPrints'])$(id).disabled=true;
  clearPrintsPreview();$('printsStatus').textContent='Preparando prévia…';
  try{
-  const result=await videoPrints(source,{previewOnly:true,png:$('printsFormat').value==='png',compact:$('printsCompact').value==='compact',signal:controller.signal});
+  const result=await videoPrints(source,{previewOnly:true,interval:Number($('printsInterval').value)*Number($('printsUnit').value),png:$('printsFormat').value==='png',compact:$('printsCompact').value==='compact',maxDimension:Number($('printsDimension').value),quality:Number($('printsQuality').value),signal:controller.signal});
   previewUrls=[URL.createObjectURL(result.original),URL.createObjectURL(result.optimized)];
   $('previewBefore').src=previewUrls[0];$('previewAfter').src=previewUrls[1];
-  $('previewSize').textContent=`Antes: ${(result.original.size/1024).toFixed(1)} KB (${result.originalWidth}×${result.originalHeight}). Depois: ${(result.optimized.size/1024).toFixed(1)} KB (${result.width}×${result.height}). Economia: ${Math.round((1-result.optimized.size/result.original.size)*100)}%.`;
+  $('previewSize').textContent=`Antes: ${(result.original.size/1024).toFixed(1)} KB (${result.originalWidth}×${result.originalHeight}). Depois: ${(result.optimized.size/1024).toFixed(1)} KB (${result.width}×${result.height}). Economia: ${Math.round((1-result.optimized.size/result.original.size)*100)}%. Estimativa para ${result.captures} capturas: ${(result.estimatedBytes/1e6).toFixed(1)} MB, baseada apenas no primeiro print e sem descontar semelhantes.`;
   $('printsPreview').hidden=false;$('printsStatus').textContent='Prévia pronta. Confira a qualidade antes de gerar o ZIP.';
  }catch(e){$('printsStatus').textContent=e.name==='AbortError'?'Prévia cancelada.':e.message;}
  finally{printsController=null;$('cancelPrints').hidden=true;for(const id of ['generatePrints','extractAudio','previewPrints'])$(id).disabled=false;}

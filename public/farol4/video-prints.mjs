@@ -31,7 +31,8 @@ function waitMedia(video,event,signal,action){
   if(signal?.aborted){abort();return;}try{action?.();}catch(e){cleanup();reject(e);}
  });
 }
-export async function videoPrints(file,{interval=1,png=false,compact=false,previewOnly=false,deduplicate=false,sensitivity='careful',signal,onProgress=()=>{}}={}){
+export async function videoPrints(file,{interval=1,png=false,compact=false,maxDimension=1200,quality=.75,previewOnly=false,deduplicate=false,sensitivity='careful',signal,onProgress=()=>{}}={}){
+ if(![800,1200,1600].includes(maxDimension)||!Number.isFinite(quality)||quality<.4||quality>.95)throw Error('Configuração de qualidade inválida.');
  if(!Number.isFinite(interval)||interval<=0)throw Error('Informe um intervalo maior que zero.');
  const video=document.createElement('video');video.muted=true;video.playsInline=true;video.preload='auto';
  const url=URL.createObjectURL(file),entries=[],times=[];
@@ -63,14 +64,14 @@ export async function videoPrints(file,{interval=1,png=false,compact=false,previ
    if(!original)throw Error('O navegador não conseguiu gerar a imagem.');
    let blob=original,width=canvas.width,height=canvas.height;
    if(compact){
-    const output=document.createElement('canvas'),ratio=Math.min(1,1600/Math.max(canvas.width,canvas.height));
+    const output=document.createElement('canvas'),ratio=Math.min(1,maxDimension/Math.max(canvas.width,canvas.height));
     output.width=Math.max(1,Math.round(canvas.width*ratio));output.height=Math.max(1,Math.round(canvas.height*ratio));
     const drawing=output.getContext('2d');drawing.imageSmoothingQuality='high';drawing.drawImage(canvas,0,0,output.width,output.height);
-    const smaller=await new Promise(resolve=>output.toBlob(resolve,'image/jpeg',.85));
+    const smaller=await new Promise(resolve=>output.toBlob(resolve,'image/jpeg',quality));
     if(smaller&&smaller.size<original.size){blob=smaller;width=output.width;height=output.height;}
    }
    if(signal?.aborted)throw new DOMException('Cancelado','AbortError');
-   if(previewOnly)return {original,optimized:blob,width,height,originalWidth:canvas.width,originalHeight:canvas.height};
+   if(previewOnly)return {original,optimized:blob,width,height,originalWidth:canvas.width,originalHeight:canvas.height,estimatedBytes:count*(blob.size+200),captures:count};
    originalBytes+=original.size;imageBytes+=blob.size;
    size+=blob.size+200;
    if(size>LIMIT-100000)throw Error('Os prints ultrapassam 100 MB. Aumente o intervalo ou escolha JPEG.');
@@ -78,7 +79,7 @@ export async function videoPrints(file,{interval=1,png=false,compact=false,previ
    onProgress(`${i+1}/${count} capturas analisadas · ${times.length} mantidas · ${discarded} descartadas · ${(size/1e6).toFixed(1)} MB`);
    await new Promise(resolve=>setTimeout(resolve,0));
   }
-  entries.push({name:'LEIA-ME.json',blob:new Blob([JSON.stringify({video:file.name,interval_seconds:interval,duration_seconds:duration,timestamps_seconds:times,compact,original_image_bytes:originalBytes,output_image_bytes:imageBytes,deduplicate,sensitivity,analyzed:count,kept:times.length,discarded,note:'Capturas sem áudio; quadros intermediários não incluídos.'},null,2)])});
+  entries.push({name:'LEIA-ME.json',blob:new Blob([JSON.stringify({video:file.name,interval_seconds:interval,duration_seconds:duration,timestamps_seconds:times,compact,maxDimension,quality,original_image_bytes:originalBytes,output_image_bytes:imageBytes,deduplicate,sensitivity,analyzed:count,kept:times.length,discarded,note:'Capturas sem áudio; quadros intermediários não incluídos.'},null,2)])});
   onProgress('Preparando ZIP…');
   const zip=await imagesZip(entries,file.name.replace(/\.[^.]+$/,'')+'-prints.zip');
   if(signal?.aborted)throw new DOMException('Cancelado','AbortError');
