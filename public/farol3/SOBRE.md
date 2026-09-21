@@ -53,3 +53,5 @@ Reconectar em qualquer aparelho pausa a transmissão, mantém a sala/arquivo e o
 ## Diagnóstico do início
 
 O painel mantém visíveis projeto Supabase, sala, identidade curta do arquivo, leitura do QR e presença confirmada do outro aparelho. IDs iguais indicam a mesma sala escolhida; somente a presença confirmada indica comunicação real. QR lido não significa canal conectado. Erros de alcance do serviço são separados de erros de leitura. Mensagens criptografadas de controle são processadas em ordem para evitar que confirmação/pausa sejam descartadas por inversão assíncrona. Entrar em outra sala do mesmo arquivo limpa somente a negociação anterior, preservando blocos.
+
+Confirmações de QR/câmera são limitadas a uma por segundo para não criar uma fila que atrase pausa e conclusão em conexões com latência. Validado com Supabase real após reativar o projeto farol4 que estava INACTIVE.

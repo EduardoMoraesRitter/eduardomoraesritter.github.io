@@ -8,7 +8,8 @@ let config,target='',code='',connecting=false,epoch=0,lastPeer=0,peer='',armed=f
 let resetting=false,resetAck=null;
 let transport='CLOSED',lastOptical=0,configFailure='',lastProbe=0;
 let syncToken='',awaitingScan=false,scannedToken='',finishedSync='';
-function clearSync(){syncToken='';awaitingScan=false;scannedToken='';finishedSync='';}
+let lastReady=0,lastSyncReady=0;
+function clearSync(){syncToken='';awaitingScan=false;scannedToken='';finishedSync='';lastReady=0;lastSyncReady=0;}
 function syncHint(){return engine.state().role==='send'?'Centralize este QR no receptor. Aguardando leitura e confirmação do progresso.':`Centralize a câmera no QR de conexão do transmissor. ${engine.state().count} blocos preservados.`;}
 function beginSync(){
  armed=false;if(!awaitingScan)changePause(true);
@@ -23,7 +24,7 @@ async function reconnect(){
  if(engine.state().role==='send'&&!code&&engine.source()){await prepared();return;}
  beginSync();if(code)await connect();
 }
-function syncReady(){const s=engine.state();if(scannedToken&&s.camera)send('sync_ready',{token:scannedToken,count:s.receivedId===target?s.count:0,pause:pause.value});}
+function syncReady(){const now=Date.now();if(now-lastSyncReady<1000)return;lastSyncReady=now;const s=engine.state();if(scannedToken&&s.camera)send('sync_ready',{token:scannedToken,count:s.receivedId===target?s.count:0,pause:pause.value});}
 
 const stats=new TransferStats();let lastStats=null,remoteStatsAt=0;
 function clearStats(){stats.reset();lastStats=null;remoteStatsAt=0;$('transferStats').hidden=true;}
@@ -111,7 +112,7 @@ async function prepared(){
   await connect();if(generation!==epoch)return;showQr();
  }catch(e){error('Não foi possível preparar a sala: '+e.message);}
 }
-function ready(){if(awaitingScan)return;const state=engine.state();if(state.role==='receive'&&state.camera&&target&&!pause.value.paused)send('ready',{count:state.receivedId===target?state.count:0});}
+function ready(){if(awaitingScan||Date.now()-lastReady<1000)return;lastReady=Date.now();const state=engine.state();if(state.role==='receive'&&state.camera&&target&&!pause.value.paused)send('ready',{count:state.receivedId===target?state.count:0});}
 async function readPair(text){
  if(resetting)return;const revision=epoch;
  try{
