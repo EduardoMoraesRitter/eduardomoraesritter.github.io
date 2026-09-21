@@ -49,3 +49,7 @@ Os dois lados mostram bytes reconstruídos, velocidade útil recente, tempo deco
 ## Reconexão com confirmação óptica
 
 Reconectar em qualquer aparelho pausa a transmissão, mantém a sala/arquivo e os blocos recebidos e exibe novamente o QR no transmissor. O receptor pede centralização e relê um identificador novo de sincronização dentro do QR da mesma sala. Só depois de confirmar o progresso pelo canal a transmissão continua. Uma mensagem de câmera pronta antiga não libera essa etapa. O emissor continua a sequência de sementes de gotas em memória, sem zerá-la. Começar do zero permanece a ação separada que apaga o progresso. Sem conexão com o canal, a reconexão aguarda e mostra o erro; não confirma progresso remoto.
+
+## Diagnóstico do início
+
+O painel mantém visíveis projeto Supabase, sala, identidade curta do arquivo, leitura do QR e presença confirmada do outro aparelho. IDs iguais indicam a mesma sala escolhida; somente a presença confirmada indica comunicação real. QR lido não significa canal conectado. Erros de alcance do serviço são separados de erros de leitura. Mensagens criptografadas de controle são processadas em ordem para evitar que confirmação/pausa sejam descartadas por inversão assíncrona. Entrar em outra sala do mesmo arquivo limpa somente a negociação anterior, preservando blocos.

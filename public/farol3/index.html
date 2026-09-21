@@ -116,7 +116,7 @@
     <button id="mRecv" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Receber</button>
   </div>
 
-<section class="panel panel-pad" style="margin-bottom:16px" aria-label="Conexão entre aparelhos"><strong id="roomStatus">Supabase · não conectado</strong><p id="roomPeer" class="hint">Escolha um arquivo para criar a sala. No receptor, leia o primeiro QR.</p><p id="transferStats" class="hint" style="overflow-wrap:anywhere" hidden></p><p id="roomError" role="alert" hidden></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="roomReset" class="btn">Começar do zero</button><button id="roomReconnect" class="btn">Conectar / reconectar</button><button id="roomQr" class="btn" disabled>Mostrar QR de conexão</button><button id="roomCameraStop" class="btn" disabled>Parar câmera</button><button id="roomPause" class="btn" disabled>Pausar nos dois aparelhos</button></div><label style="display:block;margin-top:10px"><input id="roomAuto" type="checkbox" checked> Iniciar quando o receptor estiver pronto</label><details><summary>Conexão manual</summary><label>Código da sala <input id="roomCode" style="width:100%" autocomplete="off"></label><button id="roomJoin" class="btn">Entrar na sala</button></details></section>
+<section class="panel panel-pad" style="margin-bottom:16px" aria-label="Conexão entre aparelhos"><strong id="roomStatus">Supabase · não conectado</strong><div id="roomDetails" class="hint" style="display:grid;gap:4px;overflow-wrap:anywhere;margin-top:8px"><span id="roomProject">Projeto Supabase: carregando…</span><span id="roomIdentity">Sala: aguardando QR ou arquivo</span><span id="roomOptical">QR de conexão: ainda não lido neste aparelho</span><span id="roomStep" role="status">Aguardando arquivo ou câmera.</span></div><p id="roomPeer" class="hint">Escolha um arquivo para criar a sala. No receptor, leia o primeiro QR.</p><p id="transferStats" class="hint" style="overflow-wrap:anywhere" hidden></p><p id="roomError" role="alert" hidden></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="roomReset" class="btn">Começar do zero</button><button id="roomReconnect" class="btn">Conectar / reconectar</button><button id="roomQr" class="btn" disabled>Mostrar QR de conexão</button><button id="roomCameraStop" class="btn" disabled>Parar câmera</button><button id="roomPause" class="btn" disabled>Pausar nos dois aparelhos</button></div><label style="display:block;margin-top:10px"><input id="roomAuto" type="checkbox" checked> Iniciar quando o receptor estiver pronto</label><details><summary>Conexão manual</summary><label>Código da sala <input id="roomCode" style="width:100%" autocomplete="off"></label><button id="roomJoin" class="btn">Entrar na sala</button></details></section>
   <!-- ENVIAR -->
   <section id="sendView" class="grid">
     <div class="panel panel-pad">
@@ -635,7 +635,7 @@
 })();
 </script>
 <script type="module" src="./media-tools.mjs?v=20260921-3"></script>
-<script type="module" src="./room.mjs?v=20260921-5"></script>
+<script type="module" src="./room.mjs?v=20260921-6"></script>
 <script type="module" src="./camera-auto.mjs?v=20260921-3"></script>
 </body>
 </html>

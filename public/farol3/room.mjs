@@ -1,11 +1,12 @@
 import {TransferStats,validStats,statsText} from './transfer-stats.mjs?v=20260921-4';
-import {ReturnChannel} from './realtime.mjs?v=20260921-5';
+import {ReturnChannel} from './realtime.mjs?v=20260921-6';
 import {PauseState} from '../farol4/pause-state.mjs?v=20260909-3';
 import {digest,newPairCode,b64,unb64} from '../farol4/protocol.mjs?v=20260920-1';
 const $=id=>document.getElementById(id),engine=window.farol3Engine;
 const pause=new PauseState(crypto.randomUUID());
 let config,target='',code='',connecting=false,epoch=0,lastPeer=0,peer='',armed=false,verified='',verifying=false,ack=false,lastTry=0,completed=false;
 let resetting=false,resetAck=null;
+let transport='CLOSED',lastOptical=0,configFailure='',lastProbe=0;
 let syncToken='',awaitingScan=false,scannedToken='',finishedSync='';
 function clearSync(){syncToken='';awaitingScan=false;scannedToken='';finishedSync='';}
 function syncHint(){return engine.state().role==='send'?'Centralize este QR no receptor. Aguardando leitura e confirmação do progresso.':`Centralize a câmera no QR de conexão do transmissor. ${engine.state().count} blocos preservados.`;}
@@ -38,15 +39,33 @@ setInterval(()=>{
  else if(remoteStatsAt&&Date.now()-remoteStatsAt>12000&&lastStats&&!lastStats.done){$('transferStats').textContent='Sem atualização do receptor · previsão indisponível. Último progresso: '+(lastStats.bytes/1000000).toFixed(2)+' MB';}
 },1000);
 const channel=new ReturnChannel(onMessage,onState,(...args)=>window.supabase.createClient(...args));
-const configuration=fetch('../farol4/config.json').then(r=>{if(!r.ok)throw Error('Configuração do Supabase indisponível.');return r.json();});
+let configuration;
+function loadConfig(){
+ if(!configuration)configuration=fetch('../farol4/config.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('Configuração do Supabase indisponível.');return r.json();}).then(value=>{config=value;configFailure='';status();return value;}).catch(e=>{configuration=null;configFailure=e.message;error(e.message);status();throw e;});
+ return configuration;
+}
+loadConfig().catch(()=>{});
+async function probeService(){
+ if(!config||Date.now()-lastProbe<10000)return;lastProbe=Date.now();
+ try{const result=await fetch(config.url+'/auth/v1/health',{headers:{apikey:config.key},signal:AbortSignal.timeout(7000)});if(!result.ok&&!channel.ready)error(`Supabase respondeu HTTP ${result.status}. Verifique o estado do projeto e sua configuração.`);}
+ catch{if(!channel.ready)error('Não foi possível alcançar o endereço do Supabase. Pode ser DNS, projeto pausado/inativo ou bloqueio de rede. O QR pode ter sido lido, mas a confirmação entre aparelhos ainda não chegou.');}
+}
+
 // The request can fail before the user starts a transfer; connect() displays that failure.
-configuration.catch(()=>{});
+
 const validId=id=>typeof id==='string'&&/^[a-f0-9]{64}:\d{3}$/.test(id)&&Number(id.split(':')[1])>=100&&Number(id.split(':')[1])<=800;
 function error(message){$('roomError').hidden=false;$('roomError').textContent=message;}
 function status(){
  const role=engine.state().role;
- $('roomStatus').textContent=`Supabase · ${channel.ready?'conectado':connecting?'conectando…':'não conectado'} · Sala: ${channel.roomId||'—'}`;
+ $('roomStatus').textContent=`Supabase · ${channel.ready?'conectado':transport==='CONNECTING'||connecting?'conectando…':'não conectado'} · Sala: ${channel.roomId||'—'}`;
  $('roomReconnect').disabled=connecting;
+ $('roomProject').textContent=config?'Projeto Supabase: '+new URL(config.url).hostname.split('.')[0]:'Projeto Supabase: '+(configFailure||'carregando…');
+ $('roomIdentity').textContent='Sala: '+(channel.roomId||'aguardando QR ou arquivo')+' · Arquivo: '+(target?target.slice(0,12):'—');
+ $('roomOptical').textContent=role==='send'?'QR de conexão: '+(target?'disponível no transmissor':'selecione um arquivo'):lastOptical?'QR de conexão: lido às '+new Date(lastOptical).toLocaleTimeString():'QR de conexão: ainda não lido';
+ const peerFresh=lastPeer&&Date.now()-lastPeer<12000;
+ $('roomIdentity').textContent+=' · '+(peerFresh?'Outro aparelho confirmado':'Outro aparelho ainda não confirmado');
+ $('roomStep').textContent=!target?'Escolha o arquivo no transmissor ou leia o QR no receptor.':!channel.ready?'Aguardando conexão com Supabase. Transmissão automática bloqueada.':awaitingScan?(scannedToken?'QR relido. Aguardando confirmação do transmissor.':syncHint()):!peerFresh?'Servidor conectado. Aguardando o outro aparelho na mesma sala.':completed||verified===target?'Arquivo recebido e integridade confirmada.':pause.value.paused?'Conexão confirmada. Transmissão pausada.':engine.state().sending?'Transmitindo. Receptor confirmado na mesma sala.':role==='receive'?'Sala confirmada. '+(engine.state().camera?'Câmera pronta para receber.':'Ligue a câmera para receber.'):'Receptor confirmado. '+($('roomAuto').checked?'Aguardando câmera pronta.':'Início automático desativado; use Iniciar.');
+
  $('roomQr').disabled=!code||role!=='send'||!target;
  $('roomPause').disabled=!target||awaitingScan;$('roomCameraStop').disabled=!engine.state().camera;$('roomCameraStop').hidden=role!=='receive';
  $('roomPause').textContent=pause.value.paused?'Continuar nos dois aparelhos':'Pausar nos dois aparelhos';
@@ -66,7 +85,7 @@ async function connect(){
  if(connecting||resetting)return;
  connecting=true;lastTry=Date.now();status();
  try{
-  config=await configuration;if(resetting)return;
+  config=await loadConfig();if(resetting)return;
   if(navigator.onLine===false)throw Error('Sem internet neste aparelho.');
   if(!/^[a-f0-9]{64}$/.test(code))throw Error('Leia o QR de conexão ou informe o código da sala.');
   $('roomCode').value=code;
@@ -75,16 +94,17 @@ async function connect(){
  finally{connecting=false;status();}
 }
 function onState(state,reason){
- status();
- if(state==='SUBSCRIBED'){$('roomError').hidden=true;send('hello');syncPause();ready();if(engine.state().role==='send'&&!engine.state().sending&&!pause.value.paused)showQr();}
+ transport=state;status();
+ if(state==='SUBSCRIBED'){$('roomError').hidden=true;send('hello');syncPause();if(scannedToken)syncReady();else ready();if(engine.state().role==='send'&&!engine.state().sending&&!pause.value.paused)showQr();}
  else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(state)){
+  if(engine.state().sending)changePause(true);probeService();
   error(`Conexão interrompida (${state}). ${reason?'O serviço recusou ou interrompeu o canal.':'O navegador não informou a causa exata.'} Confira a internet e tente reconectar.`);
  }
 }
 async function prepared(){
  const generation=++epoch,source=engine.source();
  if(!source)return;
- clearSync();clearStats();armed=false;engine.stop();target='';peer='';lastPeer=0;pause.reset();verified='';ack=false;completed=false;
+ clearSync();clearStats();lastOptical=0;armed=false;engine.stop();target='';peer='';lastPeer=0;pause.reset();verified='';ack=false;completed=false;
  try{
   const hash=await digest(source);if(generation!==epoch)return;
   target=hash+':'+engine.state().bs;engine.identify(target);code=newPairCode();armed=true;
@@ -97,8 +117,10 @@ async function readPair(text){
  try{
   if(text.length>3000)return;
   const data=JSON.parse(new TextDecoder().decode(unb64(text.slice(5))));
-  const expected=await configuration;if(resetting||revision!==epoch)return;
-  if(data.url!==expected.url||!/^[a-f0-9]{64}$/.test(data.code)||!validId(data.file))return;
+  const expected=await loadConfig();if(resetting||revision!==epoch)return;
+  if(data.url!==expected.url){error('Este QR aponta para outro projeto Supabase. Atualize o Farol 3 nos dois aparelhos.');return;}
+  if(!/^[a-f0-9]{64}$/.test(data.code)||!validId(data.file))return;
+  lastOptical=Date.now();status();
   if(engine.state().role!=='receive')return;
   if(code===data.code&&target===data.file){
     if(typeof data.sync==='string'&&data.sync.length===36&&data.sync!==finishedSync){awaitingScan=true;scannedToken=data.sync;syncReady();status();}
@@ -109,7 +131,7 @@ async function readPair(text){
    if(!confirm('Começar outro arquivo? Salve o anterior antes de continuar. Os blocos anteriores serão removidos.'))return;
    engine.discard();
   }
-  if(target!==data.file){clearStats();clearSync();}++epoch;target=data.file;code=data.code;peer='';lastPeer=0;pause.reset();verified='';ack=false;completed=false;
+  if(target!==data.file)clearStats();clearSync();++epoch;target=data.file;code=data.code;peer='';lastPeer=0;pause.reset();verified='';ack=false;completed=false;
   if(typeof data.sync==='string'&&data.sync.length===36){awaitingScan=true;scannedToken=data.sync;}
   await connect();if(scannedToken)syncReady();else ready();
  }catch{/* A damaged optical QR must not change the current room. */}
@@ -187,7 +209,7 @@ async function resetAll(local=true){
    confirmed=await Promise.race([response,new Promise(resolve=>setTimeout(()=>resolve(false),2000))]);
   }else if(!local){await send('reset_ack');confirmed=true;}
   target='';code='';peer='';lastPeer=0;verified='';completed=false;pause.reset();ack=false;
-  await channel.close();channel.roomId=null;await engine.reset();clearStats();clearSync();
+  await channel.close();channel.roomId=null;await engine.reset();clearStats();clearSync();lastOptical=0;
   $('roomCode').value='';$('roomError').hidden=true;status();
   $('roomPeer').textContent=confirmed?'Sala encerrada. Pronto para começar do zero nos dois aparelhos.':'Limpeza local concluída. Sem confirmação do outro aparelho; use Começar do zero nele também.';
  }catch(e){error('Não foi possível concluir a limpeza: '+e.message);}

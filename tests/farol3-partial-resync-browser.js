@@ -24,5 +24,10 @@ async page=>{
  await frame();await s.waitForFunction(()=>window.farol3Engine.state().sending);
  await r.waitForFunction(()=>!window.farol3Link.paused());
  if(await r.evaluate(()=>window.farol3Engine.state().count)<before.count)throw Error('Progress lost');
+ const oldRoom=await s.locator('#roomCode').inputValue();
+ await s.evaluate(()=>document.querySelector('#file').dispatchEvent(new Event('change')));
+ await s.waitForFunction(old=>document.querySelector('#roomCode').value!==old&&document.querySelector('#roomStatus').textContent.startsWith('Supabase · conectado'),oldRoom);
+ await r.locator('#roomReconnect').click();await frame();await s.waitForFunction(()=>window.farol3Engine.state().sending);
+ if(await r.evaluate(()=>window.farol3Engine.state().count)<before.count)throw Error('Same-file new room lost progress');
  await context.close();return {partialBlocksPreserved:before.count,total:before.total,receiverReconnectWaitedForQr:true};
 }
