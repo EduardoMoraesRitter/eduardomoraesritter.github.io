@@ -1,5 +1,6 @@
 async page=>{
  const context=await page.context().browser().newContext();const s=await context.newPage(),r=await context.newPage();
+ await context.route('**/vendor/supabase.js*',route=>route.fulfill({contentType:'application/javascript',body:`window.supabase={createClient(){let bus;return {channel(topic){bus=new BroadcastChannel(topic);const c={on(_,__,fn){bus.onmessage=e=>fn(e.data);return c;},subscribe(fn){setTimeout(()=>fn('SUBSCRIBED'),20);return c;},async send(m){bus.postMessage({payload:m.payload});return 'ok';}};return c;},async removeAllChannels(){bus?.close();},realtime:{disconnect(){}}};}};`}));
  await s.goto('http://127.0.0.1:4331/farol3/index.html');
  await r.addInitScript(()=>{
   const c=document.createElement('canvas');c.width=c.height=900;

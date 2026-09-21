@@ -1,11 +1,29 @@
 import {TransferStats,validStats,statsText} from './transfer-stats.mjs?v=20260921-4';
-import {ReturnChannel} from './realtime.mjs?v=20260921-3';
+import {ReturnChannel} from './realtime.mjs?v=20260921-5';
 import {PauseState} from '../farol4/pause-state.mjs?v=20260909-3';
 import {digest,newPairCode,b64,unb64} from '../farol4/protocol.mjs?v=20260920-1';
 const $=id=>document.getElementById(id),engine=window.farol3Engine;
 const pause=new PauseState(crypto.randomUUID());
 let config,target='',code='',connecting=false,epoch=0,lastPeer=0,peer='',armed=false,verified='',verifying=false,ack=false,lastTry=0,completed=false;
 let resetting=false,resetAck=null;
+let syncToken='',awaitingScan=false,scannedToken='',finishedSync='';
+function clearSync(){syncToken='';awaitingScan=false;scannedToken='';finishedSync='';}
+function syncHint(){return engine.state().role==='send'?'Centralize este QR no receptor. Aguardando leitura e confirmação do progresso.':`Centralize a câmera no QR de conexão do transmissor. ${engine.state().count} blocos preservados.`;}
+function beginSync(){
+ armed=false;if(!awaitingScan)changePause(true);
+ if(engine.state().role==='send'){
+  if(!syncToken)syncToken=crypto.randomUUID();
+  awaitingScan=true;showQr();send('sync_offer',{token:syncToken});
+ }else{awaitingScan=true;scannedToken='';if(!engine.state().camera)$('startCam').click();send('sync_request');}
+ status();
+}
+async function reconnect(){
+ if(resetting)return;
+ if(engine.state().role==='send'&&!code&&engine.source()){await prepared();return;}
+ beginSync();if(code)await connect();
+}
+function syncReady(){const s=engine.state();if(scannedToken&&s.camera)send('sync_ready',{token:scannedToken,count:s.receivedId===target?s.count:0,pause:pause.value});}
+
 const stats=new TransferStats();let lastStats=null,remoteStatsAt=0;
 function clearStats(){stats.reset();lastStats=null;remoteStatsAt=0;$('transferStats').hidden=true;}
 function renderStats(value){$('transferStats').hidden=false;$('transferStats').textContent=statsText(value);}
@@ -30,17 +48,18 @@ function status(){
  $('roomStatus').textContent=`Supabase · ${channel.ready?'conectado':connecting?'conectando…':'não conectado'} · Sala: ${channel.roomId||'—'}`;
  $('roomReconnect').disabled=connecting;
  $('roomQr').disabled=!code||role!=='send'||!target;
- $('roomPause').disabled=!target;$('roomCameraStop').disabled=!engine.state().camera;$('roomCameraStop').hidden=role!=='receive';
+ $('roomPause').disabled=!target||awaitingScan;$('roomCameraStop').disabled=!engine.state().camera;$('roomCameraStop').hidden=role!=='receive';
  $('roomPause').textContent=pause.value.paused?'Continuar nos dois aparelhos':'Pausar nos dois aparelhos';
  if(pause.value.paused)$('roomPeer').textContent=ack?'Pausado nos dois aparelhos':'Pausa local · aguardando confirmação do outro aparelho';
  else if(!lastPeer||Date.now()-lastPeer>12000)$('roomPeer').textContent=channel.ready?'Aguardando o outro aparelho nesta sala. Leia o QR de conexão.':'Escolha um arquivo ou leia o QR de conexão.';
+ if(awaitingScan)$('roomPeer').textContent=syncHint();
 }
 function send(type,extra={}){return channel.send({type,role:engine.state().role,file:target,...extra});}
 function syncPause(){if(pause.value.revision)return send('pause_state',pause.value);}
 function changePause(value){pause.change(value);ack=false;if(value)engine.stop();else if(engine.state().role==='send'&&target)engine.start();status();syncPause();}
 function showQr(){
  if(!code||!target||engine.state().role!=='send')return;
- engine.stop();engine.show('F3|P|'+b64(new TextEncoder().encode(JSON.stringify({url:config.url,code,file:target}))));
+ engine.stop();engine.show('F3|P|'+b64(new TextEncoder().encode(JSON.stringify({url:config.url,code,file:target,sync:syncToken}))));
  $('roomPeer').textContent='Leia este QR no receptor para entrar na mesma sala.';
 }
 async function connect(){
@@ -65,14 +84,14 @@ function onState(state,reason){
 async function prepared(){
  const generation=++epoch,source=engine.source();
  if(!source)return;
- clearStats();armed=false;engine.stop();target='';peer='';lastPeer=0;pause.reset();verified='';ack=false;completed=false;
+ clearSync();clearStats();armed=false;engine.stop();target='';peer='';lastPeer=0;pause.reset();verified='';ack=false;completed=false;
  try{
   const hash=await digest(source);if(generation!==epoch)return;
   target=hash+':'+engine.state().bs;engine.identify(target);code=newPairCode();armed=true;
   await connect();if(generation!==epoch)return;showQr();
  }catch(e){error('Não foi possível preparar a sala: '+e.message);}
 }
-function ready(){const state=engine.state();if(state.role==='receive'&&state.camera&&target&&!pause.value.paused)send('ready',{count:state.receivedId===target?state.count:0});}
+function ready(){if(awaitingScan)return;const state=engine.state();if(state.role==='receive'&&state.camera&&target&&!pause.value.paused)send('ready',{count:state.receivedId===target?state.count:0});}
 async function readPair(text){
  if(resetting)return;const revision=epoch;
  try{
@@ -81,14 +100,18 @@ async function readPair(text){
   const expected=await configuration;if(resetting||revision!==epoch)return;
   if(data.url!==expected.url||!/^[a-f0-9]{64}$/.test(data.code)||!validId(data.file))return;
   if(engine.state().role!=='receive')return;
-  if(code===data.code&&target===data.file){ready();return;}
+  if(code===data.code&&target===data.file){
+    if(typeof data.sync==='string'&&data.sync.length===36&&data.sync!==finishedSync){awaitingScan=true;scannedToken=data.sync;syncReady();status();}
+    else if(!awaitingScan)ready();return;
+   }
   const previous=engine.state();
   if(previous.count&&previous.receivedId!==data.file){
    if(!confirm('Começar outro arquivo? Salve o anterior antes de continuar. Os blocos anteriores serão removidos.'))return;
    engine.discard();
   }
-  if(target!==data.file)clearStats();++epoch;target=data.file;code=data.code;peer='';lastPeer=0;pause.reset();verified='';ack=false;completed=false;
-  await connect();ready();
+  if(target!==data.file){clearStats();clearSync();}++epoch;target=data.file;code=data.code;peer='';lastPeer=0;pause.reset();verified='';ack=false;completed=false;
+  if(typeof data.sync==='string'&&data.sync.length===36){awaitingScan=true;scannedToken=data.sync;}
+  await connect();if(scannedToken)syncReady();else ready();
  }catch{/* A damaged optical QR must not change the current room. */}
 }
 async function report(){
@@ -101,7 +124,7 @@ async function report(){
   finally{verifying=false;}
  }else send('missing',{count:state.count,total:state.total,drops:state.count,stats:receiverStats()});
 }
-function onMessage(m){
+async function onMessage(m){
  if(resetting&&m.type!=='reset_ack')return;
  const state=engine.state();if(!['send','receive'].includes(m.role)||m.role===state.role)return;
  // Manual joining learns the file only from an authenticated sender in this room.
@@ -111,7 +134,20 @@ function onMessage(m){
  if(m.type==='reset_ack'){resetAck?.();return;}
  if(m.type==='reset'){resetAll(false);return;}
  peer=m.from;lastPeer=Date.now();status();
+ if(m.type==='sync_request'&&state.role==='send'){beginSync();return;}
+ if(m.type==='sync_offer'&&state.role==='receive'&&typeof m.token==='string'&&m.token.length===36&&m.token!==finishedSync){
+  if(!awaitingScan)changePause(true);awaitingScan=true;if(!state.camera)$('startCam').click();status();return;
+ }
+ if(m.type==='sync_ready'&&state.role==='send'&&m.token&&(m.token===syncToken||m.token===finishedSync)&&Number.isInteger(m.count)&&m.count>=0&&m.count<=state.totalSend){
+  const first=m.token===syncToken;finishedSync=m.token;syncToken='';awaitingScan=false;
+  await send('sync_ack',{token:m.token,count:m.count,total:state.totalSend});
+  if(first){if(m.pause)pause.accept(m.pause);completed=m.count===state.totalSend;if(!completed)changePause(false);}
+  $('roomPeer').textContent=`Sincronizado: receptor preservou ${m.count} de ${state.totalSend} blocos. ${completed?'Arquivo já recebido.':'Continuando com novas gotas.'}`;return;
+ }
+ if(m.type==='sync_ack'&&state.role==='receive'&&m.token===scannedToken){finishedSync=m.token;awaitingScan=false;scannedToken='';$('roomPeer').textContent=`Sincronizado: ${state.count} blocos preservados. Aguardando novas gotas.`;return;}
+
  if(m.type==='pause_state'){
+  if(awaitingScan&&!m.paused)return;
   if(pause.accept(m)){ack=true;if(m.paused)engine.stop();else if(state.role==='send')engine.start();}
   if(pause.matches(m))send('pause_ack',pause.value);status();return;
  }
@@ -122,9 +158,10 @@ function onMessage(m){
  }
  if(state.role!=='send')return;
  if(['missing','done'].includes(m.type)&&validStats(m.stats)){lastStats=m.stats;remoteStatsAt=Date.now();renderStats(m.stats);}
+ if(awaitingScan){$('roomPeer').textContent=syncHint();return;}
  if(m.type==='ready'){
   $('roomPeer').textContent='Receptor conectado · câmera pronta.';
-  if(armed&&$('roomAuto').checked&&!pause.value.paused){armed=false;engine.start();}
+  if(!awaitingScan&&armed&&$('roomAuto').checked&&!pause.value.paused){armed=false;engine.start();}
  }else if(m.type==='missing'&&Number.isInteger(m.count)&&m.count>=0&&m.count<=state.totalSend){
   $('roomPeer').textContent=`Receptor reconstruiu ${m.count} de ${state.totalSend} blocos. Enviando novas gotas.`;
  }else if(m.type==='done'&&m.hash===target.split(':')[0]&&m.count===state.totalSend){
@@ -134,7 +171,7 @@ function onMessage(m){
 window.farol3Link={
  hasTarget:()=>!!target,beforeModeChange:()=>{if(target)changePause(true);},readPair,paused:()=>pause.value.paused,
  acceptMeta:meta=>!target||(meta.id===target&&Number.isInteger(meta.K)&&meta.K>0&&meta.K<=1000000&&meta.bs>=100&&meta.bs<=800&&meta.size>=0&&meta.size<=100000000),
- toggle:()=>{armed=false;if(target)changePause(engine.state().sending||!pause.value.paused&&engine.state().role==='receive');else if(engine.state().sending)engine.stop();else engine.start();},
+ toggle:()=>{if(awaitingScan)return;armed=false;if(target)changePause(engine.state().sending||!pause.value.paused&&engine.state().role==='receive');else if(engine.state().sending)engine.stop();else engine.start();},
  cameraStopped:()=>{if(target&&!resetting)changePause(true);},cameraReady:ready
 };
 async function resetAll(local=true){
@@ -150,19 +187,19 @@ async function resetAll(local=true){
    confirmed=await Promise.race([response,new Promise(resolve=>setTimeout(()=>resolve(false),2000))]);
   }else if(!local){await send('reset_ack');confirmed=true;}
   target='';code='';peer='';lastPeer=0;verified='';completed=false;pause.reset();ack=false;
-  await channel.close();channel.roomId=null;await engine.reset();clearStats();
+  await channel.close();channel.roomId=null;await engine.reset();clearStats();clearSync();
   $('roomCode').value='';$('roomError').hidden=true;status();
   $('roomPeer').textContent=confirmed?'Sala encerrada. Pronto para começar do zero nos dois aparelhos.':'Limpeza local concluída. Sem confirmação do outro aparelho; use Começar do zero nele também.';
  }catch(e){error('Não foi possível concluir a limpeza: '+e.message);}
  finally{resetAck=null;resetting=false;$('roomReset').disabled=false;}
 }
 $('roomReset').onclick=()=>resetAll(true);
-window.addEventListener('farol3-loading',()=>{clearStats();++epoch;armed=false;if(target)changePause(true);target='';peer='';lastPeer=0;channel.close();status();});
+window.addEventListener('farol3-loading',()=>{clearSync();clearStats();++epoch;armed=false;if(target)changePause(true);target='';peer='';lastPeer=0;channel.close();status();});
 window.addEventListener('farol3-prepared',prepared);
 window.addEventListener('farol3-pause-preparation',()=>{if(target)changePause(true);});
 $('roomPause').onclick=()=>{armed=false;changePause(!pause.value.paused);};
-$('roomQr').onclick=()=>{changePause(true);showQr();};
-$('roomReconnect').onclick=()=>{if(engine.state().role==='send'&&!code&&engine.source())prepared();else connect();};
+$('roomQr').onclick=beginSync;
+$('roomReconnect').onclick=reconnect;
 $('roomJoin').onclick=()=>{
  const next=$('roomCode').value.trim().toLowerCase();
  if(!/^[a-f0-9]{64}$/.test(next)){error('Código da sala inválido. Copie o código completo ou leia o QR.');return;}
@@ -176,7 +213,7 @@ $('roomCameraStop').onclick=()=>engine.cameraStop();
 setInterval(()=>{
  if(resetting)return;
  if(lastPeer&&Date.now()-lastPeer>12000&&engine.state().sending){changePause(true);error('Contato com o receptor perdido. Transmissão pausada.');}
- if(channel.ready){send('hello');syncPause();ready();report();}
+ if(channel.ready){if(awaitingScan){if(engine.state().role==='send')send('sync_offer',{token:syncToken});else if(scannedToken)syncReady();else send('sync_request');}send('hello');syncPause();ready();report();}
  else if(code&&Date.now()-lastTry>10000&&!connecting)connect();
  status();
 },3000);

@@ -45,3 +45,7 @@ O ajuste automático de visão funciona desde o QR inicial: quando reconhece um 
 ## Velocidade e previsão
 
 Os dois lados mostram bytes reconstruídos, velocidade útil recente, tempo decorrido (incluindo pausas), tempo em atividade e previsão restante. A medição usa até 30 segundos de progresso novo; blocos restaurados não contam como velocidade nova. Após 12 segundos sem avanço, a previsão fica indisponível. O transmissor recebe os números pelo canal da sala e sinaliza ausência de atualização. São bytes do conteúdo transmitido, possivelmente comprimido; não gotas emitidas. O cronômetro desta medição reinicia ao recarregar a página ou trocar o arquivo. A previsão em fountain codes oscila porque a reconstrução pode ocorrer em saltos.
+
+## Reconexão com confirmação óptica
+
+Reconectar em qualquer aparelho pausa a transmissão, mantém a sala/arquivo e os blocos recebidos e exibe novamente o QR no transmissor. O receptor pede centralização e relê um identificador novo de sincronização dentro do QR da mesma sala. Só depois de confirmar o progresso pelo canal a transmissão continua. Uma mensagem de câmera pronta antiga não libera essa etapa. O emissor continua a sequência de sementes de gotas em memória, sem zerá-la. Começar do zero permanece a ação separada que apaga o progresso. Sem conexão com o canal, a reconexão aguarda e mostra o erro; não confirma progresso remoto.
