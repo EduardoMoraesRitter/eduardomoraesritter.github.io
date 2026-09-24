@@ -1,0 +1,487 @@
+---
+// src/pages/pix-golpe.astro
+// ──────────────────────────
+// Lab Pix — resultado salvo da corrida "Detector de Golpe do Pix":
+// JEV + Rust vs DeepSeek + Python vs Laya + Python. Tudo é estático: os números vêm do snapshot
+// gravado da execução real (src/data/pix-golpe/corrida.json) e são calculados no build.
+import Nav    from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import corrida from '../data/pix-golpe/corrida.json';
+
+import '../styles/global.css';
+
+type Ev = any;
+const eventos: Ev[] = (corrida as any).eventos;
+
+const LADOS = [
+  { id: 'rust',   nome: 'JEV + Rust',        stack: 'TypeSafe JEV · Rust',        detalhe: 'API TypeSafe · grafo CSR em Vec<u32>' },
+  { id: 'python', nome: 'DeepSeek + Python', stack: 'LLM generativo · Python',    detalhe: 'Gemini 2.5 Flash no lugar do DeepSeek · listas Python' },
+  { id: 'laya',   nome: 'Laya + Python',     stack: 'Convai Laya · Python · GPU', detalhe: 'modelo aberto, local numa RTX 4070 · listas Python' },
+] as const;
+
+const fins: Record<string, Ev> = Object.fromEntries(
+  LADOS.map(l => [l.id, eventos.find(e => e.tipo === 'fim' && e.lado === l.id)])
+);
+const ordem = eventos.filter(e => e.tipo === 'fim').sort((a, b) => a.seq - b.seq).map(e => e.lado);
+const pos = (id: string) => ordem.indexOf(id) + 1;
+const msgs = (id: string) => eventos.filter(e => e.tipo === 'mensagem' && e.lado === id).sort((a, b) => a.idx - b.idx);
+const ladosInfo = (corrida as any).lados ?? {};
+const dados = (corrida as any).dados ?? {};
+
+// ---------- formatação pt-BR ----------
+const nf = (v: number, d = 0) => v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+function fmtMs(ms: number | null | undefined) {
+  if (ms == null) return '—';
+  if (ms < 1) return nf(ms * 1000) + ' µs';
+  if (ms < 10) return nf(ms, 1) + ' ms';
+  if (ms < 1000) return nf(ms) + ' ms';
+  return nf(ms / 1000, 1) + ' s';
+}
+function fmtTotal(ms: number) {
+  if (ms < 60000) return nf(ms / 1000, 1) + ' s';
+  const s = Math.round(ms / 1000);
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + ' min';
+}
+const fmtUSD = (v: number) => 'US$ ' + (v === 0 ? '0' : nf(v, v < 0.01 ? 4 : 3));
+const fmtMem = (mb: number) => (mb >= 1024 ? nf(mb / 1024, 1) + ' GB' : nf(mb) + ' MB');
+const fmtBRL = (c: number) => 'R$ ' + nf(c / 100, 2);
+function fmtDelta(seg: number) {
+  const a = Math.abs(seg);
+  if (a < 3600) return '+' + Math.round(a / 60) + ' min';
+  if (a < 86400) return '+' + nf(a / 3600, 1) + ' h';
+  return '+' + nf(a / 86400, 1) + ' d';
+}
+const pct = (v: number) => nf(v * 100) + '%';
+
+// ---------- números por lado ----------
+const total = fins.rust.processadas;
+const golpesReais = fins.rust.golpes_reais;
+const stats = Object.fromEntries(LADOS.map(l => {
+  const f = fins[l.id];
+  const acertos = f.processadas - f.falsos_positivos - f.falsos_negativos;
+  const memExtra = l.id === 'laya' && ladosInfo.laya?.vram_mb ? ' + ' + fmtMem(ladosInfo.laya.vram_mb) + ' GPU' : '';
+  return [l.id, { f, acertos, taxa: acertos / f.processadas, memTxt: fmtMem(f.mem_mb) + memExtra }];
+}));
+
+// ---------- tabela comparativa (estrela no melhor de cada linha) ----------
+type Linha = { chave: string; rotulo: string; val: (id: string) => number; fmt: (v: number, id: string) => string; melhor: 'min' | 'max' };
+const linhas: Linha[] = [
+  { chave: 'pix.stat.arrival',  rotulo: 'Chegada',            val: pos,                                   fmt: v => v + 'º',                      melhor: 'min' },
+  { chave: 'pix.stat.total',    rotulo: 'Tempo total',        val: id => fins[id].total_ms,               fmt: v => fmtTotal(v),                  melhor: 'min' },
+  { chave: 'pix.stat.decision', rotulo: 'Decisão (mediana)',  val: id => fins[id].p50_decisao_ms,         fmt: v => fmtMs(v),                     melhor: 'min' },
+  { chave: 'pix.stat.trace',    rotulo: 'Rastreio (mediana)', val: id => fins[id].p50_rastreio_ms,        fmt: v => fmtMs(v),                     melhor: 'min' },
+  { chave: 'pix.stat.accuracy', rotulo: 'Acerto geral',       val: id => stats[id].taxa,                  fmt: v => pct(v),                       melhor: 'max' },
+  { chave: 'pix.stat.caught',   rotulo: 'Golpes pegos',       val: id => fins[id].verdadeiros_positivos,  fmt: v => v + ' / ' + golpesReais,       melhor: 'max' },
+  { chave: 'pix.stat.fp',       rotulo: 'Alarmes falsos',     val: id => fins[id].falsos_positivos,       fmt: v => String(v),                    melhor: 'min' },
+  { chave: 'pix.stat.fn',       rotulo: 'Golpes perdidos',    val: id => fins[id].falsos_negativos,       fmt: v => String(v),                    melhor: 'min' },
+  { chave: 'pix.stat.routes',   rotulo: 'Rotas até o saque',  val: id => fins[id].saques_encontrados,     fmt: v => String(v),                    melhor: 'max' },
+  { chave: 'pix.stat.cost',     rotulo: 'Custo da corrida',   val: id => fins[id].custo_usd,              fmt: v => fmtUSD(v),                    melhor: 'min' },
+  { chave: 'pix.stat.mem',      rotulo: 'Memória',            val: id => fins[id].mem_mb,                 fmt: (_v, id) => stats[id].memTxt,      melhor: 'min' },
+];
+const vencedores = (l: Linha) => {
+  const vs = LADOS.map(x => l.val(x.id));
+  const alvo = l.melhor === 'min' ? Math.min(...vs) : Math.max(...vs);
+  return new Set(LADOS.filter(x => l.val(x.id) === alvo).map(x => x.id));
+};
+const placar = Object.fromEntries(LADOS.map(l => [l.id, linhas.filter(li => li.chave !== 'pix.stat.arrival' && vencedores(li).has(l.id) && vencedores(li).size === 1).length]));
+
+// ---------- tela final da corrida ----------
+const porChegada = [...LADOS].sort((a, b) => pos(a.id) - pos(b.id));
+const tela = Object.fromEntries(LADOS.map(l => {
+  const ms = msgs(l.id);
+  const ultimoGolpe = [...ms].reverse().find(e => e.golpe && e.rota && e.rotulo_golpe) ?? [...ms].reverse().find(e => e.golpe && e.rota);
+  const log = ms.slice(-8).reverse();
+  const golpesDetectados = ms.filter(e => e.golpe).length;
+  return [l.id, { ultimoGolpe, log, golpesDetectados }];
+}));
+const modeloTxt = (id: string) => {
+  const i = ladosInfo[id] ?? {};
+  return [i.modelo, i.dispositivo].filter(Boolean).join(' · ');
+};
+const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+---
+
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark" data-lang="pt"
+      data-title-pt="Lab Pix — Detector de Golpe do Pix · Eduardo Ritter"
+      data-title-en="Pix Lab — Pix Fraud Detector · Eduardo Ritter">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lab Pix — Detector de Golpe do Pix · Eduardo Ritter</title>
+  <meta name="description" content="JEV + Rust vs DeepSeek + Python vs Laya + Python: 150 mensagens de WhatsApp, 15 golpes do Pix, rastreio do dinheiro até a conta de saque." />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <script is:inline>
+    (function () {
+      var s = localStorage.getItem('theme');
+      var d = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', s || (d ? 'dark' : 'light'));
+    })();
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Display:wght@400;500&family=Google+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+
+<body class="pg">
+
+  <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+  <Nav base="/" />
+
+  <main>
+
+    <!-- ── Abertura ─────────────────────────────────────────────── -->
+    <section class="section pg-abertura reveal-section" id="topo">
+      <div class="container">
+        <p class="label pg-eyebrow"><span data-i18n="pix.eyebrow">Lab · Detecção de golpe do Pix</span> · {gravadoEm}</p>
+        <h1 class="pg-titulo">
+          <span class="pg-c-rust">JEV + Rust</span> <em>vs</em>
+          <span class="pg-c-python">DeepSeek + Python</span> <em>vs</em>
+          <span class="pg-c-laya">Laya + Python</span>
+        </h1>
+        <p class="pg-sub" data-i18n="pix.sub">As mesmas mensagens de WhatsApp entram nos três lados, na mesma ordem. Cada lado decide com IA se é golpe e, quando é, rastreia o dinheiro num grafo de transações Pix, conta a conta, até a conta de saque.</p>
+        <ul class="pg-chips">
+          <li class="label">{nf(dados.n_mensagens ?? total)} <span data-i18n="pix.chip.msgs">mensagens</span></li>
+          <li class="label">{golpesReais} <span data-i18n="pix.chip.scams">golpes</span></li>
+          <li class="label">{nf(dados.n_contas)} <span data-i18n="pix.chip.accounts">contas</span></li>
+          <li class="label">{nf(dados.n_transacoes)} <span data-i18n="pix.chip.tx">transações Pix</span></li>
+          <li class="label pg-chip-alerta" data-i18n="pix.chip.synthetic">dados sintéticos</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── 01 Resumo ─────────────────────────────────────────────── -->
+    <section class="section pg-resumo reveal-section" id="resumo">
+      <div class="container">
+        <header class="section-header">
+          <span class="section-index">01</span>
+          <h2 data-i18n="pix.summary.title">Resumo</h2>
+        </header>
+
+        <div class="pg-podio">
+          {porChegada.map((l, i) => {
+            const s = stats[l.id]; const f = s.f;
+            return (
+              <article class={`pg-card pg-lado-${l.id} reveal-item`} style={`--delay: ${i * 0.08}s`}>
+                <div class="pg-card-topo">
+                  <span class="pg-posicao">{pos(l.id)}º</span>
+                  <div>
+                    <h3 class="pg-card-nome">{l.nome}</h3>
+                    <p class="label">{l.stack}</p>
+                  </div>
+                </div>
+                <div class="pg-card-tempo">
+                  <span class="stat-num">{fmtTotal(f.total_ms)}</span>
+                  <span class="label" data-i18n="pix.stat.total150">para 150 mensagens</span>
+                </div>
+                <dl class="pg-linhas">
+                  <div><dt class="label" data-i18n="pix.stat.decision">Decisão (mediana)</dt><dd>{fmtMs(f.p50_decisao_ms)}</dd></div>
+                  <div><dt class="label" data-i18n="pix.stat.caught">Golpes pegos</dt><dd>{f.verdadeiros_positivos} / {golpesReais}</dd></div>
+                  <div><dt class="label" data-i18n="pix.stat.fp">Alarmes falsos</dt><dd>{f.falsos_positivos}</dd></div>
+                  <div><dt class="label" data-i18n="pix.stat.cost">Custo da corrida</dt><dd>{fmtUSD(f.custo_usd)}</dd></div>
+                  <div><dt class="label" data-i18n="pix.stat.mem">Memória</dt><dd>{s.memTxt}</dd></div>
+                </dl>
+              </article>
+            );
+          })}
+        </div>
+
+        <p class="pg-veredito" data-i18n="pix.verdict">O <strong>Laya</strong>, rodando local na GPU, terminou primeiro e não custou nada, mas errou mais: 12 alarmes falsos e 1 golpe perdido. O <strong>JEV com Rust</strong> acertou as 150 mensagens com o menor uso de memória e custo de frações de centavo. O <strong>LLM generativo</strong> também acertou tudo, mas foi o mais lento e o mais caro.</p>
+
+        <div class="pg-acoes">
+          <a class="btn-outline" href="#corrida"><span data-i18n="pix.cta.race">Ver a tela da corrida</span></a>
+          <a class="btn-outline" href="#comparativo"><span data-i18n="pix.cta.table">Comparativo completo</span></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 02 Comparativo ────────────────────────────────────────── -->
+    <section class="section reveal-section" id="comparativo">
+      <div class="container">
+        <header class="section-header">
+          <span class="section-index">02</span>
+          <h2 data-i18n="pix.table.title">Comparativo</h2>
+        </header>
+        <div class="pg-tabela-wrap">
+          <table class="pg-tabela">
+            <thead>
+              <tr>
+                <th class="label" data-i18n="pix.table.metric">Métrica</th>
+                {LADOS.map(l => <th class={`label pg-c-${l.id}`}>{l.nome}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {linhas.map(li => {
+                const v = vencedores(li);
+                return (
+                  <tr>
+                    <th class="pg-metrica" data-i18n={li.chave}>{li.rotulo}</th>
+                    {LADOS.map(l => (
+                      <td class={v.has(l.id) ? 'pg-melhor' : ''}>{v.has(l.id) && <span class="pg-estrela" aria-label="melhor">★</span>}{li.fmt(li.val(l.id), l.id)}</td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p class="pg-nota"><span data-i18n="pix.table.note">★ = melhor da linha. Linhas vencidas sozinho:</span> {LADOS.map(l => `${l.nome} ${placar[l.id]}`).join(' · ')}.</p>
+      </div>
+    </section>
+
+    <!-- ── 03 A corrida (tela final salva) ───────────────────────── -->
+    <section class="section reveal-section" id="corrida">
+      <div class="container pg-container-largo">
+        <header class="section-header">
+          <span class="section-index">03</span>
+          <h2 data-i18n="pix.race.title">A corrida</h2>
+        </header>
+        <p class="pg-sub pg-sub-curto" data-i18n="pix.race.sub">A tela como ficou no fim da execução, no modo normal: cada lado pega a próxima mensagem assim que termina a anterior.</p>
+
+        <div class="pg-corrida">
+          {LADOS.map(l => {
+            const s = stats[l.id]; const f = s.f; const t = tela[l.id]; const g = t.ultimoGolpe;
+            return (
+              <article class={`pg-coluna pg-lado-${l.id}`}>
+                <div class="pg-col-cab">
+                  <div>
+                    <h3 class="pg-card-nome">{l.nome}</h3>
+                    <p class="label">{l.detalhe}</p>
+                  </div>
+                  <span class={`pg-selo pg-selo-${pos(l.id)}`}>{pos(l.id)}º · {fmtTotal(f.total_ms)}</span>
+                </div>
+                <div class="pg-chipzinhos">
+                  <span class="pg-mono">{modeloTxt(l.id)}</span>
+                  <span class="pg-mono">{s.memTxt}</span>
+                </div>
+
+                <div class="pg-progresso">
+                  <div class="pg-progresso-num"><strong>{f.processadas}</strong> / {total}</div>
+                  <div class="pg-barra"><span style="width:100%"></span></div>
+                </div>
+
+                <div class="pg-contadores">
+                  <div><span class="label" data-i18n="pix.race.golpes">golpes</span><b>{t.golpesDetectados}</b></div>
+                  <div><span class="label" data-i18n="pix.race.acertos">acertos</span><b>{s.acertos} <small>{pct(s.taxa)}</small></b></div>
+                  <div><span class="label" data-i18n="pix.race.custo">custo</span><b>{fmtUSD(f.custo_usd)}</b></div>
+                  <div><span class="label" data-i18n="pix.race.decisao">decisão p50</span><b>{fmtMs(f.p50_decisao_ms)}</b></div>
+                  <div><span class="label" data-i18n="pix.race.rastreio">rastreio p50</span><b>{fmtMs(f.p50_rastreio_ms)}</b></div>
+                  <div><span class="label" data-i18n="pix.race.tempo">tempo</span><b>{fmtTotal(f.total_ms)}</b></div>
+                </div>
+
+                {g && (
+                  <div class="pg-msg">
+                    <p class="label"><span data-i18n="pix.race.lastscam">Último golpe rastreado</span> · msg #{g.msg_id}</p>
+                    <p class="pg-msg-meta pg-mono">{g.remetente} → {g.destinatario_nome}</p>
+                    <blockquote>{g.texto}</blockquote>
+                    <div class="pg-decisao">
+                      <span class="pg-badge-golpe" data-i18n="pix.race.scam">GOLPE</span>
+                      <span class="pg-mono">prob. {pct(g.prob)} · {g.tipo_golpe?.replaceAll('_', ' ')} · {fmtMs(g.t_decisao_ms)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {g && g.rota && (
+                  <div class="pg-rota">
+                    <p class="label"><span data-i18n="pix.race.route">Rota do dinheiro</span> · {g.rota.saque_encontrado ? `saque em ${g.rota.hops} hops` : `${g.rota.hops} hops, sem saque`}</p>
+                    <ol>
+                      {g.rota.nos.map((n: any, i: number) => {
+                        const a = g.rota.arestas[i];
+                        const ultimo = i === g.rota.nos.length - 1;
+                        const papel = i === 0 ? 'destino' : (ultimo && n.tipo === 'caixa' ? 'saque' : `hop ${i}`);
+                        return (
+                          <li class={`pg-no ${ultimo && n.tipo === 'caixa' ? 'pg-no-saque' : ''}`}>
+                            <span class="pg-no-ponto" aria-hidden="true"></span>
+                            <div class="pg-no-txt">
+                              <span class="label">{papel}</span>
+                              <span class="pg-no-nome">{n.nome}</span>
+                              <span class="pg-no-banco">{n.banco}</span>
+                            </div>
+                            {a && <span class="pg-aresta pg-mono">{fmtBRL(a.valor_centavos)} · {fmtDelta(a.ts - g.ts_msg)}</span>}
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </div>
+                )}
+
+                <div class="pg-log">
+                  <p class="label" data-i18n="pix.race.log">Últimas mensagens</p>
+                  <ul>
+                    {t.log.map((e: any) => (
+                      <li>
+                        <span class="pg-mono pg-log-idx">{e.idx}</span>
+                        <span class={e.golpe ? 'pg-log-golpe' : 'pg-log-legit'}>{e.golpe ? 'GOLPE' : 'LEGÍTIMA'} {pct(e.prob)}</span>
+                        <span class="pg-mono pg-log-ms">{fmtMs(e.t_decisao_ms)}</span>
+                        <span class={e.acertou ? 'pg-ok' : 'pg-erro'}>{e.acertou ? '✓' : '✗'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 04 Como funciona ──────────────────────────────────────── -->
+    <section class="section reveal-section" id="como-funciona">
+      <div class="container">
+        <header class="section-header">
+          <span class="section-index">04</span>
+          <h2 data-i18n="pix.how.title">Como funciona</h2>
+        </header>
+        <ol class="pg-passos">
+          <li><span class="stat-num">1</span><div><h3 data-i18n="pix.how.s1.t">Decisão por IA</h3><p data-i18n="pix.how.s1.d">Cada mensagem vai para a IA do lado. O JEV e o Laya respondem perguntas tipadas com probabilidade (é golpe? tem urgência? qual o tipo?). O LLM generativo responde um JSON.</p></div></li>
+          <li><span class="stat-num">2</span><div><h3 data-i18n="pix.how.s2.t">Chave Pix</h3><p data-i18n="pix.how.s2.d">Em código, sem IA: a chave Pix citada no texto (CPF, CNPJ, telefone, e-mail ou aleatória) é extraída, normalizada e ligada à conta de destino.</p></div></li>
+          <li><span class="stat-num">3</span><div><h3 data-i18n="pix.how.s3.t">Grafo em memória</h3><p data-i18n="pix.how.s3.d">As transações ficam num grafo CSR: cada conta é um nó e cada Pix é uma aresta com valor e instante. No Rust, vetores compactos; no Python, listas.</p></div></li>
+          <li><span class="stat-num">4</span><div><h3 data-i18n="pix.how.s4.t">Rastreio até o saque</h3><p data-i18n="pix.how.s4.d">A partir da conta de destino, segue sempre o maior repasse numa janela de 72 horas, laranja a laranja, até chegar a uma conta de saque.</p></div></li>
+        </ol>
+
+        <div class="pg-ressalvas">
+          <p class="label" data-i18n="pix.caveats.title">Ressalvas</p>
+          <ul>
+            <li data-i18n="pix.caveats.1">Dados 100% sintéticos, gerados localmente. Chaves Pix e nomes aparecem mascarados.</li>
+            <li data-i18n="pix.caveats.2">O lado "DeepSeek + Python" usou o Gemini 2.5 Flash pela mesma API compatível com OpenAI, porque não havia chave do DeepSeek.</li>
+            <li data-i18n="pix.caveats.3">O Laya usou uma pergunta curta. Com as perguntas longas do JEV ele marcava todas as mensagens como golpe.</li>
+            <li data-i18n="pix.caveats.4">As perguntas foram ajustadas nestas mesmas mensagens, então o acerto de 100% não é uma promessa para dados novos.</li>
+          </ul>
+          <p class="pg-nota"><span data-i18n="pix.credits">Inspirado no vídeo do Sandeco:</span> <a class="link-item" href="https://www.youtube.com/watch?v=avQAz9norY8" target="_blank" rel="noopener">JEV+RUST: Detectando fraudes no Pix em tempo real</a></p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <Footer />
+
+  <script>
+    import '../scripts/main.js';
+  </script>
+
+</body>
+</html>
+
+<style is:global>
+  /* Cores dos três lados, derivadas do site: dourado do accent, aço e lavanda discretos */
+  [data-theme="dark"] .pg  { --lado-rust: #c9a96e; --lado-python: #8fa6c4; --lado-laya: #b3a0d8; --golpe: #d9776b; --legit: #8fb89a; }
+  [data-theme="light"] .pg { --lado-rust: #9c7a3c; --lado-python: #4a6a92; --lado-laya: #6e56a8; --golpe: #b0463a; --legit: #3f7a52; }
+
+  .pg-c-rust   { color: var(--lado-rust); }
+  .pg-c-python { color: var(--lado-python); }
+  .pg-c-laya   { color: var(--lado-laya); }
+  .pg-lado-rust   { --lado: var(--lado-rust); }
+  .pg-lado-python { --lado: var(--lado-python); }
+  .pg-lado-laya   { --lado: var(--lado-laya); }
+  .pg-mono { font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-size: .74rem; letter-spacing: 0; }
+
+  .pg-abertura { padding-top: calc(var(--header-h) + clamp(48px, 7vw, 96px)); }
+  .pg-eyebrow { margin-bottom: 22px; }
+  .pg-titulo {
+    font-family: var(--font-display); font-weight: 300; letter-spacing: -0.02em; line-height: 1.08;
+    font-size: clamp(2.1rem, 5.2vw, 4.2rem); max-width: 18ch;
+  }
+  .pg-titulo em { font-family: var(--font-display-editorial); font-style: italic; color: var(--text-2); font-weight: 300; }
+  .pg-sub { margin-top: 26px; max-width: 62ch; color: var(--text-2); font-size: 1.02rem; line-height: 1.7; }
+  .pg-sub-curto { margin: -28px 0 36px; }
+  .pg-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 32px; list-style: none; padding: 0; }
+  .pg-chips li { border: 1px solid var(--border); padding: 8px 14px; color: var(--text-1); }
+  .pg-chips .pg-chip-alerta { border-color: var(--accent); color: var(--accent); }
+
+  .pg-podio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .pg-card { background: var(--bg); padding: 30px 28px 26px; position: relative; }
+  .pg-card::before { content: ''; position: absolute; left: 0; top: 0; right: 0; height: 2px; background: var(--lado); }
+  .pg-card-topo { display: flex; gap: 16px; align-items: flex-start; }
+  .pg-posicao { font-family: var(--font-display-editorial); font-size: 2.6rem; line-height: .9; color: var(--lado); font-weight: 300; }
+  .pg-card-nome { font-family: var(--font-display); font-weight: 400; font-size: 1.3rem; letter-spacing: -0.01em; margin-bottom: 6px; }
+  .pg-card-tempo { margin: 26px 0 18px; display: flex; flex-direction: column; gap: 6px; }
+  .pg-card-tempo .stat-num { color: var(--lado); font-size: clamp(2.2rem, 3.4vw, 3rem); }
+  .pg-linhas { display: grid; gap: 0; }
+  .pg-linhas div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); }
+  .pg-linhas dd { font-size: .95rem; color: var(--text-1); text-align: right; }
+
+  .pg-veredito { margin-top: 40px; max-width: 70ch; font-family: var(--font-display-editorial); font-size: clamp(1.25rem, 2vw, 1.55rem); line-height: 1.5; font-weight: 300; }
+  .pg-veredito strong { font-weight: 500; color: var(--accent); }
+  .pg-acoes { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 34px; }
+
+  .pg-tabela-wrap { overflow-x: auto; border: 1px solid var(--border); }
+  .pg-tabela { width: 100%; border-collapse: collapse; min-width: 640px; }
+  .pg-tabela th, .pg-tabela td { padding: 14px 18px; border-bottom: 1px solid var(--border); text-align: right; font-size: .92rem; white-space: nowrap; }
+  .pg-tabela thead th { text-align: right; }
+  .pg-tabela thead th:first-child, .pg-tabela .pg-metrica { text-align: left; }
+  .pg-tabela .pg-metrica { font-weight: 400; color: var(--text-2); }
+  .pg-tabela tbody tr:last-child th, .pg-tabela tbody tr:last-child td { border-bottom: 0; }
+  .pg-tabela tbody tr:hover { background: var(--bg-surface); }
+  .pg-melhor { color: var(--accent); }
+  .pg-estrela { margin-right: 6px; font-size: .8rem; }
+  .pg-nota { margin-top: 16px; color: var(--text-2); font-size: .85rem; line-height: 1.6; }
+
+  .pg-container-largo { max-width: 1440px; }
+  .pg-corrida { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .pg-coluna { border: 1px solid var(--border); border-top: 2px solid var(--lado); background: var(--bg-surface); padding: 20px 18px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .pg-col-cab { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .pg-selo { flex-shrink: 0; font-size: .72rem; font-weight: 500; letter-spacing: .08em; padding: 6px 10px; border: 1px solid var(--lado); color: var(--lado); white-space: nowrap; }
+  .pg-selo-1 { background: var(--lado); color: var(--bg); }
+  .pg-chipzinhos { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pg-chipzinhos span { border: 1px solid var(--border); padding: 4px 8px; color: var(--text-2); }
+  .pg-progresso-num { font-size: .85rem; color: var(--text-2); margin-bottom: 8px; }
+  .pg-progresso-num strong { font-family: var(--font-display); font-size: 1.6rem; font-weight: 300; color: var(--text-1); }
+  .pg-barra { height: 6px; background: var(--border); }
+  .pg-barra span { display: block; height: 100%; background: var(--lado); }
+  .pg-contadores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .pg-contadores div { background: var(--bg); padding: 10px 10px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .pg-contadores .label { font-size: .58rem; }
+  .pg-contadores b { font-weight: 400; font-size: .98rem; white-space: nowrap; }
+  .pg-contadores small { color: var(--text-2); font-size: .72rem; }
+
+  .pg-msg { border: 1px solid var(--border); background: var(--bg); padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .pg-msg-meta { color: var(--text-2); }
+  .pg-msg blockquote { border-left: 2px solid var(--golpe); padding-left: 12px; font-size: .9rem; line-height: 1.55; color: var(--text-1); }
+  .pg-decisao { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: var(--text-2); }
+  .pg-badge-golpe { border: 1px solid var(--golpe); color: var(--golpe); font-size: .7rem; font-weight: 600; letter-spacing: .14em; padding: 4px 10px; }
+
+  .pg-rota ol { list-style: none; padding: 0; margin: 12px 0 0; }
+  .pg-no { display: grid; grid-template-columns: 14px 1fr; column-gap: 12px; position: relative; padding-bottom: 14px; }
+  .pg-no::before { content: ''; position: absolute; left: 6px; top: 14px; bottom: 0; width: 1px; background: var(--border-hover); }
+  .pg-no:last-child::before { display: none; }
+  .pg-no-ponto { width: 13px; height: 13px; border: 1px solid var(--lado); border-radius: 50%; margin-top: 3px; background: var(--bg-surface); position: relative; z-index: 1; }
+  .pg-no-saque .pg-no-ponto { background: var(--golpe); border-color: var(--golpe); }
+  .pg-no-txt { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+  .pg-no-txt .label { font-size: .58rem; min-width: 46px; }
+  .pg-no-nome { font-size: .9rem; }
+  .pg-no-banco { font-size: .78rem; color: var(--text-2); }
+  .pg-no-saque .pg-no-nome { color: var(--golpe); }
+  .pg-aresta { grid-column: 2; color: var(--lado); margin-top: 4px; }
+
+  .pg-log ul { list-style: none; padding: 0; margin: 10px 0 0; border-top: 1px solid var(--border); }
+  .pg-log li { display: grid; grid-template-columns: 34px 1fr auto 18px; gap: 8px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: .8rem; }
+  .pg-log-idx, .pg-log-ms { color: var(--text-2); }
+  .pg-log-golpe { color: var(--golpe); font-weight: 500; letter-spacing: .04em; }
+  .pg-log-legit { color: var(--legit); letter-spacing: .04em; }
+  .pg-ok { color: var(--legit); } .pg-erro { color: var(--golpe); }
+
+  .pg-passos { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .pg-passos li { background: var(--bg); padding: 28px 26px; display: flex; gap: 20px; }
+  .pg-passos .stat-num { font-size: 2.2rem; }
+  .pg-passos h3 { font-family: var(--font-display); font-weight: 400; font-size: 1.15rem; margin-bottom: 8px; }
+  .pg-passos p { color: var(--text-2); line-height: 1.65; font-size: .95rem; }
+  .pg-ressalvas { margin-top: 44px; }
+  .pg-ressalvas ul { margin: 14px 0 0; padding-left: 18px; color: var(--text-2); line-height: 1.8; font-size: .95rem; max-width: 80ch; }
+
+  .nav-links a.is-current { color: var(--accent); }
+
+  @media (max-width: 1100px) {
+    .pg-corrida { grid-template-columns: repeat(3, minmax(300px, 1fr)); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px; }
+    .pg-coluna { scroll-snap-align: start; }
+  }
+  @media (max-width: 860px) {
+    .pg-podio { grid-template-columns: 1fr; }
+    .pg-passos { grid-template-columns: 1fr; }
+    .pg-corrida { grid-template-columns: repeat(3, 86%); }
+  }
+</style>
