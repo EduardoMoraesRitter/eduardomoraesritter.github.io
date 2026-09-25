@@ -2,7 +2,7 @@
 // src/pages/pix-golpe.astro
 // ──────────────────────────
 // Lab Pix — resultado salvo da corrida "Detector de Golpe do Pix" com os três lados em Rust:
-// JEV + Rust vs DeepSeek + Rust vs Laya + Rust (só o modelo muda). Tudo é estático: os números vêm do
+// JEV + Rust vs Gemini + Rust vs Laya + Rust (só o modelo muda; o Gemini ocupa o lugar do DeepSeek do vídeo). Tudo é estático: os números vêm do
 // snapshot gravado da execução real (src/data/pix-golpe/corrida.json) e são calculados no build,
 // com o mesmo critério do relatório final do app (grupos, estrela só nas linhas comparáveis, placar por grupo).
 import Nav    from '../components/Nav.astro';
@@ -21,7 +21,7 @@ const execucao = C.execucao ?? {};
 
 const LADOS = [
   { id: 'jev',      nome: 'JEV + Rust',      curto: 'JEV',      modelo: 'TypeSafe JEV',                           onde: 'API TypeSafe' },
-  { id: 'deepseek', nome: 'DeepSeek + Rust', curto: 'DeepSeek', modelo: 'Gemini 2.5 Flash no lugar do DeepSeek',  onde: 'API compatível com OpenAI' },
+  { id: 'deepseek', nome: 'Gemini + Rust',   curto: 'Gemini',   modelo: 'Gemini 2.5 Flash, do Google',            onde: 'API do Google (compatível com OpenAI)' },
   { id: 'laya',     nome: 'Laya + Rust',     curto: 'Laya',     modelo: 'Convai Laya, modelo aberto',             onde: 'local na GPU (RTX 4070)' },
 ] as const;
 
@@ -185,7 +185,7 @@ const gravadoEm = new Date(C.gravado_em).toLocaleDateString('pt-BR', { day: '2-d
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lab Pix — Detector de Golpe do Pix · Eduardo Ritter</title>
-  <meta name="description" content="JEV vs DeepSeek vs Laya, os três em Rust: 150 mensagens de WhatsApp, 15 golpes do Pix, rastreio do dinheiro até a conta de saque." />
+  <meta name="description" content="JEV vs Gemini vs Laya, os três em Rust: 150 mensagens de WhatsApp, 15 golpes do Pix, rastreio do dinheiro até a conta de saque." />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
   <script is:inline>
@@ -216,7 +216,7 @@ const gravadoEm = new Date(C.gravado_em).toLocaleDateString('pt-BR', { day: '2-d
         <p class="label pg-eyebrow"><span data-i18n="pix.eyebrow">Lab · Detecção de golpe do Pix</span> · {gravadoEm}</p>
         <h1 class="pg-titulo">
           <span class="pg-c-jev">JEV</span> <em>vs</em>
-          <span class="pg-c-deepseek">DeepSeek</span> <em>vs</em>
+          <span class="pg-c-deepseek">Gemini</span> <em>vs</em>
           <span class="pg-c-laya">Laya</span><span class="pg-titulo-rust"> · <span data-i18n="pix.title.rust">os três em Rust</span></span>
         </h1>
         <p class="pg-sub" data-i18n="pix.sub">O mesmo app em Rust roda os três lados; só o modelo de IA muda. As mesmas mensagens de WhatsApp entram nos três, na mesma ordem. Cada lado decide se é golpe e, quando é, rastreia o dinheiro num grafo de transações Pix, conta a conta, até a conta de saque.</p>
@@ -268,11 +268,12 @@ const gravadoEm = new Date(C.gravado_em).toLocaleDateString('pt-BR', { day: '2-d
           })}
         </div>
 
-        <p class="pg-veredito" data-i18n="pix.verdict">Com o mesmo app em Rust nos três lados, o grafo leva menos de meio milissegundo no total em qualquer um deles: <strong>a diferença vem toda do modelo</strong>. O <strong>Laya</strong>, local na GPU, terminou em 6 segundos e custou frações de centavo, mas errou mais: 12 alarmes falsos e 1 golpe perdido, com precisão de 54%. O <strong>JEV</strong> acertou as 150 mensagens em 78 segundos por menos de 1 centavo de dólar. O <strong>LLM generativo</strong> também acertou tudo, mas levou 3 minutos e custou quase 10 vezes mais.</p>
+        <p class="pg-veredito" data-i18n="pix.verdict">Com o mesmo app em Rust nos três lados, o grafo leva menos de meio milissegundo no total em qualquer um deles: <strong>a diferença vem toda do modelo</strong>. O <strong>Laya</strong>, local na GPU, terminou em 6 segundos e custou frações de centavo, mas errou mais: 12 alarmes falsos e 1 golpe perdido, com precisão de 54%. O <strong>JEV</strong> acertou as 150 mensagens em 78 segundos por menos de 1 centavo de dólar. O <strong>Gemini</strong>, um LLM generativo, também acertou tudo, mas levou 3 minutos e custou quase 10 vezes mais.</p>
 
         <div class="pg-acoes">
           <a class="btn-outline" href="#comparativo"><span data-i18n="pix.cta.table">Comparativo completo</span></a>
           <a class="btn-outline" href="#corrida"><span data-i18n="pix.cta.race">Ver a tela da corrida</span></a>
+          <a class="btn-outline" href="#laya"><span data-i18n="pix.cta.laya">Por que o Laya erra</span></a>
           <a class="btn-outline" href="#mensagens"><span data-i18n="pix.cta.msgs">Ler as mensagens</span></a>
         </div>
       </div>
@@ -457,10 +458,10 @@ const gravadoEm = new Date(C.gravado_em).toLocaleDateString('pt-BR', { day: '2-d
           <p class="label" data-i18n="pix.caveats.title">Ressalvas</p>
           <ul>
             <li data-i18n="pix.caveats.1">Dados 100% sintéticos, gerados localmente. Chaves Pix e nomes aparecem mascarados.</li>
-            <li data-i18n="pix.caveats.2">O lado "DeepSeek" usou o Gemini 2.5 Flash pela mesma API compatível com OpenAI, porque não havia chave do DeepSeek.</li>
+            <li data-i18n="pix.caveats.2">O vídeo original compara com o DeepSeek. Aqui o LLM generativo é o Gemini 2.5 Flash, do Google, porque não havia chave do DeepSeek. O código é o mesmo: com a chave, o lado volta a ser DeepSeek sem mudar nada.</li>
             <li data-i18n="pix.caveats.3">O Laya usou uma pergunta curta. Com as perguntas longas do JEV ele marcava todas as mensagens como golpe.</li>
             <li data-i18n="pix.caveats.5">O custo de máquina do Laya é uma estimativa: tempo do modelo vezes US$ 0,35 por hora de uma GPU T4 na nuvem. Nos lados de API, máquina e memória do modelo ficam no provedor e não são medidas.</li>
-            <li data-i18n="pix.caveats.6">Numa rodada anterior, com o DeepSeek e o Laya rodando em Python, os tempos foram praticamente os mesmos (3:00 min e 7,2 s): o gargalo é o modelo, não a linguagem.</li>
+            <li data-i18n="pix.caveats.6">Numa rodada anterior, com o Gemini e o Laya rodando em Python, os tempos foram praticamente os mesmos (3:00 min e 7,2 s): o gargalo é o modelo, não a linguagem.</li>
             <li data-i18n="pix.caveats.4">As perguntas foram ajustadas nestas mesmas mensagens, então o acerto de 100% não é uma promessa para dados novos.</li>
           </ul>
           <p class="pg-nota"><span data-i18n="pix.credits">Inspirado no vídeo do Sandeco:</span> <a class="link-item" href="https://www.youtube.com/watch?v=avQAz9norY8" target="_blank" rel="noopener">JEV+RUST: Detectando fraudes no Pix em tempo real</a></p>
@@ -468,11 +469,51 @@ const gravadoEm = new Date(C.gravado_em).toLocaleDateString('pt-BR', { day: '2-d
       </div>
     </section>
 
-    <!-- ── 05 As mensagens (todas, expansíveis) ──────────────────── -->
-    <section class="section reveal-section" id="mensagens">
+    <!-- ── 05 Por que o Laya erra (testes de alarme falso, feitos depois da corrida) ── -->
+    <section class="section reveal-section" id="laya">
       <div class="container">
         <header class="section-header">
           <span class="section-index">05</span>
+          <h2 data-i18n="pix.exp.title">Por que o Laya erra</h2>
+        </header>
+        <p class="pg-sub pg-sub-curto" data-i18n="pix.exp.intro">Depois da corrida, testamos se uma instrução melhor ou exemplos acabariam com os alarmes falsos do Laya. Cada versão da pergunta rodou nas 150 mensagens e em 30 mensagens novas, escritas à mão, que nenhum modelo tinha visto (15 golpes e 15 legítimas).</p>
+
+        <div class="pg-tabela-wrap">
+          <table class="pg-tabela pg-tabela-exp">
+            <thead>
+              <tr>
+                <th class="label" data-i18n="pix.exp.col.q">Quem e com que pergunta</th>
+                <th class="label" data-i18n="pix.exp.col.150">150 de sempre · golpes pegos · alarmes falsos</th>
+                <th class="label" data-i18n="pix.exp.col.30">30 novas · golpes pegos · alarmes falsos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th class="pg-metrica"><span class="pg-c-laya">Laya</span> · <span data-i18n="pix.exp.v1">pergunta curta, a da corrida</span></th><td>14/15 · 12</td><td class="pg-ruim">9/15 · 2</td></tr>
+              <tr><th class="pg-metrica"><span class="pg-c-laya">Laya</span> · <span data-i18n="pix.exp.v2">instrução melhor (o que é golpe e o que é cobrança legítima)</span></th><td class="pg-ruim">15/15 · 102</td><td class="pg-ruim">15/15 · 13</td></tr>
+              <tr><th class="pg-metrica"><span class="pg-c-laya">Laya</span> · <span data-i18n="pix.exp.v3">instrução melhor + exemplos</span></th><td class="pg-ruim">12/15 · 47</td><td>12/15 · 6</td></tr>
+              <tr><th class="pg-metrica"><span class="pg-c-laya">Laya</span> · <span data-i18n="pix.exp.v4">escolha entre 3 opções (golpe, cobrança, conversa)</span></th><td class="pg-ruim">13/15 · 32</td><td class="pg-ruim">9/15 · 8</td></tr>
+              <tr><th class="pg-metrica"><span class="pg-c-laya">Laya</span> · <span data-i18n="pix.exp.v5">escolha + exemplos</span></th><td class="pg-ruim">6/15 · 55</td><td>12/15 · 8</td></tr>
+              <tr class="pg-destaque"><th class="pg-metrica"><span class="pg-c-jev">JEV</span> · <span data-i18n="pix.exp.vjev">pergunta da corrida</span></th><td class="pg-melhor">15/15 · 0</td><td class="pg-melhor">15/15 · 0</td></tr>
+              <tr class="pg-destaque"><th class="pg-metrica"><span class="pg-c-deepseek">Gemini</span> · <span data-i18n="pix.exp.vjev">pergunta da corrida</span></th><td class="pg-melhor">15/15 · 0</td><td class="pg-melhor">15/15 · 0</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ol class="pg-passos pg-achados">
+          <li><span class="stat-num">1</span><div><h3 data-i18n="pix.exp.a1.t">Exemplos viram parte da mensagem</h3><p data-i18n="pix.exp.a1.d">Colocados junto do texto, os exemplos de golpe contaminam tudo: a nota mediana de golpe das mensagens legítimas subiu de 0,00 para 0,54, e até a mensagem "ok" ao lado dos exemplos levou 0,58. Um LLM usa exemplos como referência; o Laya julga tudo o que recebe como se fosse a própria mensagem.</p></div></li>
+          <li><span class="stat-num">2</span><div><h3 data-i18n="pix.exp.a2.t">Ele reage ao assunto, não ao fato</h3><p data-i18n="pix.exp.a2.d">Com perguntas pequenas, ele respondeu "sim" para fatos que não estão no texto: "o remetente diz ser banco ou órgão?" deu 1,00 numa mensagem sobre aula de violão. Palavras de dinheiro (Pix, valor, pagar) puxam a nota para golpe, por isso venda combinada, aluguel e consulta viram alarme falso.</p></div></li>
+          <li><span class="stat-num">3</span><div><h3 data-i18n="pix.exp.a3.t">Instrução melhor só muda o ponto do erro</h3><p data-i18n="pix.exp.a3.d">Explicar o que é golpe fez o Laya marcar quase tudo como golpe (102 alarmes falsos); os exemplos reduziram os alarmes mas ele passou a perder golpes. Nas 30 mensagens novas, a pergunta da corrida deixou passar 6 de 15 golpes, como falsos avisos do INSS, do Detran e da central do banco.</p></div></li>
+          <li><span class="stat-num">4</span><div><h3 data-i18n="pix.exp.a4.t">Conclusão: é o modelo, não o prompt</h3><p data-i18n="pix.exp.a4.d">O JEV e o Gemini acertaram as 30 mensagens novas com a mesma pergunta de sempre, então elas não eram difíceis demais. O Laya, pequeno e sem treino, precisa ser treinado com exemplos rotulados, ou usado como filtro rápido com o JEV confirmando os casos suspeitos.</p></div></li>
+        </ol>
+        <p class="pg-nota" data-i18n="pix.exp.nota">30 mensagens é pouco para números exatos, mas a diferença entre 15 de 15 e 9 de 15 golpes pegos é grande demais para ser acaso. Todos os testes do Laya rodaram localmente, sem custo.</p>
+      </div>
+    </section>
+
+    <!-- ── 06 As mensagens (todas, expansíveis) ──────────────────── -->
+    <section class="section reveal-section" id="mensagens">
+      <div class="container">
+        <header class="section-header">
+          <span class="section-index">06</span>
           <h2 data-i18n="pix.msgs.title">As mensagens</h2>
         </header>
         <p class="pg-sub pg-sub-curto" data-i18n="pix.msgs.sub">Clique numa mensagem para ler o texto inteiro, ver a decisão de cada lado e a rota do dinheiro quando houve rastreio.</p>
@@ -483,7 +524,7 @@ const gravadoEm = new Date(C.gravado_em).toLocaleDateString('pt-BR', { day: '2-d
           <button type="button" class="pg-filtro" data-filtro="erro"><span data-i18n="pix.msgs.errors">Com erro de algum lado</span> <b>{nComErro}</b></button>
         </div>
         <p class="pg-legenda label">
-          <span class="pg-c-jev">■ JEV + Rust</span> · <span class="pg-c-deepseek">■ DeepSeek + Rust</span> · <span class="pg-c-laya">■ Laya + Rust</span> · ✓ <span data-i18n="pix.msgs.right">acertou</span> · ✗ <span data-i18n="pix.msgs.wrong">errou</span>
+          <span class="pg-c-jev">■ JEV + Rust</span> · <span class="pg-c-deepseek">■ Gemini + Rust</span> · <span class="pg-c-laya">■ Laya + Rust</span> · ✓ <span data-i18n="pix.msgs.right">acertou</span> · ✗ <span data-i18n="pix.msgs.wrong">errou</span>
         </p>
 
         <ol class="pg-msgs">
@@ -752,4 +793,9 @@ const gravadoEm = new Date(C.gravado_em).toLocaleDateString('pt-BR', { day: '2-d
   .pg-tabela .pg-texto-cel { white-space: normal; font-size: .8rem; color: var(--text-2); text-align: right; }
   .pg-tabela td[colspan] { text-align: center; }
   .pg-tabela .pg-vazio { color: var(--text-2); font-size: .8rem; }
+  .pg-tabela-exp td { text-align: center; }
+  .pg-tabela-exp thead th:not(:first-child) { text-align: center; white-space: normal; }
+  .pg-tabela-exp .pg-metrica { white-space: normal; }
+  .pg-tabela .pg-ruim { color: var(--golpe); }
+  .pg-achados { margin-top: 32px; }
 </style>
