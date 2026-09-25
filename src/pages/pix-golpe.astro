@@ -1,9 +1,10 @@
 ---
 // src/pages/pix-golpe.astro
 // ──────────────────────────
-// Lab Pix — resultado salvo da corrida "Detector de Golpe do Pix":
-// JEV + Rust vs DeepSeek + Python vs Laya + Python. Tudo é estático: os números vêm do snapshot
-// gravado da execução real (src/data/pix-golpe/corrida.json) e são calculados no build.
+// Lab Pix — resultado salvo da corrida "Detector de Golpe do Pix" com os três lados em Rust:
+// JEV + Rust vs DeepSeek + Rust vs Laya + Rust (só o modelo muda). Tudo é estático: os números vêm do
+// snapshot gravado da execução real (src/data/pix-golpe/corrida.json) e são calculados no build,
+// com o mesmo critério do relatório final do app (grupos, estrela só nas linhas comparáveis, placar por grupo).
 import Nav    from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import corrida from '../data/pix-golpe/corrida.json';
@@ -11,39 +12,39 @@ import corrida from '../data/pix-golpe/corrida.json';
 import '../styles/global.css';
 
 type Ev = any;
-const eventos: Ev[] = (corrida as any).eventos;
+const C: any = corrida;
+const eventos: Ev[] = C.eventos;
+const app = C.app ?? {};
+const dados = C.dados ?? {};
+const ladosInfo = C.lados ?? {};
+const execucao = C.execucao ?? {};
 
 const LADOS = [
-  { id: 'rust',   nome: 'JEV + Rust',        stack: 'TypeSafe JEV · Rust',        detalhe: 'API TypeSafe · grafo CSR em Vec<u32>' },
-  { id: 'python', nome: 'DeepSeek + Python', stack: 'LLM generativo · Python',    detalhe: 'Gemini 2.5 Flash no lugar do DeepSeek · listas Python' },
-  { id: 'laya',   nome: 'Laya + Python',     stack: 'Convai Laya · Python · GPU', detalhe: 'modelo aberto, local numa RTX 4070 · listas Python' },
+  { id: 'jev',      nome: 'JEV + Rust',      curto: 'JEV',      modelo: 'TypeSafe JEV',                           onde: 'API TypeSafe' },
+  { id: 'deepseek', nome: 'DeepSeek + Rust', curto: 'DeepSeek', modelo: 'Gemini 2.5 Flash no lugar do DeepSeek',  onde: 'API compatível com OpenAI' },
+  { id: 'laya',     nome: 'Laya + Rust',     curto: 'Laya',     modelo: 'Convai Laya, modelo aberto',             onde: 'local na GPU (RTX 4070)' },
 ] as const;
 
-const fins: Record<string, Ev> = Object.fromEntries(
-  LADOS.map(l => [l.id, eventos.find(e => e.tipo === 'fim' && e.lado === l.id)])
-);
+const fins: Record<string, Ev> = Object.fromEntries(LADOS.map(l => [l.id, eventos.find(e => e.tipo === 'fim' && e.lado === l.id)]));
 const ordem = eventos.filter(e => e.tipo === 'fim').sort((a, b) => a.seq - b.seq).map(e => e.lado);
 const pos = (id: string) => ordem.indexOf(id) + 1;
 const msgs = (id: string) => eventos.filter(e => e.tipo === 'mensagem' && e.lado === id).sort((a, b) => a.idx - b.idx);
-const ladosInfo = (corrida as any).lados ?? {};
-const dados = (corrida as any).dados ?? {};
 
 // ---------- formatação pt-BR ----------
 const nf = (v: number, d = 0) => v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmtInt = (v: number) => nf(Math.round(v));
 function fmtMs(ms: number | null | undefined) {
   if (ms == null) return '—';
   if (ms < 1) return nf(ms * 1000) + ' µs';
   if (ms < 10) return nf(ms, 1) + ' ms';
   if (ms < 1000) return nf(ms) + ' ms';
-  return nf(ms / 1000, 1) + ' s';
-}
-function fmtTotal(ms: number) {
   if (ms < 60000) return nf(ms / 1000, 1) + ' s';
   const s = Math.floor(ms / 1000);
   return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + ' min';
 }
-const fmtUSD = (v: number) => 'US$ ' + nf(v, 4);
-const fmtMem = (mb: number) => (mb >= 1024 ? nf(mb / 1024, 1) + ' GB' : nf(mb) + ' MB');
+const fmtUSD = (v: number) => 'US$ ' + (v === 0 ? '0' : v < 0.001 ? nf(v, 6) : nf(v, 4));
+const fmtMem = (mb: number) => (mb >= 1024 ? nf(mb / 1024, 1) + ' GB' : nf(mb, mb < 100 ? 1 : 0) + ' MB');
+const fmtPct1 = (v: number) => nf(v * 100, 1) + '%';
 const fmtBRL = (c: number) => 'R$ ' + nf(c / 100, 2);
 function fmtDelta(seg: number) {
   const a = Math.abs(seg);
@@ -51,59 +52,113 @@ function fmtDelta(seg: number) {
   if (a < 86400) return '+' + nf(a / 3600, 1) + ' h';
   return '+' + nf(a / 86400, 1) + ' d';
 }
-const pct = (v: number) => nf(v * 100) + '%';
 
-// ---------- números por lado ----------
-const total = fins.rust.processadas;
-const golpesReais = fins.rust.golpes_reais;
-const stats = Object.fromEntries(LADOS.map(l => {
+// ---------- métricas por lado (mesmos campos do relatório do app, SPEC §11.3) ----------
+const M: Record<string, any> = Object.fromEntries(LADOS.map(l => {
   const f = fins[l.id];
-  const acertos = f.processadas - f.falsos_positivos - f.falsos_negativos;
-  const memExtra = l.id === 'laya' && ladosInfo.laya?.vram_mb ? ' + ' + fmtMem(ladosInfo.laya.vram_mb) + ' GPU' : '';
-  return [l.id, { f, acertos, taxa: acertos / f.processadas, memTxt: fmtMem(f.mem_mb) + memExtra }];
+  return [l.id, {
+    k: l.id, f, proc: f.processadas, reais: f.golpes_reais, sinal: f.sinalizados ?? f.golpes_detectados,
+    vp: f.verdadeiros_positivos, fp: f.falsos_positivos, fn: f.falsos_negativos, vn: f.verdadeiros_negativos,
+    precisao: f.precisao, cobertura: f.cobertura, acuracia: f.acuracia, saques: f.saques_encontrados, erros: f.erros,
+    chegada: pos(l.id), total: f.total_ms, ia: f.tempo_ia_ms, grafo: f.tempo_grafo_ms, outros: f.tempo_outros_ms,
+    p50d: f.p50_decisao_ms, mediad: f.media_decisao_ms, p50r: f.p50_rastreio_ms, mediar: f.media_rastreio_ms,
+    custoApi: f.custo_api_usd, custoMaq: f.custo_maquina_usd ?? null, custoTotal: f.custo_total_usd, custoMsg: f.custo_por_mensagem_usd,
+    premissa: f.premissa_custo, tokIn: f.tokens_in, tokOut: f.tokens_out ?? null, tokInMsg: f.tokens_in_por_mensagem,
+    onde: f.modelo_onde, ram: f.modelo_ram_mb ?? null, vram: f.modelo_vram_mb ?? null,
+  }];
 }));
+const golpesReais = M.jev.reais;
+const total = M.jev.proc;
 
-// ---------- tabela comparativa (estrela no melhor de cada linha) ----------
-// Mesmas linhas e mesmo critério do relatório final do app: estrela no melhor de cada linha
-// (sem estrela quando os três empatam); "chegada" ganha estrela mas fica fora do placar;
-// mensagens processadas e tokens são só informativos.
-type Linha = {
-  chave: string; rotulo: string; val: (id: string) => number;
-  fmt: (v: number, id: string) => string; melhor: 'min' | 'max' | null; placar?: boolean;
-};
-const linhas: Linha[] = [
-  { chave: 'pix.row.arrival',   rotulo: 'chegada',                 val: pos,                                  fmt: v => v + 'º',                        melhor: 'min', placar: false },
-  { chave: 'pix.row.total',     rotulo: 'tempo total',             val: id => fins[id].total_ms,              fmt: v => fmtTotal(v),                    melhor: 'min' },
-  { chave: 'pix.row.p50dec',    rotulo: 'p50 decisão',             val: id => fins[id].p50_decisao_ms,        fmt: v => fmtMs(v),                       melhor: 'min' },
-  { chave: 'pix.row.avgdec',    rotulo: 'média decisão',           val: id => fins[id].media_decisao_ms,      fmt: v => fmtMs(v),                       melhor: 'min' },
-  { chave: 'pix.row.p50tr',     rotulo: 'p50 rastreio',            val: id => fins[id].p50_rastreio_ms,       fmt: v => fmtMs(v),                       melhor: 'min' },
-  { chave: 'pix.row.avgtr',     rotulo: 'média rastreio',          val: id => fins[id].media_rastreio_ms,     fmt: v => fmtMs(v),                       melhor: 'min' },
-  { chave: 'pix.row.detected',  rotulo: 'golpes detectados / reais', val: id => Math.abs(fins[id].golpes_detectados - fins[id].golpes_reais),
-                                                                   fmt: (_v, id) => fins[id].golpes_detectados + ' / ' + fins[id].golpes_reais, melhor: 'min' },
-  { chave: 'pix.row.tp',        rotulo: 'verdadeiros positivos',   val: id => fins[id].verdadeiros_positivos, fmt: v => String(v),                      melhor: 'max' },
-  { chave: 'pix.row.fp',        rotulo: 'falsos positivos',        val: id => fins[id].falsos_positivos,      fmt: v => String(v),                      melhor: 'min' },
-  { chave: 'pix.row.fn',        rotulo: 'falsos negativos',        val: id => fins[id].falsos_negativos,      fmt: v => String(v),                      melhor: 'min' },
-  { chave: 'pix.row.cashout',   rotulo: 'saques encontrados',      val: id => fins[id].saques_encontrados,    fmt: v => String(v),                      melhor: 'max' },
-  { chave: 'pix.row.cost',      rotulo: 'custo',                   val: id => fins[id].custo_usd,             fmt: v => fmtUSD(v),                      melhor: 'min' },
-  { chave: 'pix.row.mem',       rotulo: 'memória (RSS)',           val: id => fins[id].mem_mb,                fmt: (_v, id) => stats[id].memTxt,        melhor: 'min' },
-  { chave: 'pix.row.errors',    rotulo: 'erros',                   val: id => fins[id].erros ?? 0,            fmt: v => String(v),                      melhor: 'min' },
-  { chave: 'pix.row.processed', rotulo: 'mensagens processadas',   val: id => fins[id].processadas,           fmt: v => nf(v),                          melhor: null },
-  { chave: 'pix.row.tokens',    rotulo: 'tokens (entrada / saída)', val: id => fins[id].tokens_in ?? 0,
-                                                                   fmt: (_v, id) => nf(fins[id].tokens_in ?? 0) + ' / ' + nf(fins[id].tokens_out ?? 0), melhor: null },
+type Linha = { chave: string; nome: string; get?: (m: any) => any; melhor?: 'menor' | 'maior'; fmt?: (v: any, m: any) => string;
+  vazio?: (m: any) => string; texto?: boolean; foraDoPlacar?: boolean; destaque?: boolean; app?: boolean };
+const GRUPOS: { chave: string; nome: string; linhas: Linha[] }[] = [
+  { chave: 'pix.g.acerto', nome: 'Acerto', linhas: [
+    { chave: 'pix.r.proc',   nome: 'mensagens processadas', get: m => m.proc, fmt: fmtInt },
+    { chave: 'pix.r.sinal',  nome: 'sinalizados como golpe', get: m => m.sinal, fmt: fmtInt },
+    { chave: 'pix.r.vp',     nome: 'golpes pegos (VP) / reais', get: m => m.vp, melhor: 'maior', fmt: (v, m) => fmtInt(v) + ' / ' + fmtInt(m.reais), destaque: true },
+    { chave: 'pix.r.fp',     nome: 'alarmes falsos (FP)', get: m => m.fp, melhor: 'menor', fmt: fmtInt, destaque: true },
+    { chave: 'pix.r.fn',     nome: 'golpes perdidos (FN)', get: m => m.fn, melhor: 'menor', fmt: fmtInt },
+    { chave: 'pix.r.vn',     nome: 'legítimas liberadas (VN)', get: m => m.vn, melhor: 'maior', fmt: fmtInt },
+    { chave: 'pix.r.prec',   nome: 'precisão (VP / sinalizados)', get: m => m.precisao, melhor: 'maior', fmt: fmtPct1, vazio: () => 'nada sinalizado', destaque: true },
+    { chave: 'pix.r.cob',    nome: 'cobertura (VP / reais)', get: m => m.cobertura, melhor: 'maior', fmt: fmtPct1, destaque: true },
+    { chave: 'pix.r.acc',    nome: 'acurácia', get: m => m.acuracia, melhor: 'maior', fmt: fmtPct1 },
+    { chave: 'pix.r.saques', nome: 'saques encontrados', get: m => m.saques, fmt: fmtInt },
+    { chave: 'pix.r.erros',  nome: 'erros de IA', get: m => m.erros, melhor: 'menor', fmt: fmtInt },
+  ] },
+  { chave: 'pix.g.tempo', nome: 'Tempo', linhas: [
+    { chave: 'pix.r.chegada', nome: 'chegada', get: m => m.chegada, melhor: 'menor', foraDoPlacar: true, fmt: v => v + 'º' },
+    { chave: 'pix.r.total',   nome: 'tempo total', get: m => m.total, melhor: 'menor', fmt: fmtMs, destaque: true },
+    { chave: 'pix.r.ia',      nome: 'tempo de IA (soma das decisões)', get: m => m.ia, melhor: 'menor', fmt: fmtMs },
+    { chave: 'pix.r.grafo',   nome: 'tempo de grafo (soma dos rastreios)', get: m => m.grafo, fmt: fmtMs },
+    { chave: 'pix.r.outros',  nome: 'outros (total − IA − grafo)', get: m => m.outros, fmt: fmtMs },
+    { chave: 'pix.r.p50d',    nome: 'p50 decisão', get: m => m.p50d, melhor: 'menor', fmt: fmtMs, destaque: true },
+    { chave: 'pix.r.mediad',  nome: 'média decisão', get: m => m.mediad, melhor: 'menor', fmt: fmtMs },
+    { chave: 'pix.r.p50r',    nome: 'p50 rastreio', get: m => m.p50r, fmt: fmtMs },
+    { chave: 'pix.r.mediar',  nome: 'média rastreio', get: m => m.mediar, fmt: fmtMs },
+  ] },
+  { chave: 'pix.g.custo', nome: 'Custo', linhas: [
+    { chave: 'pix.r.capi',    nome: 'custo da API', get: m => m.custoApi, melhor: 'menor', fmt: fmtUSD },
+    { chave: 'pix.r.cmaq',    nome: 'custo de máquina (estimado)', get: m => m.custoMaq, melhor: 'menor', fmt: fmtUSD, vazio: () => 'embutido na API' },
+    { chave: 'pix.r.ctotal',  nome: 'custo total', get: m => m.custoTotal, melhor: 'menor', fmt: fmtUSD, destaque: true },
+    { chave: 'pix.r.cmsg',    nome: 'custo por mensagem', get: m => m.custoMsg, melhor: 'menor', fmt: fmtUSD },
+    { chave: 'pix.r.premissa',nome: 'premissa do custo', get: m => m.premissa, texto: true, fmt: v => v },
+  ] },
+  { chave: 'pix.g.tokens', nome: 'Tokens', linhas: [
+    { chave: 'pix.r.tin',     nome: 'tokens de entrada', get: m => m.tokIn, melhor: 'menor', fmt: fmtInt },
+    { chave: 'pix.r.tout',    nome: 'tokens de saída', get: m => m.tokOut, melhor: 'menor', fmt: fmtInt, vazio: () => 'não gera texto' },
+    { chave: 'pix.r.tinmsg',  nome: 'entrada por mensagem', get: m => m.tokInMsg, melhor: 'menor', fmt: v => nf(v, 1) },
+  ] },
+  { chave: 'pix.g.memoria', nome: 'Memória', linhas: [
+    { chave: 'pix.r.onde',    nome: 'onde roda o modelo', get: m => m.onde, texto: true,
+      fmt: (v, m) => v === 'local' ? 'local na GPU' : 'no provedor (' + LADOS.find(l => l.id === m.k)!.onde + ')' },
+    { chave: 'pix.r.ram',     nome: 'RAM do modelo', get: m => m.ram, melhor: 'menor', fmt: fmtMem, vazio: m => m.onde === 'local' ? '—' : 'no provedor' },
+    { chave: 'pix.r.vram',    nome: 'VRAM do modelo', get: m => m.vram, melhor: 'menor', fmt: fmtMem, vazio: m => m.onde === 'local' ? '—' : 'no provedor' },
+    { chave: 'pix.r.app',     nome: 'app Rust (os três lados)', app: true },
+  ] },
 ];
-const vencedores = (l: Linha): Set<string> => {
-  if (!l.melhor) return new Set();
-  const vs = LADOS.map(x => l.val(x.id));
-  const alvo = l.melhor === 'min' ? Math.min(...vs) : Math.max(...vs);
-  return new Set(LADOS.filter(x => l.val(x.id) === alvo).map(x => x.id));
-};
-// estrela só quando há diferença entre os lados
-const estrelas = (l: Linha): Set<string> => { const v = vencedores(l); return v.size === LADOS.length ? new Set() : v; };
-const linhasPlacar = linhas.filter(l => l.melhor && l.placar !== false);
-const placar = Object.fromEntries(LADOS.map(l => [l.id, linhasPlacar.filter(li => { const v = vencedores(li); return v.size === 1 && v.has(l.id); }).length]));
-const empates = linhasPlacar.filter(li => vencedores(li).size > 1).length;
-const placarOrdenado = [...LADOS].sort((a, b) => placar[b.id] - placar[a.id]);
-const execucao = (corrida as any).execucao ?? {};
+
+// estrela só com ≥ 2 valores comparáveis e sem empate geral; placar por grupo (a chegada fica fora)
+const relatorio = GRUPOS.map(g => {
+  const pl: Record<string, number> = { jev: 0, deepseek: 0, laya: 0 };
+  let comparaveis = 0;
+  const linhas = g.linhas.map(li => {
+    if (li.app) return { ...li, cels: [] as any[] };
+    const vals = Object.fromEntries(LADOS.map(l => [l.id, li.get!(M[l.id])]));
+    const nota = (id: string) => { const v = vals[id]; if (typeof v !== 'number' || Number.isNaN(v)) return null; return li.melhor === 'menor' ? v : li.melhor === 'maior' ? -v : null; };
+    let venc: string[] = [];
+    const validos = LADOS.map(l => l.id).filter(id => nota(id) != null);
+    if (li.melhor && validos.length >= 2) {
+      if (!li.foraDoPlacar) comparaveis++;
+      const melhor = Math.min(...validos.map(id => nota(id)!));
+      venc = validos.filter(id => nota(id) === melhor);
+      if (venc.length === validos.length) venc = [];
+      else if (!li.foraDoPlacar) venc.forEach(id => pl[id]++);
+    }
+    const cels = LADOS.map(l => {
+      const v = vals[l.id];
+      const vazio = v == null || (typeof v === 'number' && Number.isNaN(v));
+      return { id: l.id, txt: vazio ? (li.vazio ? li.vazio(M[l.id]) : '—') : li.fmt!(v, M[l.id]), vencedor: venc.includes(l.id), vazio };
+    });
+    return { ...li, cels };
+  });
+  const max = comparaveis ? Math.max(...LADOS.map(l => pl[l.id])) : 0;
+  const lideres = max > 0 ? LADOS.filter(l => pl[l.id] === max).map(l => l.id) : [];
+  return { chave: g.chave, nome: g.nome, comparaveis, pl, lideres, linhas };
+});
+const appTxt = `${fmtMem(app.rss_mb)} de memória do processo, dos quais ${fmtMem(app.dados_mb)} de dados (grafo e contas) · um só processo, compartilhado pelos três lados`;
+const nomeDe = (id: string) => LADOS.find(l => l.id === id)!.nome;
+
+// ---------- tela final da corrida ----------
+const porChegada = [...LADOS].sort((a, b) => pos(a.id) - pos(b.id));
+const tela = Object.fromEntries(LADOS.map(l => {
+  const ms = msgs(l.id);
+  const ultimoGolpe = [...ms].reverse().find(e => e.golpe && e.rota && e.rotulo_golpe) ?? [...ms].reverse().find(e => e.golpe && e.rota);
+  return [l.id, { ultimoGolpe, log: ms.slice(-8).reverse() }];
+}));
+const memModelo = (id: string) => M[id].onde === 'local'
+  ? `${fmtMem(M[id].ram)} RAM + ${fmtMem(M[id].vram)} VRAM`
+  : 'no provedor';
 
 // ---------- as 150 mensagens, com a decisão de cada lado ----------
 type Msg = { idx: number; msg_id: number; texto: string; remetente: string; destinatario: string; golpe: boolean; lados: Record<string, Ev> };
@@ -116,25 +171,10 @@ for (const e of eventos) {
 }
 const mensagens = [...porIdx.values()].sort((a, b) => a.idx - b.idx);
 const comErro = (m: Msg) => LADOS.some(l => m.lados[l.id] && m.lados[l.id].acertou === false);
-const nGolpesMsgs = mensagens.filter(m => m.golpe).length;
 const nComErro = mensagens.filter(comErro).length;
 const rotaDe = (m: Msg) => { for (const l of LADOS) { const e = m.lados[l.id]; if (e?.rota) return e; } return null; };
 const tipoTxt = (t?: string) => (t ? t.replaceAll('_', ' ') : '—');
-
-// ---------- tela final da corrida ----------
-const porChegada = [...LADOS].sort((a, b) => pos(a.id) - pos(b.id));
-const tela = Object.fromEntries(LADOS.map(l => {
-  const ms = msgs(l.id);
-  const ultimoGolpe = [...ms].reverse().find(e => e.golpe && e.rota && e.rotulo_golpe) ?? [...ms].reverse().find(e => e.golpe && e.rota);
-  const log = ms.slice(-8).reverse();
-  const golpesDetectados = ms.filter(e => e.golpe).length;
-  return [l.id, { ultimoGolpe, log, golpesDetectados }];
-}));
-const modeloTxt = (id: string) => {
-  const i = ladosInfo[id] ?? {};
-  return [i.modelo, i.dispositivo].filter(Boolean).join(' · ');
-};
-const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const gravadoEm = new Date(C.gravado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 ---
 
 <!DOCTYPE html>
@@ -145,7 +185,7 @@ const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-B
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lab Pix — Detector de Golpe do Pix · Eduardo Ritter</title>
-  <meta name="description" content="JEV + Rust vs DeepSeek + Python vs Laya + Python: 150 mensagens de WhatsApp, 15 golpes do Pix, rastreio do dinheiro até a conta de saque." />
+  <meta name="description" content="JEV vs DeepSeek vs Laya, os três em Rust: 150 mensagens de WhatsApp, 15 golpes do Pix, rastreio do dinheiro até a conta de saque." />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
   <script is:inline>
@@ -175,16 +215,17 @@ const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-B
       <div class="container">
         <p class="label pg-eyebrow"><span data-i18n="pix.eyebrow">Lab · Detecção de golpe do Pix</span> · {gravadoEm}</p>
         <h1 class="pg-titulo">
-          <span class="pg-c-rust">JEV + Rust</span> <em>vs</em>
-          <span class="pg-c-python">DeepSeek + Python</span> <em>vs</em>
-          <span class="pg-c-laya">Laya + Python</span>
+          <span class="pg-c-jev">JEV</span> <em>vs</em>
+          <span class="pg-c-deepseek">DeepSeek</span> <em>vs</em>
+          <span class="pg-c-laya">Laya</span><span class="pg-titulo-rust"> · <span data-i18n="pix.title.rust">os três em Rust</span></span>
         </h1>
-        <p class="pg-sub" data-i18n="pix.sub">As mesmas mensagens de WhatsApp entram nos três lados, na mesma ordem. Cada lado decide com IA se é golpe e, quando é, rastreia o dinheiro num grafo de transações Pix, conta a conta, até a conta de saque.</p>
+        <p class="pg-sub" data-i18n="pix.sub">O mesmo app em Rust roda os três lados; só o modelo de IA muda. As mesmas mensagens de WhatsApp entram nos três, na mesma ordem. Cada lado decide se é golpe e, quando é, rastreia o dinheiro num grafo de transações Pix, conta a conta, até a conta de saque.</p>
         <ul class="pg-chips">
-          <li class="label">{nf(dados.n_mensagens ?? total)} <span data-i18n="pix.chip.msgs">mensagens</span></li>
-          <li class="label">{golpesReais} <span data-i18n="pix.chip.scams">golpes</span></li>
-          <li class="label">{nf(dados.n_contas)} <span data-i18n="pix.chip.accounts">contas</span></li>
-          <li class="label">{nf(dados.n_transacoes)} <span data-i18n="pix.chip.tx">transações Pix</span></li>
+          <li class="label">{fmtInt(dados.n_mensagens ?? total)} <span data-i18n="pix.chip.msgs">mensagens</span></li>
+          <li class="label pg-chip-golpes"><span data-i18n="pix.chip.real">golpes reais</span>: {golpesReais}</li>
+          <li class="label">{fmtInt(dados.n_contas)} <span data-i18n="pix.chip.accounts">contas</span></li>
+          <li class="label">{fmtInt(dados.n_transacoes)} <span data-i18n="pix.chip.tx">transações Pix</span></li>
+          <li class="label"><span data-i18n="pix.chip.app">app Rust</span>: {fmtMem(app.rss_mb)} ({fmtMem(app.dados_mb)} <span data-i18n="pix.chip.data">de dados</span>)</li>
           <li class="label pg-chip-alerta" data-i18n="pix.chip.synthetic">dados sintéticos</li>
         </ul>
       </div>
@@ -200,42 +241,44 @@ const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-B
 
         <div class="pg-podio">
           {porChegada.map((l, i) => {
-            const s = stats[l.id]; const f = s.f;
+            const m = M[l.id];
             return (
               <article class={`pg-card pg-lado-${l.id} reveal-item`} style={`--delay: ${i * 0.08}s`}>
                 <div class="pg-card-topo">
-                  <span class="pg-posicao">{pos(l.id)}º</span>
+                  <span class="pg-posicao">{m.chegada}º</span>
                   <div>
                     <h3 class="pg-card-nome">{l.nome}</h3>
-                    <p class="label">{l.stack}</p>
+                    <p class="label">{l.modelo} · {l.onde}</p>
                   </div>
                 </div>
                 <div class="pg-card-tempo">
-                  <span class="stat-num">{fmtTotal(f.total_ms)}</span>
+                  <span class="stat-num">{fmtMs(m.total)}</span>
                   <span class="label" data-i18n="pix.stat.total150">para 150 mensagens</span>
                 </div>
                 <dl class="pg-linhas">
-                  <div><dt class="label" data-i18n="pix.stat.decision">Decisão (mediana)</dt><dd>{fmtMs(f.p50_decisao_ms)}</dd></div>
-                  <div><dt class="label" data-i18n="pix.stat.caught">Golpes pegos</dt><dd>{f.verdadeiros_positivos} / {golpesReais}</dd></div>
-                  <div><dt class="label" data-i18n="pix.stat.fp">Alarmes falsos</dt><dd>{f.falsos_positivos}</dd></div>
-                  <div><dt class="label" data-i18n="pix.stat.cost">Custo da corrida</dt><dd>{fmtUSD(f.custo_usd)}</dd></div>
-                  <div><dt class="label" data-i18n="pix.stat.mem">Memória</dt><dd>{s.memTxt}</dd></div>
+                  <div><dt class="label" data-i18n="pix.r.p50d">p50 decisão</dt><dd>{fmtMs(m.p50d)}</dd></div>
+                  <div><dt class="label" data-i18n="pix.stat.caught">Golpes pegos</dt><dd>{m.vp} / {m.reais}</dd></div>
+                  <div><dt class="label" data-i18n="pix.stat.fp">Alarmes falsos</dt><dd>{m.fp}</dd></div>
+                  <div><dt class="label" data-i18n="pix.r.prec">precisão</dt><dd>{fmtPct1(m.precisao)}</dd></div>
+                  <div><dt class="label" data-i18n="pix.r.ctotal">custo total</dt><dd>{fmtUSD(m.custoTotal)}{m.custoMaq != null && <small class="pg-obs"> (<span data-i18n="pix.card.est">máquina, estimado</span>)</small>}</dd></div>
+                  <div><dt class="label" data-i18n="pix.card.mem">memória do modelo</dt><dd>{memModelo(l.id)}</dd></div>
                 </dl>
               </article>
             );
           })}
         </div>
 
-        <p class="pg-veredito" data-i18n="pix.verdict">O <strong>Laya</strong>, rodando local na GPU, terminou primeiro e não custou nada, mas errou mais: 12 alarmes falsos e 1 golpe perdido. O <strong>JEV com Rust</strong> acertou as 150 mensagens com o menor uso de memória e custo de frações de centavo. O <strong>LLM generativo</strong> também acertou tudo, mas foi o mais lento e o mais caro.</p>
+        <p class="pg-veredito" data-i18n="pix.verdict">Com o mesmo app em Rust nos três lados, o grafo leva menos de meio milissegundo no total em qualquer um deles: <strong>a diferença vem toda do modelo</strong>. O <strong>Laya</strong>, local na GPU, terminou em 6 segundos e custou frações de centavo, mas errou mais: 12 alarmes falsos e 1 golpe perdido, com precisão de 54%. O <strong>JEV</strong> acertou as 150 mensagens em 78 segundos por menos de 1 centavo de dólar. O <strong>LLM generativo</strong> também acertou tudo, mas levou 3 minutos e custou quase 10 vezes mais.</p>
 
         <div class="pg-acoes">
-          <a class="btn-outline" href="#corrida"><span data-i18n="pix.cta.race">Ver a tela da corrida</span></a>
           <a class="btn-outline" href="#comparativo"><span data-i18n="pix.cta.table">Comparativo completo</span></a>
+          <a class="btn-outline" href="#corrida"><span data-i18n="pix.cta.race">Ver a tela da corrida</span></a>
+          <a class="btn-outline" href="#mensagens"><span data-i18n="pix.cta.msgs">Ler as mensagens</span></a>
         </div>
       </div>
     </section>
 
-    <!-- ── 02 Comparativo ────────────────────────────────────────── -->
+    <!-- ── 02 Comparativo (relatório agrupado) ───────────────────── -->
     <section class="section reveal-section" id="comparativo">
       <div class="container">
         <header class="section-header">
@@ -244,14 +287,19 @@ const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-B
         </header>
         <p class="label pg-exec">
           <span data-i18n="pix.table.run">execução</span> #{execucao.id ?? 1} · <span data-i18n="pix.table.mode">modo</span> {execucao.modo ?? 'normal'} ·
-          {LADOS.map((l, i) => <span>{i > 0 && ' · '}{l.nome.split(' + ')[1]}: {fins[l.id].processadas} msgs</span>)}
+          <span data-i18n="pix.chip.real">golpes reais</span>: {golpesReais} · {LADOS.map(l => `${l.curto}: ${M[l.id].proc} msgs`).join(' · ')}
         </p>
-        <p class="pg-placar">
-          {placarOrdenado.map((l, i) => (
-            <span>{i > 0 && ' · '}<b class={`pg-c-${l.id}`}>{l.nome}</b> {i === 0 && <span data-i18n="pix.table.wins">vence</span>} {placar[l.id]} {i === 0 && <span data-i18n="pix.table.rows">linhas</span>}</span>
+        <div class="pg-placar-grupos">
+          {relatorio.filter(g => g.comparaveis).map(g => (
+            <span class="pg-placar-item">
+              <span class="label" data-i18n={g.chave}>{g.nome}</span>
+              {g.lideres.length === 1
+                ? <b class={`pg-c-${g.lideres[0]}`}>{nomeDe(g.lideres[0])}</b>
+                : <span class="pg-mudo"><span data-i18n="pix.table.tie">empate</span> {g.lideres.map(nomeDe).join(' e ')}</span>}
+              <span class="pg-mono pg-placar-det">{LADOS.map((l, i) => <span class={`pg-c-${l.id}`}>{i > 0 && ' · '}{g.pl[l.id]}</span>)}</span>
+            </span>
           ))}
-          <span> · {empates} <span data-i18n="pix.table.ties">empates</span></span>
-        </p>
+        </div>
         <div class="pg-tabela-wrap">
           <table class="pg-tabela">
             <thead>
@@ -261,21 +309,30 @@ const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-B
               </tr>
             </thead>
             <tbody>
-              {linhas.map(li => {
-                const v = estrelas(li);
-                return (
-                  <tr class={li.melhor ? '' : 'pg-info'}>
-                    <th class="pg-metrica" data-i18n={li.chave}>{li.rotulo}</th>
+              {relatorio.map(g => (
+                <Fragment>
+                  <tr class="pg-grupo">
+                    <th scope="rowgroup"><span data-i18n={g.chave}>{g.nome}</span>{!g.comparaveis && <small> · <span data-i18n="pix.table.info">informativo</span></small>}</th>
                     {LADOS.map(l => (
-                      <td class={v.has(l.id) ? 'pg-melhor' : ''}>{v.has(l.id) && <span class="pg-estrela" aria-label="melhor">★</span>}{li.fmt(li.val(l.id), l.id)}</td>
+                      <td class={g.lideres.length === 1 && g.lideres[0] === l.id ? 'pg-grupo-lider' : ''}>{g.comparaveis ? (g.pl[l.id] ? '★ ' + g.pl[l.id] : '0') : ''}</td>
                     ))}
                   </tr>
-                );
-              })}
+                  {g.linhas.map((li: any) => li.app ? (
+                    <tr class="pg-info"><th class="pg-metrica" data-i18n={li.chave}>{li.nome}</th><td colspan="3" class="pg-texto-cel">{appTxt}</td></tr>
+                  ) : (
+                    <tr class={[li.destaque ? 'pg-destaque' : '', li.melhor ? '' : 'pg-info'].filter(Boolean).join(' ')}>
+                      <th class="pg-metrica" data-i18n={li.chave}>{li.nome}</th>
+                      {li.cels.map((c: any) => (
+                        <td class={[c.vencedor ? 'pg-melhor' : '', li.texto ? 'pg-texto-cel' : '', c.vazio ? 'pg-vazio' : ''].filter(Boolean).join(' ')}>{c.vencedor && <span class="pg-estrela" aria-label="melhor">★</span>}{c.txt}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </Fragment>
+              ))}
             </tbody>
           </table>
         </div>
-        <p class="pg-nota" data-i18n="pix.table.note">★ = vencedor da linha entre os lados que terminaram. Tempos, custo e memória: menor é melhor. Verdadeiros positivos e saques: maior é melhor. A chegada ganha estrela mas fica fora do placar.</p>
+        <p class="pg-nota" data-i18n="pix.table.note">★ = melhor da linha, só nas linhas comparáveis. O placar de cada grupo conta as ★ do grupo, sem misturar acerto, tempo, custo, tokens e memória. Linhas sem ★ são informativas: o rastreio no grafo é o mesmo código Rust nos três lados, e custo de máquina e memória do modelo só existem no lado local (nos lados de API ficam embutidos no provedor).</p>
       </div>
     </section>
 
@@ -290,33 +347,36 @@ const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-B
 
         <div class="pg-corrida">
           {LADOS.map(l => {
-            const s = stats[l.id]; const f = s.f; const t = tela[l.id]; const g = t.ultimoGolpe;
+            const m = M[l.id]; const t = tela[l.id]; const g = t.ultimoGolpe;
             return (
               <article class={`pg-coluna pg-lado-${l.id}`}>
                 <div class="pg-col-cab">
                   <div>
                     <h3 class="pg-card-nome">{l.nome}</h3>
-                    <p class="label">{l.detalhe}</p>
+                    <p class="label">{l.onde}</p>
                   </div>
-                  <span class={`pg-selo pg-selo-${pos(l.id)}`}>{pos(l.id)}º · {fmtTotal(f.total_ms)}</span>
+                  <span class={`pg-selo pg-selo-${m.chegada}`}>{m.chegada}º · {fmtMs(m.total)}</span>
                 </div>
                 <div class="pg-chipzinhos">
-                  <span class="pg-mono">{modeloTxt(l.id)}</span>
-                  <span class="pg-mono">{s.memTxt}</span>
+                  <span class="pg-mono">{ladosInfo[l.id]?.modelo}</span>
+                  <span class="pg-mono">{memModelo(l.id)}</span>
                 </div>
 
                 <div class="pg-progresso">
-                  <div class="pg-progresso-num"><strong>{f.processadas}</strong> / {total}</div>
+                  <div class="pg-progresso-num"><strong>{m.proc}</strong> / {total}</div>
                   <div class="pg-barra"><span style="width:100%"></span></div>
                 </div>
 
                 <div class="pg-contadores">
-                  <div><span class="label" data-i18n="pix.race.golpes">golpes</span><b>{t.golpesDetectados}</b></div>
-                  <div><span class="label" data-i18n="pix.race.acertos">acertos</span><b>{s.acertos} <small>{pct(s.taxa)}</small></b></div>
-                  <div><span class="label" data-i18n="pix.race.custo">custo</span><b>{fmtUSD(f.custo_usd)}</b></div>
-                  <div><span class="label" data-i18n="pix.race.decisao">decisão p50</span><b>{fmtMs(f.p50_decisao_ms)}</b></div>
-                  <div><span class="label" data-i18n="pix.race.rastreio">rastreio p50</span><b>{fmtMs(f.p50_rastreio_ms)}</b></div>
-                  <div><span class="label" data-i18n="pix.race.tempo">tempo</span><b>{fmtTotal(f.total_ms)}</b></div>
+                  <div><span class="label" data-i18n="pix.c.sinal">sinalizados</span><b>{m.sinal}</b></div>
+                  <div><span class="label" data-i18n="pix.c.vp">golpes pegos</span><b>{m.vp}/{m.reais}</b></div>
+                  <div><span class="label" data-i18n="pix.c.fp">alarmes falsos</span><b>{m.fp}</b></div>
+                  <div><span class="label" data-i18n="pix.c.prec">precisão</span><b>{fmtPct1(m.precisao)}</b></div>
+                  <div><span class="label" data-i18n="pix.c.cob">cobertura</span><b>{fmtPct1(m.cobertura)}</b></div>
+                  <div><span class="label" data-i18n="pix.c.custo">custo total</span><b>{fmtUSD(m.custoTotal)}</b></div>
+                  <div><span class="label" data-i18n="pix.race.decisao">decisão p50</span><b>{fmtMs(m.p50d)}</b></div>
+                  <div><span class="label" data-i18n="pix.race.rastreio">rastreio p50</span><b>{fmtMs(m.p50r)}</b></div>
+                  <div><span class="label" data-i18n="pix.race.tempo">tempo</span><b>{fmtMs(m.total)}</b></div>
                 </div>
 
                 {g && (
@@ -326,7 +386,7 @@ const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-B
                     <blockquote>{g.texto}</blockquote>
                     <div class="pg-decisao">
                       <span class="pg-badge-golpe" data-i18n="pix.race.scam">GOLPE</span>
-                      <span class="pg-mono">prob. {pct(g.prob)} · {g.tipo_golpe?.replaceAll('_', ' ')} · {fmtMs(g.t_decisao_ms)}</span>
+                      <span class="pg-mono">prob. {fmtPct1(g.prob)} · {tipoTxt(g.tipo_golpe)} · {fmtMs(g.t_decisao_ms)}</span>
                     </div>
                   </div>
                 )}
@@ -338,12 +398,11 @@ const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-B
                       {g.rota.nos.map((n: any, i: number) => {
                         const a = g.rota.arestas[i];
                         const ultimo = i === g.rota.nos.length - 1;
-                        const papel = i === 0 ? 'destino' : (ultimo && n.tipo === 'caixa' ? 'saque' : `hop ${i}`);
                         return (
                           <li class={`pg-no ${ultimo && n.tipo === 'caixa' ? 'pg-no-saque' : ''}`}>
                             <span class="pg-no-ponto" aria-hidden="true"></span>
                             <div class="pg-no-txt">
-                              <span class="label">{papel}</span>
+                              <span class="label">{i === 0 ? 'destino' : (ultimo && n.tipo === 'caixa' ? 'saque' : `hop ${i}`)}</span>
                               <span class="pg-no-nome">{n.nome}</span>
                               <span class="pg-no-banco">{n.banco}</span>
                             </div>
@@ -363,7 +422,7 @@ const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-B
                         <details>
                           <summary>
                             <span class="pg-mono pg-log-idx">{e.idx}</span>
-                            <span class={e.golpe ? 'pg-log-golpe' : 'pg-log-legit'}>{e.golpe ? 'GOLPE' : 'LEGÍTIMA'} {pct(e.prob)}</span>
+                            <span class={e.golpe ? 'pg-log-golpe' : 'pg-log-legit'}>{e.golpe ? 'GOLPE' : 'LEGÍTIMA'} {fmtPct1(e.prob)}</span>
                             <span class="pg-mono pg-log-ms">{fmtMs(e.t_decisao_ms)}</span>
                             <span class={e.acertou ? 'pg-ok' : 'pg-erro'}>{e.acertou ? '✓' : '✗'}</span>
                           </summary>
@@ -388,18 +447,20 @@ const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-B
           <h2 data-i18n="pix.how.title">Como funciona</h2>
         </header>
         <ol class="pg-passos">
-          <li><span class="stat-num">1</span><div><h3 data-i18n="pix.how.s1.t">Decisão por IA</h3><p data-i18n="pix.how.s1.d">Cada mensagem vai para a IA do lado. O JEV e o Laya respondem perguntas tipadas com probabilidade (é golpe? tem urgência? qual o tipo?). O LLM generativo responde um JSON.</p></div></li>
+          <li><span class="stat-num">1</span><div><h3 data-i18n="pix.how.s1.t">Decisão por IA</h3><p data-i18n="pix.how.s1.d">O único passo que muda entre os lados. O JEV (API TypeSafe) e o Laya (local, na GPU) respondem perguntas tipadas com probabilidade: é golpe? tem urgência? qual o tipo? O LLM generativo responde um JSON.</p></div></li>
           <li><span class="stat-num">2</span><div><h3 data-i18n="pix.how.s2.t">Chave Pix</h3><p data-i18n="pix.how.s2.d">Em código, sem IA: a chave Pix citada no texto (CPF, CNPJ, telefone, e-mail ou aleatória) é extraída, normalizada e ligada à conta de destino.</p></div></li>
-          <li><span class="stat-num">3</span><div><h3 data-i18n="pix.how.s3.t">Grafo em memória</h3><p data-i18n="pix.how.s3.d">As transações ficam num grafo CSR: cada conta é um nó e cada Pix é uma aresta com valor e instante. No Rust, vetores compactos; no Python, listas.</p></div></li>
-          <li><span class="stat-num">4</span><div><h3 data-i18n="pix.how.s4.t">Rastreio até o saque</h3><p data-i18n="pix.how.s4.d">A partir da conta de destino, segue sempre o maior repasse numa janela de 72 horas, laranja a laranja, até chegar a uma conta de saque.</p></div></li>
+          <li><span class="stat-num">3</span><div><h3 data-i18n="pix.how.s3.t">Grafo em memória</h3><p data-i18n="pix.how.s3.d">As transações ficam num grafo CSR em Rust, compartilhado pelos três lados: cada conta é um nó e cada Pix é uma aresta com valor e instante. São 8 MB para 500 mil transações.</p></div></li>
+          <li><span class="stat-num">4</span><div><h3 data-i18n="pix.how.s4.t">Rastreio até o saque</h3><p data-i18n="pix.how.s4.d">A partir da conta de destino, segue sempre o maior repasse numa janela de 72 horas, laranja a laranja, até chegar a uma conta de saque. Leva cerca de 14 microssegundos por golpe.</p></div></li>
         </ol>
 
         <div class="pg-ressalvas">
           <p class="label" data-i18n="pix.caveats.title">Ressalvas</p>
           <ul>
             <li data-i18n="pix.caveats.1">Dados 100% sintéticos, gerados localmente. Chaves Pix e nomes aparecem mascarados.</li>
-            <li data-i18n="pix.caveats.2">O lado "DeepSeek + Python" usou o Gemini 2.5 Flash pela mesma API compatível com OpenAI, porque não havia chave do DeepSeek.</li>
+            <li data-i18n="pix.caveats.2">O lado "DeepSeek" usou o Gemini 2.5 Flash pela mesma API compatível com OpenAI, porque não havia chave do DeepSeek.</li>
             <li data-i18n="pix.caveats.3">O Laya usou uma pergunta curta. Com as perguntas longas do JEV ele marcava todas as mensagens como golpe.</li>
+            <li data-i18n="pix.caveats.5">O custo de máquina do Laya é uma estimativa: tempo do modelo vezes US$ 0,35 por hora de uma GPU T4 na nuvem. Nos lados de API, máquina e memória do modelo ficam no provedor e não são medidas.</li>
+            <li data-i18n="pix.caveats.6">Numa rodada anterior, com o DeepSeek e o Laya rodando em Python, os tempos foram praticamente os mesmos (3:00 min e 7,2 s): o gargalo é o modelo, não a linguagem.</li>
             <li data-i18n="pix.caveats.4">As perguntas foram ajustadas nestas mesmas mensagens, então o acerto de 100% não é uma promessa para dados novos.</li>
           </ul>
           <p class="pg-nota"><span data-i18n="pix.credits">Inspirado no vídeo do Sandeco:</span> <a class="link-item" href="https://www.youtube.com/watch?v=avQAz9norY8" target="_blank" rel="noopener">JEV+RUST: Detectando fraudes no Pix em tempo real</a></p>
@@ -418,11 +479,11 @@ const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-B
 
         <div class="pg-filtros" role="group" aria-label="Filtrar mensagens">
           <button type="button" class="pg-filtro is-on" data-filtro="todas"><span data-i18n="pix.msgs.all">Todas</span> <b>{mensagens.length}</b></button>
-          <button type="button" class="pg-filtro" data-filtro="golpe"><span data-i18n="pix.msgs.scams">Golpes reais</span> <b>{nGolpesMsgs}</b></button>
+          <button type="button" class="pg-filtro" data-filtro="golpe"><span data-i18n="pix.msgs.scams">Golpes reais</span> <b>{golpesReais}</b></button>
           <button type="button" class="pg-filtro" data-filtro="erro"><span data-i18n="pix.msgs.errors">Com erro de algum lado</span> <b>{nComErro}</b></button>
         </div>
         <p class="pg-legenda label">
-          <span class="pg-c-rust">■ JEV + Rust</span> · <span class="pg-c-python">■ DeepSeek + Python</span> · <span class="pg-c-laya">■ Laya + Python</span> · ✓ <span data-i18n="pix.msgs.right">acertou</span> · ✗ <span data-i18n="pix.msgs.wrong">errou</span>
+          <span class="pg-c-jev">■ JEV + Rust</span> · <span class="pg-c-deepseek">■ DeepSeek + Rust</span> · <span class="pg-c-laya">■ Laya + Rust</span> · ✓ <span data-i18n="pix.msgs.right">acertou</span> · ✗ <span data-i18n="pix.msgs.wrong">errou</span>
         </p>
 
         <ol class="pg-msgs">
@@ -449,8 +510,8 @@ const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-B
                         return (
                           <div class={`pg-msgs-lado pg-lado-${l.id}`}>
                             <b class={`pg-c-${l.id}`}>{l.nome}</b>
-                            <span class={e.golpe ? 'pg-log-golpe' : 'pg-log-legit'}>{e.golpe ? 'GOLPE' : 'LEGÍTIMA'} · {pct(e.prob)}</span>
-                            <span class="pg-mono">{tipoTxt(e.tipo_golpe)} · {fmtMs(e.t_decisao_ms)}</span>
+                            <span class={e.golpe ? 'pg-log-golpe' : 'pg-log-legit'}>{e.golpe ? 'GOLPE' : 'LEGÍTIMA'} · {fmtPct1(e.prob)}</span>
+                            <span class="pg-mono">{tipoTxt(e.tipo_golpe)} · {fmtMs(e.t_decisao_ms)}{e.tokens_in != null ? ` · ${fmtInt(e.tokens_in)} tokens` : ''}</span>
                             <span class={e.acertou ? 'pg-ok' : 'pg-erro'}>{e.acertou ? '✓ acertou' : '✗ errou'}</span>
                             {e.rota && <span class="pg-mono pg-msgs-rota">{e.rota.saque_encontrado ? `saque em ${e.rota.hops} hops` : `${e.rota.hops} hops, sem saque`}</span>}
                           </div>
@@ -511,14 +572,14 @@ const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-B
 
 <style is:global>
   /* Cores dos três lados, derivadas do site: dourado do accent, aço e lavanda discretos */
-  [data-theme="dark"] .pg  { --lado-rust: #c9a96e; --lado-python: #8fa6c4; --lado-laya: #b3a0d8; --golpe: #d9776b; --legit: #8fb89a; }
-  [data-theme="light"] .pg { --lado-rust: #9c7a3c; --lado-python: #4a6a92; --lado-laya: #6e56a8; --golpe: #b0463a; --legit: #3f7a52; }
+  [data-theme="dark"] .pg  { --lado-jev: #c9a96e; --lado-deepseek: #8fa6c4; --lado-laya: #b3a0d8; --golpe: #d9776b; --legit: #8fb89a; }
+  [data-theme="light"] .pg { --lado-jev: #9c7a3c; --lado-deepseek: #4a6a92; --lado-laya: #6e56a8; --golpe: #b0463a; --legit: #3f7a52; }
 
-  .pg-c-rust   { color: var(--lado-rust); }
-  .pg-c-python { color: var(--lado-python); }
+  .pg-c-jev   { color: var(--lado-jev); }
+  .pg-c-deepseek { color: var(--lado-deepseek); }
   .pg-c-laya   { color: var(--lado-laya); }
-  .pg-lado-rust   { --lado: var(--lado-rust); }
-  .pg-lado-python { --lado: var(--lado-python); }
+  .pg-lado-jev   { --lado: var(--lado-jev); }
+  .pg-lado-deepseek { --lado: var(--lado-deepseek); }
   .pg-lado-laya   { --lado: var(--lado-laya); }
   .pg-mono { font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-size: .74rem; letter-spacing: 0; }
 
@@ -672,4 +733,23 @@ const gravadoEm = new Date((corrida as any).gravado_em).toLocaleDateString('pt-B
     .pg-passos { grid-template-columns: 1fr; }
     .pg-corrida { grid-template-columns: repeat(3, 86%); }
   }
+
+  /* três em Rust: placar por grupo, linhas de grupo, células informativas */
+  .pg-titulo-rust { font-family: var(--font-display-editorial); font-style: italic; font-weight: 300; color: var(--text-2); font-size: .62em; white-space: nowrap; }
+  .pg-chips .pg-chip-golpes { border-color: var(--golpe); color: var(--golpe); }
+  .pg-obs { color: var(--text-2); font-size: .72rem; }
+  .pg-placar-grupos { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+  .pg-placar-item { display: inline-flex; align-items: baseline; gap: 10px; border: 1px solid var(--border); padding: 9px 14px; font-size: .92rem; }
+  .pg-placar-item b { font-weight: 500; }
+  .pg-placar-det { font-size: .78rem; }
+  .pg-mudo { color: var(--text-2); }
+  .pg-tabela .pg-grupo th, .pg-tabela .pg-grupo td { background: var(--bg-surface); font-family: var(--font-display); font-size: .78rem; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--text-1); padding-top: 18px; }
+  .pg-tabela .pg-grupo small { font-size: .62rem; color: var(--text-2); letter-spacing: .1em; }
+  .pg-tabela .pg-grupo td { color: var(--text-2); }
+  .pg-tabela .pg-grupo td.pg-grupo-lider { color: var(--accent); }
+  .pg-tabela .pg-destaque th, .pg-tabela .pg-destaque td { font-size: .98rem; }
+  .pg-tabela .pg-destaque .pg-metrica { color: var(--text-1); }
+  .pg-tabela .pg-texto-cel { white-space: normal; font-size: .8rem; color: var(--text-2); text-align: right; }
+  .pg-tabela td[colspan] { text-align: center; }
+  .pg-tabela .pg-vazio { color: var(--text-2); font-size: .8rem; }
 </style>
