@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Papel · texto entre dois dispositivos</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header><a href="/">Eduardo Ritter</a><span>Uma ideia de cada vez.</span></header>
+<main>
+<div class="heading"><div><p class="eyebrow">BLOCO COMPARTILHADO / P2P</p><h1>Papel<span>.</span></h1></div><button id="connect">Conectar outro dispositivo</button></div>
+<p class="intro">Escreva aqui. Leia do outro lado.</p>
+<div class="toolbar"><nav aria-label="Folhas"><button class="active" data-room="1" aria-pressed="true">Folha 01</button><button data-room="2" aria-pressed="false">Folha 02</button><button data-room="3" aria-pressed="false">Folha 03</button></nav><span id="status" role="status">Só neste dispositivo</span></div>
+<div class="paper"><label class="sr" for="text">Texto da folha</label><textarea id="text" maxlength="12000" placeholder="Pode começar…" spellcheck="true"></textarea><footer><span id="saved" role="status">Cópia neste navegador</span><span id="count">0 / 12.000</span></footer></div>
+<div class="actions"><button id="copy">Copiar texto</button><button id="download">Baixar .txt</button></div>
+<p class="footnote">Três folhas, dois dispositivos. As cópias ficam neste navegador. Para sincronizar, mantenha as duas abas abertas e conectadas. Ao editar ao mesmo tempo, a versão mais recente da folha prevalece. <a href="SOBRE.md">Como funciona</a></p>
+<dialog id="pair"><form method="dialog"><button class="close" aria-label="Fechar">×</button></form><p class="eyebrow">CONEXÃO ENTRE DOIS DISPOSITIVOS</p><h2>Junte os dois papéis.</h2><p>Troque os códigos por um canal de confiança. Não compartilhe com outras pessoas.</p><div class="choices"><button id="invite">1. Criar convite</button><button id="join">2. Responder convite</button></div><label for="incoming">Código recebido do outro dispositivo</label><textarea id="incoming" placeholder="Cole o convite ou a resposta aqui" spellcheck="false"></textarea><button id="finish">3. Aplicar resposta</button><label for="outgoing">Seu código para enviar</label><textarea id="outgoing" readonly spellcheck="false"></textarea><button id="copyCode">Copiar código</button><p id="pairStatus" role="status">No primeiro dispositivo, crie o convite. No segundo, cole e responda. Depois cole a resposta no primeiro.</p><p class="small">A conexão tenta um caminho direto com auxílio de STUN. Sem retransmissor TURN, algumas redes podem bloquear. Internet é necessária entre redes diferentes.</p><button id="disconnect">Desconectar</button></dialog>
+</main><script type="module" src="app.mjs"></script></body></html>

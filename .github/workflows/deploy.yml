@@ -30,6 +30,9 @@ jobs:
       - name: Build Astro
         run: npm run build
 
+      - name: Test Papel
+        run: node --test tests/papel.test.mjs
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {Notebook, validNote, readSignal, LIMIT} from '../public/papel/model.mjs';
+test('três folhas independentes e recuperação local',()=>{const a=new Notebook('a');a.edit(1,'Olá 🌎');a.edit(3,'Outra folha');const b=new Notebook('b',JSON.parse(JSON.stringify(a.notes)));assert.equal(b.notes[0].text,'Olá 🌎');assert.equal(b.notes[1].text,'');assert.equal(b.notes[2].text,'Outra folha');});
+test('sincronização bidirecional e mensagens fora de ordem',()=>{const a=new Notebook('a'),b=new Notebook('b');const old=a.edit(1,'primeiro');b.receive(old);b.edit(1,'segundo');a.receive(b.notes[0]);assert.equal(a.receive(old),false);assert.deepEqual(a.notes,b.notes);});
+test('edições simultâneas convergem independentemente da ordem',()=>{const a=new Notebook('a'),b=new Notebook('b');const x=a.edit(2,'A'),y=b.edit(2,'B');a.receive(y);b.receive(x);assert.deepEqual(a.notes,b.notes);assert.equal(a.notes[1].text,'B');});
+test('mensagens inválidas não alteram folhas',()=>{const a=new Notebook('a');for(const value of [null,{}, {room:4,text:'x',clock:1,author:'b'},{room:1,text:'x',clock:Infinity,author:'b'},{room:1,text:'x'.repeat(LIMIT+1),clock:1,author:'b'}]){assert.equal(Boolean(validNote(value)),false);assert.equal(a.receive(value),false);}assert.equal(a.notes[0].text,'');assert.throws(()=>a.edit(1,'x'.repeat(LIMIT+1)));});
+test('convite e resposta têm tipos distintos e validação',()=>{const offer=JSON.stringify({v:1,type:'offer',sdp:'v=0\r\n'});assert.equal(readSignal(offer,'offer').type,'offer');assert.throws(()=>readSignal(offer,'answer'));assert.throws(()=>readSignal('código quebrado','offer'));assert.throws(()=>readSignal(JSON.stringify({v:1,type:'offer',sdp:'bad'}),'offer'));});
