@@ -145,3 +145,9 @@ if(initialParams.has('nome')){
   $('roomName').value=initialParams.get('nome');$('roomType').value=initialParams.get('tipo')==='senha'?'password':'public';togglePassword();$('pair').showModal();
   if($('roomType').value==='public')$('enterNamed').click();
 }
+if(!initialSecret&&!initialParams.has('nome')){
+  $('roomName').value='papel-publico';$('roomType').value='public';togglePassword();
+  $('text').disabled=true;
+  namedSecret('papel-publico').then(value=>connectRelay(value,{name:'papel-publico',protected:false}))
+    .catch(e=>$('relayStatus').textContent=e.message).finally(()=>$('text').disabled=false);
+}

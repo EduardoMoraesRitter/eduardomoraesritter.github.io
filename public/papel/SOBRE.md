@@ -6,6 +6,8 @@ Bloco de texto estático para GitHub Pages, com três folhas e duas formas de co
 
 ## Salas com nome curto
 
+Abrir `/papel/` sem parâmetros conecta automaticamente à sala pública `papel-publico`, na Folha 01, sem abrir painel ou pedir códigos. Todos que abrem esse endereço compartilham as três folhas dessa sala. As salas protegidas e os links específicos continuam abrindo seus próprios destinos. A sala pública não oferece armazenamento central: para recuperar o texto em um aparelho novo, algum navegador com uma cópia precisa estar conectado.
+
 Em Conectar outro dispositivo, informe um nome de 2 a 24 letras sem acentos, números ou hífen, como `mesa1`. Escolha Pública ou Protegida por senha e clique em Criar ou entrar. Os demais aparelhos informam o mesmo nome e tipo. Uma sala com senha exige também a mesma senha, com pelo menos 12 caracteres.
 
 Não há cadastro de sala, dono, reserva de nome ou recuperação de senha. A pública é acessível a qualquer pessoa que conheça ou tente o nome. Na protegida, PBKDF2 SHA-256 com 600.000 iterações e salt separado por nome/tipo deriva uma chave de 256 bits. A senha não é enviada ao Supabase, salva no navegador ou incluída no link. Senhas diferentes geram canais diferentes; não é possível distinguir senha errada de ausência de outro dispositivo. Use uma senha forte, pois senhas fracas podem ser tentadas offline por quem possuir um envelope criptografado.
