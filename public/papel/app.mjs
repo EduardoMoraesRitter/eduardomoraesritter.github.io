@@ -1,11 +1,12 @@
 import {Notebook, readSignal} from './model.mjs';
 import {Relay} from './relay.mjs';
-import {newSecret,validSecret} from './crypto.mjs';
+import {newSecret,validSecret,namedSecret,normalizeRoom} from './crypto.mjs';
 const $ = id => document.getElementById(id);
-const storageKey = 'papel-notes-v1';
+let storageKey = 'papel-notes-v1';
 let saved = [];
 try { saved = JSON.parse(localStorage.getItem(storageKey) || '[]'); if (!Array.isArray(saved)) saved=[]; } catch {}
-const book = new Notebook(crypto.randomUUID(), saved);
+let book = new Notebook(crypto.randomUUID(), saved);
+let namedRoom=null,joining=false;
 let room=1, pc=null, channel=null, generation=0, timer;
 let relayState='off',relayPeers=0,p2pState='off',secret='';
 const relay=new Relay((...args)=>window.supabase.createClient(...args),note=>{
@@ -16,11 +17,11 @@ function connectionStatus(){
   const states=[];
   if(p2pState==='ready')states.push('P2P conectado');
   else if(p2pState==='error')states.push('P2P interrompido');
-  if(relayState==='ready')states.push(relayPeers?`Sala online · ${relayPeers} outro(s) dispositivo(s)`:'Sala online · aguardando outro dispositivo');
+  if(relayState==='ready')states.push(relayPeers?`Sala ${namedRoom?.name||'online'} · ${relayPeers} outro(s) dispositivo(s)`:`Sala ${namedRoom?.name||'online'} · aguardando outro dispositivo`);
   else if(relayState==='connecting')states.push('Conectando sala online…');
   else if(relayState==='error'||relayState==='send_error')states.push('Sala online indisponível · tente reconectar');
   status(states.join(' · ')||'Só neste dispositivo',p2pState==='ready'||(relayState==='ready'&&relayPeers>0));
-  $('relayStatus').textContent=relayState==='ready'?(relayPeers?'Conectado. As três folhas são compartilhadas com quem tem este link.':'Sala aberta. Envie o link e aguarde o outro dispositivo.'):
+  $('relayStatus').textContent=relayState==='ready'?(relayPeers?'Conectado. As três folhas estão sincronizadas.':namedRoom?'Sala aberta. No outro aparelho, informe o mesmo nome e tipo de sala'+(namedRoom.protected?' e a mesma senha. Senhas diferentes não se conectam.':'.'):'Sala aberta. Envie o link e aguarde o outro dispositivo.'):
     relayState==='connecting'?'Conectando…':relayState==='off'?'Crie uma sala ou cole o link recebido.':'Não foi possível conectar ou enviar. Confira a internet e clique em Entrar na sala para tentar novamente.';
 }
 function persist() {
@@ -81,9 +82,14 @@ $('finish').onclick=()=>action(async()=>{if(!pc || pc.localDescription?.type!=='
 $('disconnect').onclick=()=>{close();$('outgoing').value='';$('incoming').value='';$('pairStatus').textContent='Desconectado. As cópias locais foram preservadas.';};
 $('connect').onclick=()=>$('pair').showModal();
 function roomLink(value){const url=new URL(location.href);url.hash='sala='+value;return url.href;}
-async function connectRelay(value){
+async function connectRelay(value,named=null){
   if(!validSecret(value))throw Error('Cole um link de sala válido.');
-  secret=value;history.replaceState(null,'','#sala='+secret);$('roomLink').value=roomLink(secret);
+  relay.close();persist();close();namedRoom=named;
+  const nextKey=named?'papel-named-notes:'+named.name+':'+(named.protected?'password':'public')+':'+value:'papel-link-notes:'+value;
+  if(storageKey!==nextKey){storageKey=nextKey;let notes=[];try{notes=JSON.parse(localStorage.getItem(storageKey)||'[]');if(!Array.isArray(notes))notes=[];}catch{}book=new Notebook(crypto.randomUUID(),notes);render();}
+  secret=value;
+  const hash=named?'#nome='+named.name+'&tipo='+(named.protected?'senha':'publica'):'#sala='+secret;
+  history.replaceState(null,'',hash);$('roomLink').value=named?location.href:roomLink(secret);
   relayState='connecting';connectionStatus();
   try{
     if(!window.supabase)throw Error('Biblioteca de conexão indisponível. Recarregue a página.');
@@ -99,6 +105,30 @@ $('joinRoom').onclick=()=>{
 };
 $('leaveRoom').onclick=()=>{relay.close();relayState='off';secret='';history.replaceState(null,'',location.pathname+location.search);$('roomLink').value='';connectionStatus();};
 $('copyLink').onclick=()=>copy($('roomLink').value,$('copyLink'));
+function rememberedRooms(){try{const list=JSON.parse(localStorage.getItem('papel-room-list')||'[]');return Array.isArray(list)?list.filter(r=>r&&typeof r.name==='string'&&/^[a-z0-9][a-z0-9-]{1,23}$/.test(r.name)&&typeof r.protected==='boolean').slice(0,20):[];}catch{return [];}}
+function showRooms(){
+  $('recentRooms').replaceChildren();
+  for(const entry of rememberedRooms()){
+    const button=document.createElement('button');button.type='button';button.textContent=entry.name+(entry.protected?' · com senha':' · pública');
+    button.onclick=()=>{$('roomName').value=entry.name;$('roomType').value=entry.protected?'password':'public';$('roomPassword').value='';togglePassword();$('roomName').focus();};
+    $('recentRooms').append(button);
+  }
+}
+function togglePassword(){$('passwordField').hidden=$('roomType').value!=='password';}
+$('roomType').onchange=togglePassword;
+$('enterNamed').onclick=async()=>{
+  if(joining)return;joining=true;$('enterNamed').disabled=true;
+  try{
+    const name=normalizeRoom($('roomName').value),protectedRoom=$('roomType').value==='password';
+    $('relayStatus').textContent='Preparando sala…';
+    const value=await namedSecret(name,protectedRoom?$('roomPassword').value:null);
+    $('roomPassword').value='';
+    await connectRelay(value,{name,protected:protectedRoom});
+    try{const list=rememberedRooms().filter(r=>r.name!==name||r.protected!==protectedRoom);localStorage.setItem('papel-room-list',JSON.stringify([{name,protected:protectedRoom},...list].slice(0,20)));showRooms();}catch{}
+  }catch(e){$('relayStatus').textContent=e.message;}
+  finally{joining=false;$('enterNamed').disabled=false;}
+};
+$('clearRooms').onclick=()=>{try{localStorage.removeItem('papel-room-list');showRooms();}catch{}};
 $('text').oninput=()=>{book.edit(room,$('text').value);persist();count();clearTimeout(timer);timer=setTimeout(flush,150);};
 document.querySelectorAll('[data-room]').forEach(button=>button.onclick=()=>{flush();room=Number(button.dataset.room);document.querySelectorAll('[data-room]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button));});render();});
 async function copy(value,button){const label=button.textContent;try{await navigator.clipboard.writeText(value);button.textContent='Copiado!';setTimeout(()=>button.textContent=label,1500);}catch{$('pairStatus').textContent='Selecione e copie manualmente.';$('relayStatus').textContent='Selecione e copie o link manualmente.';}}
@@ -107,5 +137,11 @@ $('copyCode').onclick=()=>copy($('outgoing').value,$('copyCode'));
 $('download').onclick=()=>{const url=URL.createObjectURL(new Blob([$('text').value],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`papel-${room}.txt`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 window.addEventListener('pagehide',()=>{persist();close();relay.close();});
 render();
-const initialSecret=new URLSearchParams(location.hash.slice(1)).get('sala');
+showRooms();togglePassword();
+const initialParams=new URLSearchParams(location.hash.slice(1));
+const initialSecret=initialParams.get('sala');
 if(initialSecret)connectRelay(initialSecret).catch(e=>$('relayStatus').textContent=e.message);
+if(initialParams.has('nome')){
+  $('roomName').value=initialParams.get('nome');$('roomType').value=initialParams.get('tipo')==='senha'?'password':'public';togglePassword();$('pair').showModal();
+  if($('roomType').value==='public')$('enterNamed').click();
+}

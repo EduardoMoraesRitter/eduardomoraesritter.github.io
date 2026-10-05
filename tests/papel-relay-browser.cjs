@@ -9,9 +9,9 @@ const assert=require('node:assert/strict');
   const frames=[];
   p.on('websocket',socket=>{if(socket.url().includes('supabase'))socket.on('framesent',frame=>frames.push(String(frame.payload)));});
   await p.goto(url);await p.locator('#text').fill('SENTINELA-SECRETA-123 🌎');
-  await p.locator('#connect').click();await p.locator('#newRoom').click();
+  await p.locator('#connect').click();await p.locator('#linkOptions summary').click();await p.locator('#newRoom').click();
   await p.waitForFunction(()=>document.querySelector('#status').textContent.includes('Sala online'),{},{timeout:30000});
-  const link=await p.locator('#roomLink').inputValue();assert.ok(link.includes('#sala='));
+  await p.locator('.close').click();await p.locator('#text').fill('SENTINELA-SECRETA-123 🌎');await p.locator('#connect').click();const link=await p.locator('#roomLink').inputValue();assert.ok(link.includes('#sala='));
   await q.goto(link);
   await q.waitForFunction(()=>document.querySelector('#text').value==='SENTINELA-SECRETA-123 🌎',{},{timeout:30000});
   await p.locator('.close').click();await q.locator('#text').fill('Resposta pelo servidor');
@@ -44,3 +44,4 @@ const assert=require('node:assert/strict');
   console.log('PASS: real Supabase, encrypted WebSocket payload, bidirectional relay, three sheets, reconnect and P2P bridge both ways');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
+

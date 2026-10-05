@@ -2,9 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Notebook, validNote, readSignal, LIMIT} from '../public/papel/model.mjs';
 import {webcrypto} from 'node:crypto';
-import {newSecret,roomKeys,seal,open} from '../public/papel/crypto.mjs';
+import {newSecret,roomKeys,seal,open,namedSecret,normalizeRoom} from '../public/papel/crypto.mjs';
 import {Relay} from '../public/papel/relay.mjs';
 if(!globalThis.crypto)globalThis.crypto=webcrypto;
+test('nomes curtos convergem; senha errada e sala pública geram chaves diferentes',async()=>{
+ assert.equal(normalizeRoom(' Mesa1 '),'mesa1');assert.throws(()=>normalizeRoom('x'));assert.throws(()=>normalizeRoom('<script>'));
+ const publicKey=await namedSecret('mesa1');assert.equal(publicKey,await namedSecret(' MESA1 '));
+ const password='Uma senha longa 123';const protectedKey=await namedSecret('mesa1',password);
+ assert.equal(protectedKey,await namedSecret('mesa1',password));assert.notEqual(publicKey,protectedKey);
+ assert.notEqual(protectedKey,await namedSecret('mesa1','Outra senha longa 456'));await assert.rejects(namedSecret('mesa1','curta'));
+});
 test('AES-GCM oculta o texto, usa IV novo e rejeita adulteração e outra chave',async()=>{
  const secret=newSecret(),{key,topic}=await roomKeys(secret),other=await roomKeys(newSecret());
  const message={note:'segredo de teste 🌎'};
