@@ -8,9 +8,9 @@ const assert=require('node:assert/strict');
   const url=process.env.PAPEL_URL||'http://127.0.0.1:4337/papel/';
   await Promise.all([p.goto(url),q.goto(url)]);
   await p.locator('#text').fill('Texto inicial 🌎');
-  await p.locator('#connect').click();await p.locator('#invite').click();
+  await p.locator('#connect').click();await p.locator('#p2p summary').click();await p.locator('#invite').click();
   await p.waitForFunction(()=>document.querySelector('#outgoing').value.includes('offer'));
-  await q.locator('#connect').click();await q.locator('#incoming').fill(await p.locator('#outgoing').inputValue());await q.locator('#join').click();
+  await q.locator('#connect').click();await q.locator('#p2p summary').click();await q.locator('#incoming').fill(await p.locator('#outgoing').inputValue());await q.locator('#join').click();
   await q.waitForFunction(()=>document.querySelector('#outgoing').value.includes('answer'));
   await p.locator('#incoming').fill(await q.locator('#outgoing').inputValue());await p.locator('#finish').click();
   await Promise.all([p.waitForFunction(()=>document.querySelector('#status').dataset.connected==='true'),q.waitForFunction(()=>document.querySelector('#status').dataset.connected==='true')]);
@@ -34,3 +34,4 @@ const assert=require('node:assert/strict');
   console.log('PASS: real WebRTC, bidirectional text, three sheets, local recovery, download and mobile layout');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
+
