@@ -1,6 +1,6 @@
 import {videoAudio} from './video-audio.mjs?v=20260920-6';
 import {videoPrints} from './video-prints.mjs?v=20260921-1';
-import {recoveryAction} from './adaptive-recovery.mjs?v=20260920-3';
+import {recoveryAction,canRetryReception} from './adaptive-recovery.mjs?v=20261009-1';
 import {FileSender,PartReceiver,PART_SIZE} from './parts.mjs?v=20260920-1';
 import {TransferClock,elapsed,dataSize} from './transfer-clock.mjs?v=20260909-5';
 
@@ -16,7 +16,7 @@ import {pairPacket,readPair} from './pairing.mjs?v=20260909-3';
 
 import {TransferRate,duration,needsRecovery} from './transfer-rate.mjs?v=20260909-8';
 
-import {PauseState} from './pause-state.mjs?v=20260909-3';
+import {PauseState} from './pause-state.mjs?v=20261009-1';
 
 import {readSession,writeSession} from './session-store.mjs?v=20260909-3';
 
@@ -44,6 +44,7 @@ let lastGuidance=0,lastAutoZoom=0,lastDecoded=0;
 let cameraStartedAt=0,lastProgressAt=0,lastSpeedAdjustment=0;
 
 const pauseState=new PauseState(crypto.randomUUID());let pauseConfirmed=false;
+let automaticPauseAt=0,retryingReception=false;
 
 let restoredRoom=null,sessionEnabled=true,pendingNewPacket=null,resettingReception=false;
 
@@ -77,7 +78,7 @@ function updatePauseUI(){
 
   $('transferState').dataset.paused=String(paused);
 
-  $('pauseReceiver').textContent=paused?'Continuar recepção':'Pausar recepção';
+  $('pauseReceiver').textContent=paused?(pauseState.value.reason==='stall'?'Manter pausado':'Continuar recepção'):'Pausar recepção';
 
   $('pauseReceiver').hidden=!stream||receiver?.verified;
 
@@ -123,9 +124,11 @@ function updateDiagnostics(){
 
   const action=$('peerStatus');
 
-  if(action.textContent!==diagnosis.action)action.textContent=diagnosis.action;
+  const guidance=pauseState.value.paused&&pauseState.value.reason==='stall'?
+    'Pausa automática. O receptor tentará continuar em 5 segundos com a câmera e a conexão ativas.'+(mode==='receive'?' Use Manter pausado para cancelar.':''):diagnosis.action;
+  if(action.textContent!==guidance)action.textContent=guidance;
 
-  state.title=diagnosis.action;
+  state.title=guidance;
 
   if(['no-qr','no-new-blocks'].includes(diagnosis.code)&&$('cameraQuality').textContent!==diagnosis.text)$('cameraQuality').textContent=diagnosis.text;
 
@@ -134,6 +137,7 @@ function updateDiagnostics(){
 function sendPauseState(){if(transferId()&&pauseState.value.revision)return connection.send({type:'pause_state',role:mode,file:transferId(),...pauseState.value});}
 
 function applyPause(){
+  automaticPauseAt=pauseState.value.paused&&pauseState.value.reason==='stall'?performance.now():0;
 
   if(pauseState.value.paused){stop();rateMeter=new TransferRate();}
 
@@ -143,9 +147,30 @@ function applyPause(){
 
 }
 
-function setPaused(paused){pauseState.change(paused);pauseConfirmed=false;applyPause();rememberRoom();sendPauseState();}
+function setPaused(paused,reason){pauseState.change(paused,reason);pauseConfirmed=false;applyPause();rememberRoom();sendPauseState();}
 
-$('pauseReceiver').onclick=()=>setPaused(!pauseState.value.paused);
+$('pauseReceiver').onclick=()=>setPaused(pauseState.value.reason==='stall'||!pauseState.value.paused);
+
+function receptionCanRetry(){
+  return mode==='receive'&&receiver&&!receiver.verified&&canRetryReception({
+    pause:pauseState.value,confirmed:pauseConfirmed,waitMs:performance.now()-automaticPauseAt,
+    cameraActive:!!stream,connected:connection.ready,peerAgeMs:peerLastSeen?Date.now()-peerLastSeen:Infinity,
+    visible:!document.hidden,missing:receiver.meta.total-receiver.count,
+    blocked:opticalBlocked||resettingReception||!!verification||calibration.active||pairTarget&&pairTarget!==receiver.meta.id});
+}
+
+async function retryReception(){
+  if(retryingReception||!receptionCanRetry())return;
+  retryingReception=true;
+  const paused=pauseState.value,current=receiver,room=connection.roomId;
+  try{
+    // A manual pause while the repair request is in flight cancels this retry.
+    if(await feedback()&&pauseState.value===paused&&receiver===current&&connection.roomId===room&&receptionCanRetry()){
+      setPaused(false);
+      notice('Retomada automática: pedimos os blocos faltantes e continuamos a recepção. Os blocos já recebidos foram preservados.');
+    }
+  }finally{retryingReception=false;}
+}
 
 $('openSettings').onclick=()=>{ $('connectionDetails').open=!$('connectionDetails').open;if($('connectionDetails').open){$('connectionDetails').querySelector('summary').focus();$('connectionDetails').scrollIntoView({block:'nearest',behavior:'smooth'});}};
 
@@ -886,7 +911,7 @@ function onControl(m){
 
     if(timer&&m.cameraActive===true&&m.paused===false){
       const action=recoveryAction({age:m.progressAgeMs,fps:Number($('fps').value),sinceAdjustment:performance.now()-lastSpeedAdjustment});
-      if(action.pause){setPaused(true);notice('Pausa automática: receptor sem blocos novos há 25 segundos. Ajuste a câmera e toque em Continuar recepção.');}
+      if(action.pause){setPaused(true,'stall');notice('Pausa automática: receptor sem blocos novos há 25 segundos. Ele pedirá os blocos faltantes e tentará continuar em 5 segundos.');}
       else if(action.fps){$('fps').value=action.fps;$('fpsValue').textContent=action.fps;clearInterval(timer);timer=setInterval(nextFrame,1000/action.fps);lastSpeedAdjustment=performance.now();notice(`Leitura sem progresso: velocidade reduzida para ${action.fps} quadros/s. Reenviando os blocos solicitados.`);}
     }
     feedbackPeer=m.from;peerLastSeen=Date.now();updateLinkStatus();$('nextBlock').textContent=sender.repairs.length?sender.repairs[0]+1:'Aguardando verificação';$('connectionStatus').textContent=m.stalled?'Receptor sem blocos novos · fila de recuperação atualizada':'Receptor conectado · recuperação automática ativa';
@@ -910,6 +935,7 @@ async function feedback(){
   try{
     const sent=await connection.send(r.verified?{type:'done',role:mode,file:r.meta.id,count:r.count,hash:r.meta.hash}:{type:'missing',role:mode,file:r.meta.id,count:r.count,indices:r.missing(),stalled,cameraActive:!!stream,paused:pauseState.value.paused,progressAgeMs:Math.max(0,Math.round(performance.now()-(lastProgressAt||cameraStartedAt)))});
     if(stalled&&receiver===r)$('connectionStatus').textContent=sent?'Sem blocos novos · pedido de recuperação reenviado':'Retorno falhou · tentando novamente';
+    return sent;
   }catch{$('connectionStatus').textContent='Retorno falhou · tentando novamente';}finally{feedbackBusy=false;}
 
 }
@@ -926,9 +952,10 @@ setInterval(()=>{updateLinkStatus();updatePauseUI();if(connection.ready){sendPau
 setInterval(()=>{
   updateDiagnostics();
   if(mode==='receive'&&stream&&receiver&&!receiver.verified&&!pauseState.value.paused&&performance.now()-(lastProgressAt||cameraStartedAt)>=25000){
-    setPaused(true);notice('Pausa automática: 25 segundos sem blocos novos. Ajuste a câmera e toque em Continuar recepção. Os blocos recebidos estão preservados.');
+    setPaused(true,'stall');notice('Pausa automática: 25 segundos sem blocos novos. Tentaremos continuar em 5 segundos com os blocos faltantes. Mantenha a câmera apontada para o QR.');
   }
   if(!transferId()||opticalBlocked||resettingReception)return;
+  retryReception();
   if(connection.ready){if(mode==='receive'&&stream&&receiver&&!receiver.verified&&!pauseState.value.paused&&Date.now()-lastFeedbackAt>=3000)feedback();}
   else if(!connecting&&['CHANNEL_ERROR','TIMED_OUT','CLOSED','ERROR'].includes(connectionState)&&Date.now()-lastPairAttempt>=8000&&/^[a-f0-9]{64}$/i.test($('pairCode').value.trim())){lastPairAttempt=Date.now();connect(false);}
 },1000);

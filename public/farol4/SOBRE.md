@@ -15,6 +15,8 @@ integridade. Farol 1, 2 e 3 permanecem separados.
 6. O receptor solicita lotes de até 512 faltantes a cada três segundos. Pedidos repetidos compensam desconexões e mensagens perdidas.
 7. Após receber todos os blocos, verifica o SHA-256 e libera **Salvar arquivo verificado**. A confirmação via internet para o transmissor automaticamente.
 
+Se a leitura ficar 25 segundos sem blocos novos, os aparelhos fazem uma pausa automática. Após 5 segundos, o receptor reenvia a lista de faltantes e tenta continuar, preservando o que já recebeu. Isso exige câmera ligada, página visível, conexão ativa e confirmação recente do transmissor. **Manter pausado** cancela essa tentativa. Pausas manuais, câmera parada e falhas de armazenamento não são retomadas automaticamente.
+
 ## Status da sala
 
 A faixa no topo separa **Supabase conectado** de **outro aparelho confirmado**. O ID curto da sala deve ser igual nos dois aparelhos; ele é derivado do tópico, não é o segredo de pareamento. Uma confirmação exige mensagens autenticadas entre aparelhos em modos opostos. Após 12 segundos sem resposta, a faixa informa a ausência de confirmação recente. **Reconectar** usa o mesmo código de sala. Desconectar manualmente impede que a câmera reconecte sozinha ao mesmo QR.
