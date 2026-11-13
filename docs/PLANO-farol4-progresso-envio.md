@@ -61,3 +61,23 @@ Medição: 40 frames reais do envio (606×606, três canais por quadro), no nave
 - [ ] Próximo passo a decidir: testar a opção 3 (leitor mais rápido em paralelo) ou a parte C da opção 1 (ler em resolução menor só quando o QR estiver grande) no celular.
 
 Obs.: a medição de "imagens/s" da parte 3 (quadro "Diminua a velocidade") foi feita com o receptor em aba em segundo plano, onde o navegador desacelera a leitura da câmera. Esse número não serve para decidir; refazer em aba visível antes de confiar no conselho.
+
+## Parte 5 · opção 3: leitor zxing-wasm (13/11/2026)
+
+Pergunta: a opção 3 (leitor mais rápido, em paralelo) rende quanto?
+
+Teste: zxing-wasm 3.1.6 (publicado em 19/10/2026, MIT, arquivo WASM de 947 kB), carregado só para o teste, sem entrar no site. Mesmos frames reais do envio (40 quadros a 606 px; 10 quadros ampliados a 1100 px para simular a câmera). Cada canal lido como imagem em tons de cinza. Aba em primeiro plano. Máquina: notebook, não celular.
+
+| Leitor | 606 px | 1100 px (ampliado) |
+|---|---|---|
+| jsQR (atual) | 74 ms por quadro, 3/3 canais | 174 ms, 3/3 canais |
+| zxing, uma thread | 9,7 ms, 3/3 canais | 30 ms, 3/3 canais |
+| zxing, 3 workers (um por canal) | 11 ms (mais lento que uma thread: custo de mensagem) | 16 ms |
+
+- [x] zxing-wasm leu os 3 canais em todos os quadros: sem perda em relação ao jsQR.
+- [x] Teto do lado que envia: a tela mostra 12 quadros/s (33 QR/s) neste notebook. O transmissor não é o limite até 12.
+- [x] Conclusão: com jsQR, a 1100 px, o leitor aguenta cerca de 6 leituras por segundo, ou seja, o padrão de 6 quadros/s já está no limite. Com zxing em uma thread, cerca de 33 por segundo; com workers, cerca de 60.
+- [ ] Limites desta medição: notebook, não celular (celular é mais lento, então o ganho real é menor, mas a folga dos workers protege); a 1100 px os frames foram ampliados, então não provam leitura em câmera real.
+- [ ] Para chegar a 12 quadros/s no app, é preciso tirar a trava de 100 ms do leitor (hoje limita a 10 leituras por segundo).
+- [ ] Custo para o site: arquivo WASM de 947 kB, mais o código de workers. Não implementado ainda.
+- [x] Teste temporário apagado do projeto; nada foi commitado além deste registro.
