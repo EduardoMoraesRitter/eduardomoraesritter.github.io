@@ -8,11 +8,12 @@ import {cameraConstraints,syncCameraAspect} from './camera-view.mjs?v=20260914-1
 
 import {Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from './protocol.mjs?v=20261113-1';
 
-import {ReturnChannel} from './realtime.mjs?v=20260920-2';
+import {ReturnChannel} from './realtime.mjs?v=20261113-1';
 
 import {analyzeFrame,autoZoom,framing} from './camera.mjs?v=20261113-1';
 import {EventRate,screenDetail,confirmedDetail,readDetail} from './speed-meter.mjs?v=20261113-1';
 import {overlayQuad,overlayState,drawOverlay} from './qr-overlay.mjs?v=20261113-1';
+import {speedAdvice,adviceBadge,clampFps,FPS_MIN,FPS_MAX} from './speed-advice.mjs?v=20261113-1';
 
 import {pairPacket,readPair} from './pairing.mjs?v=20260909-3';
 
@@ -31,7 +32,9 @@ const $=id=>document.getElementById(id);
 
 const notice=text=>{$('notice').textContent=text;};
 
-const screenFrames=new EventRate(),screenCodes=new EventRate(),readRate=new EventRate();let lastLocated=0;
+const screenFrames=new EventRate(),screenCodes=new EventRate(),readRate=new EventRate(),scanRate=new EventRate(),freshRate=new EventRate();let lastLocated=0;
+// Speed talk between the two sides: the sender's advice, and the receiver's copy of it.
+let lastAdvice={action:'wait',target:0,text:''},lastAdviceAt=0,peerSpeed=null;
 let sendRateMeter=new TransferRate(),sendRateOwner=null,sendClock=new TransferClock(),sendClockOwner=null,sendConfirmed=null,sendStalled=false;
 let mode='send',sender=null,receiver=null,file=null,timer=null,frame=0,stream=null,raf=0;
 
@@ -257,7 +260,9 @@ function showPair(){calibration.cancel();
 
 $('showPair').onclick=showPair;
 
-$('fps').oninput=()=>{$('fpsValue').textContent=$('fps').value;if(timer){stop();play();}};
+$('fps').oninput=()=>{$('fpsValue').textContent=$('fps').value;if(timer){stop();play();}lastSpeedAdjustment=performance.now();lastAdviceAt=0;updateSpeedControl();sendSpeedState();};
+$('sendSlower').onclick=()=>setFps(currentFps()-1);$('sendFaster').onclick=()=>setFps(currentFps()+1);
+$('receiveSlower').onclick=()=>requestSpeed(-1);$('receiveFaster').onclick=()=>requestSpeed(1);
 
 $('startBlock').onchange=()=>{
 
@@ -411,6 +416,41 @@ function updateSendProgress(){
   $('sendSummary').textContent=sendClock.startedAt?`${dataSize(Math.min(meta.size,v.count*meta.bs))} de ${dataSize(meta.size)} · Tempo total: ${elapsed(totalMs)} · Transmitindo: ${elapsed(activeMs)} · Pausas: ${elapsed(pausedMs)}`:'';
 }
 setInterval(updateSendProgress,1000);
+function currentFps(){return Number($('fps').value);}
+// Sender only: change the frame rate without restarting the transfer, then tell the receiver.
+function setFps(value,why=''){
+  const fps=clampFps(value);if(fps===currentFps())return false;
+  $('fps').value=fps;$('fpsValue').textContent=fps;
+  if(timer){clearInterval(timer);timer=setInterval(nextFrame,1000/fps);}
+  lastSpeedAdjustment=performance.now();screenFrames.reset();screenCodes.reset();lastAdviceAt=0;
+  if(why)notice(why);updateSpeedControl();sendSpeedState();return true;
+}
+function sendSpeedState(){
+  if(mode!=='send'||!sender||!connection.ready)return;
+  const fresh=!!timer&&Date.now()-lastAdviceAt<12000;
+  connection.send({type:'speed',role:'send',file:sender.meta.id,fps:currentFps(),action:fresh?lastAdvice.action:'wait',text:fresh?lastAdvice.text:''});
+}
+// Receiver only: ask the sender for one step faster or slower.
+async function requestSpeed(delta){
+  if(mode!=='receive'||!transferId()||!connection.ready)return;
+  const sent=await connection.send({type:'speed_request',role:'receive',file:transferId(),delta});
+  $('receiveSpeedAdvice').textContent=sent?'Pedido enviado ao transmissor…':'Não foi possível enviar o pedido. Confira a conexão.';
+}
+function updateSpeedControl(){
+  const fps=currentFps(),adviceFresh=!!timer&&Date.now()-lastAdviceAt<12000;
+  $('sendFpsLabel').textContent=`${fps} quadros/s`;$('sendSlower').disabled=fps<=FPS_MIN;$('sendFaster').disabled=fps>=FPS_MAX;
+  $('sendSpeedAdvice').textContent=adviceFresh?lastAdvice.text:timer?'Sem medidas do receptor: o conselho de velocidade precisa da sala conectada e da câmera lendo.':'';
+  $('sendSpeedAdvice').dataset.advice=adviceFresh?lastAdvice.action:'wait';
+  const known=!!peerSpeed&&connection.ready&&Date.now()-peerSpeed.at<12000;
+  $('receiveFpsLabel').textContent=known?`${peerSpeed.fps} quadros/s`:'—';
+  $('receiveSlower').disabled=!known||peerSpeed.fps<=FPS_MIN;$('receiveFaster').disabled=!known||peerSpeed.fps>=FPS_MAX;
+  if(!known||peerSpeed.text||!$('receiveSpeedAdvice').textContent.startsWith('Pedido enviado'))
+    $('receiveSpeedAdvice').textContent=known?peerSpeed.text:connection.ready?'Aguardando a velocidade do transmissor.':'Sem conexão de retorno: ajuste a velocidade no transmissor.';
+  $('receiveSpeedAdvice').dataset.advice=known?peerSpeed.action:'wait';
+  const badge=$('speedBadge');badge.hidden=!(known&&stream);
+  if(known){badge.textContent=adviceBadge(peerSpeed.fps,peerSpeed.action);badge.dataset.advice=peerSpeed.action;}
+}
+setInterval(updateSpeedControl,1000);
 
 
 
@@ -544,7 +584,7 @@ function stopCamera(){calibration.cancel();
 
   $('camera').textContent='Ligar câmera e escanear';$('zoom').disabled=true;
 
-  $('cameraQuality').textContent='Câmera desligada.';lastLocated=0;readRate.reset();drawOverlay($('qrOverlay'),null);
+  $('cameraQuality').textContent='Câmera desligada.';lastLocated=0;readRate.reset();scanRate.reset();freshRate.reset();drawOverlay($('qrOverlay'),null);
 
   updateTiming();
 
@@ -659,7 +699,7 @@ async function scanFrame(time){
 
       scanCtx.drawImage(video,(vw-sw)/2,(vh-sh)/2,sw,sh,0,0,scan.width,scan.height);const img=scanCtx.getImageData(0,0,scan.width,scan.height);
 
-      let location=null,validRead=false;
+      let location=null,validRead=false;const countBefore=receiver?.count||0;scanRate.add(time);
 
       for(let ch=0;ch<3;ch++){
 
@@ -672,6 +712,7 @@ async function scanFrame(time){
       }
 
       if(validRead)lastDecoded=time;
+      freshRate.add(time,Math.max(0,(receiver?.count||0)-countBefore));
       // Outline the QR where the scanner found it; green when well framed, amber when it needs adjusting.
       if(location&&stream){lastLocated=time;const overlay=$('qrOverlay');drawOverlay(overlay,overlayQuad(location,scan.width,scan.height,overlay.clientWidth,overlay.clientHeight),overlayState(framing(location,scan.width,scan.height)));}
       else if(lastLocated&&time-lastLocated>450){lastLocated=0;drawOverlay($('qrOverlay'),null);}
@@ -920,6 +961,10 @@ function onControl(m){
 
   }
 
+  if(m.type==='speed'){
+    if(mode==='receive'&&m.role==='send'&&m.file===transferId()&&Number.isInteger(m.fps)&&m.fps>=FPS_MIN&&m.fps<=FPS_MAX&&['wait','up','down','keep','frame'].includes(m.action)&&typeof m.text==='string'&&m.text.length<=200){peerSpeed={fps:m.fps,action:m.action,text:m.text,at:Date.now()};updateSpeedControl();}
+    return;
+  }
   if(mode!=='send'||!sender||m.role!=='receive'||m.file!==sender.meta.id)return;
 
   if(feedbackPeer&&feedbackPeer!==m.from)return;
@@ -936,6 +981,10 @@ function onControl(m){
 
   }
 
+  if(m.type==='speed_request'){
+    if(m.delta===1||m.delta===-1){const fps=clampFps(currentFps()+m.delta);if(!setFps(fps,`Receptor pediu ${m.delta>0?'mais':'menos'} velocidade: ${fps} quadros/s.`))sendSpeedState();}
+    return;
+  }
   if(!Number.isInteger(m.count)||m.count<0||m.count>sender.meta.total)return;
 
   if(m.type==='missing'){
@@ -945,10 +994,13 @@ function onControl(m){
     if(timer&&m.cameraActive===true&&m.paused===false){
       const action=recoveryAction({age:m.progressAgeMs,fps:Number($('fps').value),sinceAdjustment:performance.now()-lastSpeedAdjustment});
       if(action.pause){setPaused(true,'stall');notice('Pausa automática: receptor sem blocos novos há 25 segundos. Ele pedirá os blocos faltantes e tentará continuar em 5 segundos.');}
-      else if(action.fps){$('fps').value=action.fps;$('fpsValue').textContent=action.fps;clearInterval(timer);timer=setInterval(nextFrame,1000/action.fps);lastSpeedAdjustment=performance.now();notice(`Leitura sem progresso: velocidade reduzida para ${action.fps} quadros/s. Reenviando os blocos solicitados.`);}
+      else if(action.fps)setFps(action.fps,`Leitura sem progresso: velocidade reduzida para ${action.fps} quadros/s. Reenviando os blocos solicitados.`);
     }
     feedbackPeer=m.from;peerLastSeen=Date.now();updateLinkStatus();$('nextBlock').textContent=sender.repairs.length?sender.repairs[0]+1:'Aguardando verificação';$('connectionStatus').textContent=m.stalled?'Receptor sem blocos novos · fila de recuperação atualizada':'Receptor conectado · recuperação automática ativa';
 
+    {const clock=performance.now(),measure=v=>Number.isFinite(v)&&v>=0&&v<=1000?v:0;
+      lastAdvice=speedAdvice({fps:currentFps(),frames:screenFrames.perSecond(clock),codes:screenCodes.perSecond(clock),scans:measure(m.scans),fresh:measure(m.fresh),sinceAdjustment:clock-lastSpeedAdjustment,active:!!timer&&m.cameraActive===true&&m.paused===false&&!m.stalled});
+      lastAdviceAt=Date.now();updateSpeedControl();sendSpeedState();}
     sendConfirmed=m.count;sendStalled=!!m.stalled;updateSendProgress();$('peerProgress').textContent=`Receptor já tem ${m.count} de ${sender.meta.total} blocos. Faltam ${sender.meta.total-m.count}. ${sender.repairs.length?"Próximo solicitado: "+(sender.repairs[0]+1):"Aguardando verificação"}.`;
 
   }else if(m.type==='done'&&m.count===sender.meta.total&&m.hash===sender.meta.hash){
@@ -966,7 +1018,7 @@ async function feedback(){
   feedbackBusy=true;lastFeedbackAt=Date.now();
   const r=receiver,stalled=needsRecovery({active:!!stream,paused:pauseState.value.paused,complete:r.verified,lastDecoded,progressSince:lastProgressAt||cameraStartedAt,now:performance.now()});
   try{
-    const sent=await connection.send(r.verified?{type:'done',role:mode,file:r.meta.id,count:r.count,hash:r.meta.hash}:{type:'missing',role:mode,file:r.meta.id,count:r.count,indices:r.missing(),stalled,cameraActive:!!stream,paused:pauseState.value.paused,progressAgeMs:Math.max(0,Math.round(performance.now()-(lastProgressAt||cameraStartedAt)))});
+    const sent=await connection.send(r.verified?{type:'done',role:mode,file:r.meta.id,count:r.count,hash:r.meta.hash}:{type:'missing',role:mode,file:r.meta.id,count:r.count,indices:r.missing(),stalled,cameraActive:!!stream,paused:pauseState.value.paused,scans:Math.round(scanRate.perSecond(performance.now())*10)/10,fresh:Math.round(freshRate.perSecond(performance.now())*10)/10,progressAgeMs:Math.max(0,Math.round(performance.now()-(lastProgressAt||cameraStartedAt)))});
     if(stalled&&receiver===r)$('connectionStatus').textContent=sent?'Sem blocos novos · pedido de recuperação reenviado':'Retorno falhou · tentando novamente';
     return sent;
   }catch{$('connectionStatus').textContent='Retorno falhou · tentando novamente';}finally{feedbackBusy=false;}

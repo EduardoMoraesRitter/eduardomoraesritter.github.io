@@ -19,7 +19,7 @@ Antes: o envio só tinha os contadores "Total / Próximo / Enviados" e uma frase
 
 ## Parte 2 · pedidos seguintes (13/11/2026)
 
-- [ ] Pesquisa: existe solução que transfere mais rápido? → `docs/pesquisa-farol4-transferencia-mais-rapida-2026-11-13.md`
+- [x] Pesquisa: existe solução que transfere mais rápido? → `docs/pesquisa-farol4-transferencia-mais-rapida-2026-11-13.md`
 - [x] Mostrar a velocidade em unidades fáceis: quadros por segundo, QR por segundo, blocos por segundo e dados por minuto — `speed-meter.mjs`, medido de verdade (janela de 5 s), não só o valor configurado
   - envio: "Na tela: 6.0 quadros/s · 17 QR/s · 403 kB/min · No receptor: 9.9 blocos/s · 237 kB/min"
   - recepção: "Leitura: 23 QR/s · 8.9 blocos novos/s · 213 kB/min" (QR/s conta também as leituras repetidas)
@@ -27,3 +27,23 @@ Antes: o envio só tinha os contadores "Total / Próximo / Enviados" e uma frase
 - [x] Testado no navegador (13/11/2026) com câmera simulada (a tela do envio espelhada como vídeo): moldura verde no QR centralizado, amarela com o QR deslocado para o canto, e acompanha o zoom digital (diferença de cerca de 1 módulo do QR). Falta conferir com a câmera de um celular de verdade
 - [x] Testes de unidade: `tests/farol4-speed-overlay.test.mjs` (4 testes) · suíte farol4 inteira: 42 passam, 1 pulado (Supabase ao vivo, já era pulado)
 - [x] Commit
+
+## Parte 3 · envio e recepção conversando sobre velocidade (13/11/2026)
+
+Pedido: os dois lados se comunicarem e mostrarem num canto "aumenta a velocidade" / "diminui a velocidade".
+
+Antes: pela sala só passavam pedidos de blocos, pausa e confirmação. Sobre velocidade só existia a redução automática quando a leitura travava.
+
+- [x] `speed-advice.mjs`: conselho calculado com o que o receptor mede (imagens da câmera analisadas por segundo, blocos novos por segundo) contra o que o envio mostra (quadros e QR por segundo); 5 testes em `node --test`
+  - "pode aumentar": 90% ou mais dos QR viram blocos novos e a câmera tem folga
+  - "diminua": a tela troca mais rápido do que a câmera analisa, ou menos de 55% dos QR viram blocos novos
+  - "não é a velocidade": leitura fraca mesmo com cada quadro visto duas vezes → ajustar distância, foco e brilho
+- [x] Receptor manda as medidas junto do pedido de blocos (`scans`, `fresh`); envio calcula o conselho e devolve para o receptor (mensagem `speed`)
+- [x] Quadro de velocidade nos dois lados: velocidade atual em quadros/s, conselho e botões "Mais devagar" / "Mais rápido"; no receptor os botões pedem a mudança ao envio (mensagem `speed_request`)
+- [x] Selo no canto da câmera do receptor com a velocidade e o conselho ("6 quadros/s · diminua")
+- [x] Testado no navegador (13/11/2026), envio e recepção na mesma sala com câmera simulada: os dois lados mostraram "Diminua a velocidade: a câmera analisa 1.0 imagens/s e a tela troca 6.0 vezes/s"; o botão "Mais devagar" do receptor baixou o envio de 6 para 5 quadros/s com o aviso "Receptor pediu menos velocidade". O conselho "pode aumentar" só foi conferido no teste de unidade. Suíte farol4: 47 passam, 1 pulado
+- [x] Commit
+
+## Pesquisa
+
+- [x] `docs/pesquisa-farol4-transferencia-mais-rapida-2026-11-13.md` (13 soluções comparadas, 8 recomendações em ordem, 70 links). Resposta curta: dá para ir 3 a 6 vezes mais rápido mexendo só no Farol (estimativa, não medição)
