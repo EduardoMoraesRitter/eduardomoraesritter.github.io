@@ -1,4 +1,4 @@
-import {Sender,Receiver,validMeta,MAX_BYTES,b64,unb64,crc32} from './protocol.mjs?v=20260920-1';
+import {Sender,Receiver,validMeta,MAX_BYTES,b64,unb64,crc32} from './protocol.mjs?v=20261113-1';
 export const READ_SIZE=1024*1024;
 export const PART_SIZE=8*1024*1024;
 async function hasher(){if(!globalThis.hashwasm?.createSHA256)throw Error('Verificador indisponível. Recarregue a página.');return globalThis.hashwasm.createSHA256();}

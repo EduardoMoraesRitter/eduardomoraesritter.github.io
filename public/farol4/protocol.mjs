@@ -34,7 +34,9 @@ export class Sender {
     if(!validMeta(meta)) throw Error('Configuração de blocos inválida.');
     return new Sender(bytes,meta);
   }
-  constructor(bytes,meta) { this.bytes=bytes; this.meta=meta; this.cursor=0; this.repairs=[]; this.sent=0; this.remotePlan=false; }
+  constructor(bytes,meta) { this.bytes=bytes; this.meta=meta; this.cursor=0; this.repairs=[]; this.sent=0; this.remotePlan=false; this.resetCoverage(); }
+  // Distinct blocks shown at least once; repetitions are counted only in `sent`.
+  resetCoverage() { this.shown=new Uint8Array(this.meta.total); this.covered=0; }
   metadata() { return 'F4|M|'+b64(enc.encode(JSON.stringify(this.meta))); }
   packet(i) {
     if (!Number.isInteger(i)||i<0||i>=this.meta.total) throw Error('Bloco inválido');
@@ -52,7 +54,7 @@ export class Sender {
   next() {
     if(this.remotePlan&&!this.repairs.length)return null;
     const i=this.repairs.length?this.repairs.shift():this.cursor++%this.meta.total;
-    this.sent++; return this.packet(i);
+    this.sent++; if(!this.shown[i]){this.shown[i]=1;this.covered++;} return this.packet(i);
   }
 }
 export class Receiver {

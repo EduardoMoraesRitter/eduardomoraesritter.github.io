@@ -109,3 +109,5 @@ button,summary,input,textarea,select,a{scroll-margin-block:16px 100px}
  .senderSidebar{grid-column:2;grid-row:2;display:flex;flex-direction:column;gap:14px;max-height:calc(100dvh - 106px);overflow:auto;scrollbar-gutter:stable;padding-right:8px;position:sticky;top:12px;min-width:0}
  .senderSidebar>*{flex-shrink:0;min-width:0;max-width:100%}
 }
+.sendProgress{font-size:13px;font-variant-numeric:tabular-nums;min-width:0;padding-top:12px}.sendProgress progress{margin:6px 0 10px}.sendProgress #sendSummary{margin:8px 0 0}
+@media(min-width:951px){.senderSidebar .sendProgress{padding:12px 0;border-block:1px solid var(--line)}}

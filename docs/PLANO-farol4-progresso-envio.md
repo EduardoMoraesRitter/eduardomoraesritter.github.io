@@ -1,0 +1,25 @@
+# Farol 4 · progresso no lado que envia
+
+Pedido (13/11/2026): o lado que envia não mostra o tempo nem a barra de percentual, como o lado que recebe.
+
+Antes: o envio só tinha os contadores "Total / Próximo / Enviados" e uma frase do receptor.
+
+## Parte 1 · painel de progresso no envio
+
+- [x] Sender conta quantos blocos diferentes já passaram na tela (`covered`) — `protocol.mjs`
+- [x] Módulo `send-progress.mjs` calcula percentual, tempo restante e velocidade, com teste em `node --test` (4 testes, todos passam)
+  - com retorno da sala: usa os blocos confirmados pelo receptor
+  - sem retorno: usa os blocos já transmitidos e estima o tempo pela velocidade de quadros
+- [x] Painel no envio: `x / total blocos`, percentual, barra, tempo restante, velocidade, resumo de tempo (total, transmitindo, pausas). Fica logo acima do seletor de arquivo no computador e logo abaixo do QR no celular; só aparece com arquivo escolhido
+- [x] Zera a contagem ao trocar de arquivo e ao recomeçar do bloco 1; 100% e "Concluído" ao receber "done"
+- [x] Testado no navegador (13/11/2026), arquivo de 200 kB, 500 blocos:
+  - envio sozinho: "117 / 500 blocos transmitidos · 23% · ~24 s (1ª volta) · 6.4 KiB/s na tela"
+  - envio + recepção na mesma sala: "159 / 500 blocos confirmados · 31% · ~30 s · 4.5 KiB/s", terminando em "500 / 500 · 100% · Concluído"
+- [x] Commit
+
+## Parte 2 · pedidos seguintes (13/11/2026)
+
+- [ ] Pesquisa: existe solução que transfere mais rápido? → `docs/pesquisa-farol4-transferencia-mais-rapida-2026-11-13.md`
+- [ ] Mostrar a velocidade em unidades fáceis: QR por segundo, blocos por segundo e dados por minuto, no envio e na recepção
+- [ ] Na câmera do receptor, desenhar a moldura em volta do QR encontrado, para ver se está centralizado
+- [ ] Testar no navegador e commitar

@@ -1,12 +1,12 @@
 import {videoAudio} from './video-audio.mjs?v=20260920-6';
 import {videoPrints} from './video-prints.mjs?v=20260921-1';
 import {recoveryAction,canRetryReception} from './adaptive-recovery.mjs?v=20261009-1';
-import {FileSender,PartReceiver,PART_SIZE} from './parts.mjs?v=20260920-1';
+import {FileSender,PartReceiver,PART_SIZE} from './parts.mjs?v=20261113-1';
 import {TransferClock,elapsed,dataSize} from './transfer-clock.mjs?v=20260909-5';
 
 import {cameraConstraints,syncCameraAspect} from './camera-view.mjs?v=20260914-1';
 
-import {Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from './protocol.mjs?v=20260920-1';
+import {Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from './protocol.mjs?v=20261113-1';
 
 import {ReturnChannel} from './realtime.mjs?v=20260920-2';
 
@@ -15,6 +15,7 @@ import {analyzeFrame,autoZoom} from './camera.mjs?v=20260909-3';
 import {pairPacket,readPair} from './pairing.mjs?v=20260909-3';
 
 import {TransferRate,duration,needsRecovery} from './transfer-rate.mjs?v=20260909-8';
+import {sendProgress} from './send-progress.mjs?v=20261113-1';
 
 import {PauseState} from './pause-state.mjs?v=20261009-1';
 
@@ -28,6 +29,7 @@ const $=id=>document.getElementById(id);
 
 const notice=text=>{$('notice').textContent=text;};
 
+let sendRateMeter=new TransferRate(),sendRateOwner=null,sendClock=new TransferClock(),sendClockOwner=null,sendConfirmed=null,sendStalled=false;
 let mode='send',sender=null,receiver=null,file=null,timer=null,frame=0,stream=null,raf=0;
 
 let frameReading=false,frameEpoch=0;
@@ -262,7 +264,7 @@ $('startBlock').onchange=()=>{
 
 };
 
-$('restart').onclick=()=>{if(sender){setPaused(true);sender.cursor=0;sender.repairs=[];sender.sent=0;$('startBlock').value='1';$('sentBlocks').textContent='0';$('nextBlock').textContent='1';render([sender.metadata()]);notice('Pronto para recomeçar do bloco 1.');}};
+$('restart').onclick=()=>{if(sender){setPaused(true);sender.cursor=0;sender.repairs=[];sender.sent=0;sender.resetCoverage();$('startBlock').value='1';$('sentBlocks').textContent='0';$('nextBlock').textContent='1';render([sender.metadata()]);notice('Pronto para recomeçar do bloco 1.');}};
 
 $('repair').onclick=()=>{
 
@@ -304,7 +306,7 @@ async function prepare(){calibration.cancel();
 
     $('nextBlock').textContent=sender.cursor+1;$('sentBlocks').textContent='0';$('startBlock').max=sender.meta.total;$('startBlock').value=String(sender.cursor+1);
 
-    $('peerProgress').textContent='Aguardando confirmação do receptor.';
+    $('peerProgress').textContent='Aguardando confirmação do receptor.';sendConfirmed=null;sendStalled=false;updateSendProgress();
 
     for(const id of ['play','restart','repair'])$(id).disabled=false;
 
@@ -382,6 +384,26 @@ function updateTiming(){
 }
 
 setInterval(updateTiming,1000);
+
+// Sender panel: receiver confirmations when the room is connected, otherwise blocks shown on screen.
+function updateSendProgress(){
+  $('sendProgressPanel').hidden=!sender;
+  if(!sender){$('sendCount').textContent='0 blocos';$('sendPercent').textContent='0%';$('sendProgressBar').value=0;$('sendRemaining').textContent='Escolha um arquivo';$('sendRate').textContent='—';$('sendSummary').textContent='';return;}
+  if(sendRateOwner!==sender){sendRateOwner=sender;sendRateMeter=new TransferRate();}
+  if(sendClockOwner!==sender){sendClockOwner=sender;sendClock=new TransferClock();}
+  const now=Date.now(),{meta}=sender,running=!!timer;
+  sendClock.update(now,running&&!transmissionDone,sender.sent>0);
+  if(transmissionDone)sendClock.finish(now);
+  let rate=0,stalled=sendStalled;
+  if(Number.isInteger(sendConfirmed)){const observed=sendRateMeter.observe(Math.min(meta.size,sendConfirmed*meta.bs),performance.now());rate=observed.rate;stalled=stalled||observed.stalled;}
+  const v=sendProgress({total:meta.total,size:meta.size,bs:meta.bs,confirmed:sendConfirmed,covered:sender.covered,done:transmissionDone,running,paused:pauseState.value.paused,fps:Number($('fps').value),rate,stalled});
+  $('sendCount').textContent=v.countLabel;$('sendPercent').textContent=`${v.percent}%`;$('sendProgressBar').value=v.fraction*100;
+  $('sendRemaining').textContent=v.remaining;$('sendRate').textContent=v.speed;
+  const {totalMs,activeMs,pausedMs}=sendClock.summary(now);
+  $('sendSummary').textContent=sendClock.startedAt?`${dataSize(Math.min(meta.size,v.count*meta.bs))} de ${dataSize(meta.size)} · Tempo total: ${elapsed(totalMs)} · Transmitindo: ${elapsed(activeMs)} · Pausas: ${elapsed(pausedMs)}`:'';
+}
+setInterval(updateSendProgress,1000);
+
 
 
 
@@ -916,11 +938,11 @@ function onControl(m){
     }
     feedbackPeer=m.from;peerLastSeen=Date.now();updateLinkStatus();$('nextBlock').textContent=sender.repairs.length?sender.repairs[0]+1:'Aguardando verificação';$('connectionStatus').textContent=m.stalled?'Receptor sem blocos novos · fila de recuperação atualizada':'Receptor conectado · recuperação automática ativa';
 
-    $('peerProgress').textContent=`Receptor já tem ${m.count} de ${sender.meta.total} blocos. Faltam ${sender.meta.total-m.count}. ${sender.repairs.length?"Próximo solicitado: "+(sender.repairs[0]+1):"Aguardando verificação"}.`;
+    sendConfirmed=m.count;sendStalled=!!m.stalled;updateSendProgress();$('peerProgress').textContent=`Receptor já tem ${m.count} de ${sender.meta.total} blocos. Faltam ${sender.meta.total-m.count}. ${sender.repairs.length?"Próximo solicitado: "+(sender.repairs[0]+1):"Aguardando verificação"}.`;
 
   }else if(m.type==='done'&&m.count===sender.meta.total&&m.hash===sender.meta.hash){
 
-    feedbackPeer=m.from;peerLastSeen=Date.now();stop();transmissionDone=true;updatePauseUI();$('peerProgress').textContent='Receptor confirmou arquivo completo e SHA-256 correto.';notice('Transferência concluída. Transmissão parada automaticamente.');
+    feedbackPeer=m.from;peerLastSeen=Date.now();stop();transmissionDone=true;updatePauseUI();sendConfirmed=sender.meta.total;sendStalled=false;updateSendProgress();$('peerProgress').textContent='Receptor confirmou arquivo completo e SHA-256 correto.';notice('Transferência concluída. Transmissão parada automaticamente.');
 
   }
 
@@ -1092,7 +1114,7 @@ $('switchCamera').onclick=async()=>{
  else notice(cameraFacing==='user'?'Câmera frontal selecionada. Ligue a câmera para começar.':'Câmera traseira selecionada. Ligue a câmera para começar.');
 };
 const senderSidebar=document.createElement('aside');senderSidebar.className='senderSidebar';senderSidebar.setAttribute('aria-label','Controles e progresso do envio');
-const sidebarParts=['.linkStatus','.flowLine','.sendControls','.fileSummary','.connection','footer'].map(selector=>{const element=document.querySelector(selector),anchor=document.createComment('sidebar-position');element.before(anchor);return {element,anchor};});
+const sidebarParts=['.linkStatus','.flowLine','.sendProgress','.sendControls','.fileSummary','.connection','footer'].map(selector=>{const element=document.querySelector(selector),anchor=document.createComment('sidebar-position');element.before(anchor);return {element,anchor};});
 function arrangeSenderSidebar(){
  const wide=mode==='send'&&matchMedia('(min-width:951px)').matches;
  if(wide){document.querySelector('.wrap').append(senderSidebar);for(const {element} of sidebarParts)senderSidebar.append(element);}
