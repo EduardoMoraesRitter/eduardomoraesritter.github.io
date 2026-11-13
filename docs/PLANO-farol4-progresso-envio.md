@@ -47,3 +47,17 @@ Antes: pela sala só passavam pedidos de blocos, pausa e confirmação. Sobre ve
 ## Pesquisa
 
 - [x] `docs/pesquisa-farol4-transferencia-mais-rapida-2026-11-13.md` (13 soluções comparadas, 8 recomendações em ordem, 70 links). Resposta curta: dá para ir 3 a 6 vezes mais rápido mexendo só no Farol (estimativa, não medição)
+
+## Parte 4 · qual das 3 opções rende mais (13/11/2026)
+
+Pergunta: qual das três opções da pesquisa dá mais ganho, e testar uma delas.
+
+Medição: 40 frames reais do envio (606×606, três canais por quadro), no navegador, aba em primeiro plano. Cada caso rodou 3 vezes.
+
+- [x] Opção 1, parte A: trocar `attemptBoth` por `dontInvert`. Resultado: **sem ganho** (66 ms por quadro nos dois casos). O jsQR só tenta a versão invertida quando a primeira passada falha, e nesse envio o QR sempre é achado na primeira. O "até 50% a mais" da pesquisa vale só para canal sem QR.
+- [x] Opção 1, parte B: reaproveitar os três vetores de pixels. Resultado: ganho desprezível (cerca de 2,5 ms de 66 ms). Não foi commitado.
+- [x] Opção 1, parte C: ler a imagem reduzida. Resultado: 0,75× dá cerca de 25% a menos de tempo por quadro; 0,5× dá cerca de 50% a menos, e os três canais continuam sendo lidos. **Não testado no celular**: aqui o QR ocupa o quadro inteiro; com a câmera longe pode perder detalhe.
+- [x] Conclusão: o gargalo é o próprio jsQR (cerca de 22 ms por chamada, a 606 px). Em celular, a imagem é maior, então o gargalo fica pior.
+- [ ] Próximo passo a decidir: testar a opção 3 (leitor mais rápido em paralelo) ou a parte C da opção 1 (ler em resolução menor só quando o QR estiver grande) no celular.
+
+Obs.: a medição de "imagens/s" da parte 3 (quadro "Diminua a velocidade") foi feita com o receptor em aba em segundo plano, onde o navegador desacelera a leitura da câmera. Esse número não serve para decidir; refazer em aba visível antes de confiar no conselho.
