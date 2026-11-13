@@ -20,6 +20,10 @@ Antes: o envio só tinha os contadores "Total / Próximo / Enviados" e uma frase
 ## Parte 2 · pedidos seguintes (13/11/2026)
 
 - [ ] Pesquisa: existe solução que transfere mais rápido? → `docs/pesquisa-farol4-transferencia-mais-rapida-2026-11-13.md`
-- [ ] Mostrar a velocidade em unidades fáceis: QR por segundo, blocos por segundo e dados por minuto, no envio e na recepção
-- [ ] Na câmera do receptor, desenhar a moldura em volta do QR encontrado, para ver se está centralizado
-- [ ] Testar no navegador e commitar
+- [x] Mostrar a velocidade em unidades fáceis: quadros por segundo, QR por segundo, blocos por segundo e dados por minuto — `speed-meter.mjs`, medido de verdade (janela de 5 s), não só o valor configurado
+  - envio: "Na tela: 6.0 quadros/s · 17 QR/s · 403 kB/min · No receptor: 9.9 blocos/s · 237 kB/min"
+  - recepção: "Leitura: 23 QR/s · 8.9 blocos novos/s · 213 kB/min" (QR/s conta também as leituras repetidas)
+- [x] Na câmera do receptor, moldura em volta do QR encontrado — `qr-overlay.mjs`: verde quando centralizado e no tamanho certo, amarela quando fora do centro, pequeno demais ou perto demais; some 0,45 s depois de perder o QR
+- [x] Testado no navegador (13/11/2026) com câmera simulada (a tela do envio espelhada como vídeo): moldura verde no QR centralizado, amarela com o QR deslocado para o canto, e acompanha o zoom digital (diferença de cerca de 1 módulo do QR). Falta conferir com a câmera de um celular de verdade
+- [x] Testes de unidade: `tests/farol4-speed-overlay.test.mjs` (4 testes) · suíte farol4 inteira: 42 passam, 1 pulado (Supabase ao vivo, já era pulado)
+- [x] Commit

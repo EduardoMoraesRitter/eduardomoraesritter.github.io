@@ -1,4 +1,12 @@
 // Image guidance is a heuristic, not a lux meter or a sharpness guarantee.
+// How much of the image the QR fills and whether it sits near the centre.
+export function framing(location,width,height){
+  if(!location)return {coverage:0,centered:false};
+  const p=[location.topLeftCorner,location.topRightCorner,location.bottomLeftCorner,location.bottomRightCorner];
+  const xs=p.map(p=>p.x),ys=p.map(p=>p.y),left=Math.min(...xs),right=Math.max(...xs),top=Math.min(...ys),bottom=Math.max(...ys);
+  return {coverage:Math.max((right-left)/width,(bottom-top)/height),
+    centered:Math.abs((left+right)/2-width/2)<width*.12&&Math.abs((top+bottom)/2-height/2)<height*.12};
+}
 export function analyzeFrame(data, width, height, location=null) {
   const hist=new Uint32Array(256);let samples=0;
   for(let y=Math.floor(height*.15);y<height*.85;y+=4)for(let x=Math.floor(width*.15);x<width*.85;x+=4){
@@ -6,13 +14,7 @@ export function analyzeFrame(data, width, height, location=null) {
   }
   const quantile=q=>{let n=0;for(let i=0;i<256;i++){n+=hist[i];if(n>=samples*q)return i;}return 255;};
   const low=quantile(.1),high=quantile(.9),median=quantile(.5);
-  let coverage=0,centered=false;
-  if(location){
-    const p=[location.topLeftCorner,location.topRightCorner,location.bottomLeftCorner,location.bottomRightCorner];
-    const xs=p.map(p=>p.x),ys=p.map(p=>p.y),left=Math.min(...xs),right=Math.max(...xs),top=Math.min(...ys),bottom=Math.max(...ys);
-    coverage=Math.max((right-left)/width,(bottom-top)/height);
-    centered=Math.abs((left+right)/2-width/2)<width*.12&&Math.abs((top+bottom)/2-height/2)<height*.12;
-  }
+  const {coverage,centered}=framing(location,width,height);
   let message;
   if(location)message=coverage>.84?'QR muito próximo: afaste um pouco ou reduza o zoom.':!centered?'QR reconhecido. Centralize antes de ajustar o zoom.':coverage<.42?'QR pequeno: aproxime ou aumente o zoom.':'QR legível · enquadramento adequado.';
   else if(high<70)message='Imagem escura: aumente o brilho da tela e a iluminação do ambiente.';

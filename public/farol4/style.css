@@ -111,3 +111,5 @@ button,summary,input,textarea,select,a{scroll-margin-block:16px 100px}
 }
 .sendProgress{font-size:13px;font-variant-numeric:tabular-nums;min-width:0;padding-top:12px}.sendProgress progress{margin:6px 0 10px}.sendProgress #sendSummary{margin:8px 0 0}
 @media(min-width:951px){.senderSidebar .sendProgress{padding:12px 0;border-block:1px solid var(--line)}}
+.sendProgress #sendSpeedDetail{margin:8px 0 0}.sendProgress #sendSpeedDetail:empty,#receiveSpeedDetail:empty{display:none}#receiveSpeedDetail{grid-column:1 / -1;margin:8px 0 0}
+#qrOverlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}

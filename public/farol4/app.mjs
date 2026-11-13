@@ -10,7 +10,9 @@ import {Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from './prot
 
 import {ReturnChannel} from './realtime.mjs?v=20260920-2';
 
-import {analyzeFrame,autoZoom} from './camera.mjs?v=20260909-3';
+import {analyzeFrame,autoZoom,framing} from './camera.mjs?v=20261113-1';
+import {EventRate,screenDetail,confirmedDetail,readDetail} from './speed-meter.mjs?v=20261113-1';
+import {overlayQuad,overlayState,drawOverlay} from './qr-overlay.mjs?v=20261113-1';
 
 import {pairPacket,readPair} from './pairing.mjs?v=20260909-3';
 
@@ -29,6 +31,7 @@ const $=id=>document.getElementById(id);
 
 const notice=text=>{$('notice').textContent=text;};
 
+const screenFrames=new EventRate(),screenCodes=new EventRate(),readRate=new EventRate();let lastLocated=0;
 let sendRateMeter=new TransferRate(),sendRateOwner=null,sendClock=new TransferClock(),sendClockOwner=null,sendConfirmed=null,sendStalled=false;
 let mode='send',sender=null,receiver=null,file=null,timer=null,frame=0,stream=null,raf=0;
 
@@ -222,7 +225,9 @@ async function nextFrame(){
 
     if(frame++%12===0)render([sender.metadata()]);
 
-    else {const packets=(await Promise.all([current.next(),current.next(),current.next()])).filter(Boolean);if(sender!==current||epoch!==frameEpoch)return;render(packets.length?packets:[sender.metadata()]);}
+    else {const packets=(await Promise.all([current.next(),current.next(),current.next()])).filter(Boolean);if(sender!==current||epoch!==frameEpoch)return;render(packets.length?packets:[sender.metadata()]);screenCodes.add(performance.now(),packets.length);}
+
+    screenFrames.add(performance.now());
 
     $('sentBlocks').textContent=sender.sent;
 
@@ -232,7 +237,7 @@ async function nextFrame(){
 
 }
 
-function play(){lastSpeedAdjustment=performance.now();calibration.cancel();if(!sender||timer)return;transmissionDone=false;frame=0;nextFrame();timer=setInterval(nextFrame,1000/Number($('fps').value));$('play').textContent='Pausar';}
+function play(){lastSpeedAdjustment=performance.now();calibration.cancel();if(!sender||timer)return;screenFrames.reset();screenCodes.reset();transmissionDone=false;frame=0;nextFrame();timer=setInterval(nextFrame,1000/Number($('fps').value));$('play').textContent='Pausar';}
 
 $('play').onclick=()=>setPaused(!!timer);
 
@@ -353,7 +358,7 @@ function updateTiming(){
 
   if(rateReceiver!==receiver||rateStream!==stream){rateMeter=new TransferRate();rateReceiver=receiver;rateStream=stream;}
 
-  let text='Aguardando blocos',speed='—';
+  let text='Aguardando blocos',speed='—',detail='';
 
   if(receiver?.verified)text='Concluído';
 
@@ -376,10 +381,11 @@ function updateTiming(){
     if(rate>0)speed=rate>=1024?`${(rate/1024).toFixed(1)} KiB/s`:`${Math.round(rate)} B/s`;
 
     else if(stalled)speed='0 B/s';
+    detail=readDetail({reads:readRate.perSecond(performance.now()),rate,bs:meta.bs});
 
   }
 
-  $('remainingTime').textContent=text;$('receiveRate').textContent=speed;
+  $('remainingTime').textContent=text;$('receiveRate').textContent=speed;$('receiveSpeedDetail').textContent=detail;
 
 }
 
@@ -399,6 +405,8 @@ function updateSendProgress(){
   const v=sendProgress({total:meta.total,size:meta.size,bs:meta.bs,confirmed:sendConfirmed,covered:sender.covered,done:transmissionDone,running,paused:pauseState.value.paused,fps:Number($('fps').value),rate,stalled});
   $('sendCount').textContent=v.countLabel;$('sendPercent').textContent=`${v.percent}%`;$('sendProgressBar').value=v.fraction*100;
   $('sendRemaining').textContent=v.remaining;$('sendRate').textContent=v.speed;
+  const clock=performance.now(),screen=running?screenDetail({frames:screenFrames.perSecond(clock),codes:screenCodes.perSecond(clock),bs:meta.bs}):'';
+  $('sendSpeedDetail').textContent=[screen,running&&!stalled?confirmedDetail({rate,bs:meta.bs}):''].filter(Boolean).join(' · ');
   const {totalMs,activeMs,pausedMs}=sendClock.summary(now);
   $('sendSummary').textContent=sendClock.startedAt?`${dataSize(Math.min(meta.size,v.count*meta.bs))} de ${dataSize(meta.size)} · Tempo total: ${elapsed(totalMs)} · Transmitindo: ${elapsed(activeMs)} · Pausas: ${elapsed(pausedMs)}`:'';
 }
@@ -536,7 +544,7 @@ function stopCamera(){calibration.cancel();
 
   $('camera').textContent='Ligar câmera e escanear';$('zoom').disabled=true;
 
-  $('cameraQuality').textContent='Câmera desligada.';
+  $('cameraQuality').textContent='Câmera desligada.';lastLocated=0;readRate.reset();drawOverlay($('qrOverlay'),null);
 
   updateTiming();
 
@@ -659,11 +667,14 @@ async function scanFrame(time){
 
         for(let i=0;i<pixels.length;i+=4){pixels[i]=pixels[i+1]=pixels[i+2]=img.data[i+ch];pixels[i+3]=255;}
 
-        const qr=window.jsQR(pixels,scan.width,scan.height,{inversionAttempts:'attemptBoth'});if(qr&&qr.data.startsWith('F4|')){location=qr.location;validRead=true;await receivePacket(qr.data);}
+        const qr=window.jsQR(pixels,scan.width,scan.height,{inversionAttempts:'attemptBoth'});if(qr&&qr.data.startsWith('F4|')){location=qr.location;validRead=true;readRate.add(time);await receivePacket(qr.data);}
 
       }
 
       if(validRead)lastDecoded=time;
+      // Outline the QR where the scanner found it; green when well framed, amber when it needs adjusting.
+      if(location&&stream){lastLocated=time;const overlay=$('qrOverlay');drawOverlay(overlay,overlayQuad(location,scan.width,scan.height,overlay.clientWidth,overlay.clientHeight),overlayState(framing(location,scan.width,scan.height)));}
+      else if(lastLocated&&time-lastLocated>450){lastLocated=0;drawOverlay($('qrOverlay'),null);}
 
       if(time-lastGuidance>900&&stream){
 
