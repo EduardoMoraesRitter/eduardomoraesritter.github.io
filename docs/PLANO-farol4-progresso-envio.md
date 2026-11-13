@@ -81,3 +81,14 @@ Teste: zxing-wasm 3.1.6 (publicado em 19/10/2026, MIT, arquivo WASM de 947 kB), 
 - [ ] Para chegar a 12 quadros/s no app, é preciso tirar a trava de 100 ms do leitor (hoje limita a 10 leituras por segundo).
 - [ ] Custo para o site: arquivo WASM de 947 kB, mais o código de workers. Não implementado ainda.
 - [x] Teste temporário apagado do projeto; nada foi commitado além deste registro.
+
+## Parte 6 · gargalo do receptor (13/11/2026)
+
+Pergunta: por que o receptor no app não acompanha o leitor isolado?
+
+Achados:
+- [x] Dentro do app, cada varredura do leitor (3 canais em workers) leva cerca de 45 ms, com 3 pacotes por varredura. Processar os pacotes leva ~0,1 ms. O leitor não é o gargalo com 1100 px. Pela conta, cabe cerca de 20 quadros/s.
+- [x] A taxa de animação (`requestAnimationFrame`) do Chrome de teste ficou em 5 por segundo, mesmo com a aba visível e com foco. Esse número é do ambiente de teste, não do celular. Com um timer de 16 ms no lugar, o laço rodou ~13 vezes por segundo.
+- [x] A renderização do transmissor também depende da animação: com a taxa baixa, os quadros capturados ficavam iguais. Medições anteriores de "imagens/s" em aba oculta ou com animação lenta não valem.
+- [ ] Não consegui fechar o número de blocos aceitos por segundo no app. Causas de teste: receptor preso ao arquivo da medição anterior e transmissor que nem sempre inicia na mesma página. Refazer em página nova, com arquivo de bytes fixos, sem dividir a página entre transmissor e receptor.
+- [ ] Instrumentação temporária removida de `app.mjs` (volta à versão com workers, sem marcas de tempo). Nada disso foi commitado.
