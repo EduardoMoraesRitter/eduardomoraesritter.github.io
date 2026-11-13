@@ -92,3 +92,17 @@ Achados:
 - [x] A renderização do transmissor também depende da animação: com a taxa baixa, os quadros capturados ficavam iguais. Medições anteriores de "imagens/s" em aba oculta ou com animação lenta não valem.
 - [ ] Não consegui fechar o número de blocos aceitos por segundo no app. Causas de teste: receptor preso ao arquivo da medição anterior e transmissor que nem sempre inicia na mesma página. Refazer em página nova, com arquivo de bytes fixos, sem dividir a página entre transmissor e receptor.
 - [ ] Instrumentação temporária removida de `app.mjs` (volta à versão com workers, sem marcas de tempo). Nada disso foi commitado.
+
+## Parte 7 · teste 6 contra 12 quadros/s (13/11/2026)
+
+Pergunta: subir o envio de 6 para 12 quadros/s aumenta os blocos recebidos por segundo?
+
+Método: página nova para cada medição, arquivo de bytes aleatórios próprio. 60 quadros reais capturados do transmissor no ritmo testado. Câmera simulada que repete esses quadros no mesmo ritmo do transmissor, com `requestFrame()` a cada quadro. Animação trocada por timer de 16 ms só no teste.
+
+Resultado:
+- [x] 6 quadros/s: 11,3 blocos novos/s (leitura de 41 QR/s, cerca de 12 varreduras/s).
+- [x] 12 quadros/s: 11,3 blocos novos/s (leitura de 35 QR/s, cerca de 12 varreduras/s).
+- [x] Conclusão: o receptor é que limita. Ele faz ~12 varreduras por segundo nos dois casos, e 12 quadros/s não ganha nada enquanto a varredura não ficar mais rápida.
+- [ ] Causa provável: cada varredura espera o próximo quadro de animação (16 ms) e leva ~45 ms (preparação dos canais, cópia para os workers, leitura). Ver se a espera pode ser tirada e se a cópia pode ser reduzida.
+- [ ] Ainda não medido no celular, onde a animação roda perto de 60 Hz e a leitura pode ser mais lenta.
+- [x] Teste feito em uma única página (transmissor e receptor juntos, câmera simulada). Números para comparar entre versões, não valor absoluto de velocidade real.
