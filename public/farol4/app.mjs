@@ -14,6 +14,7 @@ import {analyzeFrame,autoZoom,framing} from './camera.mjs?v=20261113-1';
 import {EventRate,screenDetail,confirmedDetail,readDetail} from './speed-meter.mjs?v=20261113-1';
 import {overlayQuad,overlayState,drawOverlay} from './qr-overlay.mjs?v=20261113-1';
 import {speedAdvice,adviceBadge,clampFps,FPS_MIN,FPS_MAX} from './speed-advice.mjs?v=20261113-1';
+import {splitChannels,packetsFrom} from './scan-decode.mjs?v=20261113-5';
 
 import {pairPacket,readPair} from './pairing.mjs?v=20260909-3';
 
@@ -576,7 +577,7 @@ function stopCamera(){calibration.cancel();
 
   document.body.classList.remove('camera-active');
 
-  cancelAnimationFrame(raf);raf=0;
+  clearTimeout(scanTimer);scanTimer=0;
 
   if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;
 
@@ -672,7 +673,7 @@ $('camera').onclick=async()=>{
 
     cameraStartedAt=performance.now();lastProgressAt=0;lastDecoded=0;lastGuidance=0;lastAutoZoom=0;announceReady();updateDiagnostics();
 
-    raf=requestAnimationFrame(scanFrame);
+    scanTimer=setTimeout(()=>scanFrame(performance.now()),0);
 
   }catch(e){stopCamera();notice('Não foi possível ligar a câmera: '+e.message);}finally{cameraStarting=false;$('switchCamera').disabled=false;}
 
@@ -680,8 +681,64 @@ $('camera').onclick=async()=>{
 
 let lastScan=0;
 
+// Frame reading: three zxing-wasm workers, one per colour channel, read in parallel.
+// If they cannot start or stop answering, reading falls back to jsQR on this thread.
+let scanBusy=false,scanWorkers=null,scanWorkersFailed=false,scanSeq=0,scanEmptyRounds=0,scanTimer=0;
+const freeBuffers=[[],[],[]];
+const pendingScans=new Map();
+const SCAN_TIMEOUT_MS=1500,SCAN_GIVE_UP_AFTER=8,SCAN_PERIOD_MS=33;
+function startScanWorkers(){
+  if(scanWorkers||scanWorkersFailed)return scanWorkers;
+  try{
+    scanWorkers=[0,1,2].map(()=>{
+      const worker=new Worker(new URL('./scan-worker.mjs?v=20261113-5',import.meta.url),{type:'module'});
+      worker.onmessage=({data})=>{const done=pendingScans.get(data.id);if(!done)return;pendingScans.delete(data.id);done(data.error?null:data.results,data.buffer);};
+      worker.onerror=()=>{scanWorkersFailed=true;stopScanWorkers();};
+      return worker;
+    });
+  }catch{scanWorkersFailed=true;scanWorkers=null;}
+  return scanWorkers;
+}
+function stopScanWorkers(){
+  for(const worker of scanWorkers||[])worker.terminate();
+  scanWorkers=null;
+  for(const [id,done] of pendingScans){pendingScans.delete(id);done(null);}
+}
+// Reuses channel buffers the workers have handed back, so a frame costs no new allocation.
+function channelBuffersFor(n){
+  return [0,1,2].map(ch=>{const pool=freeBuffers[ch];const i=pool.findIndex(b=>b.length===n);return i>=0?pool.splice(i,1)[0]:new Uint8ClampedArray(n);});
+}
+// One result list per channel (null for a channel that timed out), or null when workers are unavailable.
+// Buffers are transferred, not copied; each comes back with its result and goes to the pool.
+function readChannelsInWorkers(channels,width,height){
+  const workers=startScanWorkers();
+  if(!workers)return null;
+  return Promise.all(channels.map((pixels,ch)=>new Promise(resolve=>{
+    const id=++scanSeq;
+    const timer=setTimeout(()=>{pendingScans.delete(id);resolve(null);},SCAN_TIMEOUT_MS);
+    pendingScans.set(id,(results,buffer)=>{clearTimeout(timer);if(buffer)freeBuffers[ch].push(new Uint8ClampedArray(buffer));resolve(results);});
+    workers[ch].postMessage({id,buffer:pixels.buffer,width,height},[pixels.buffer]);
+  }))).then(results=>{
+    scanEmptyRounds=results.every(r=>r===null)?scanEmptyRounds+1:0;
+    if(scanEmptyRounds>=SCAN_GIVE_UP_AFTER){scanWorkersFailed=true;stopScanWorkers();}
+    return results;
+  });
+}
+function decodeWithJsQR(channels,width,height){
+  return channels.flatMap(pixels=>{const qr=window.jsQR?.(pixels,width,height,{inversionAttempts:'attemptBoth'});return qr&&qr.data.startsWith('F4|')?[{data:qr.data,location:qr.location}]:[];});
+}
+// The Farol 4 packets in one frame, each with the QR outline when the reader gives one.
+async function readFrame(img,width,height){
+  const channels=splitChannels(img.data,channelBuffersFor(img.data.length));
+  const results=await readChannelsInWorkers(channels,width,height);
+  if(results)return results.flatMap(list=>packetsFrom(list));
+  // Workers unavailable: decode on this thread, then keep the buffers for the next frame.
+  const found=decodeWithJsQR(channels,width,height);
+  channels.forEach((pixels,ch)=>freeBuffers[ch].push(pixels));
+  return found;
+}
 async function scanFrame(time){
-  const scanningStream=stream;
+  const scanningStream=stream;const scanStarted=performance.now();
 
   if(!stream)return;
 
@@ -689,9 +746,9 @@ async function scanFrame(time){
 
     const video=$('video');
 
-    if(time-lastScan>100&&video.readyState>=2&&video.videoWidth){
+    if(!scanBusy&&video.readyState>=2&&video.videoWidth){
 
-      lastScan=time;const vw=video.videoWidth,vh=video.videoHeight;
+      scanBusy=true;lastScan=time;const vw=video.videoWidth,vh=video.videoHeight;
 
       const sw=vw/digitalZoom,sh=vh/digitalZoom,scale=Math.min(1,1100/sw);
 
@@ -701,15 +758,7 @@ async function scanFrame(time){
 
       let location=null,validRead=false;const countBefore=receiver?.count||0;scanRate.add(time);
 
-      for(let ch=0;ch<3;ch++){
-
-        const pixels=new Uint8ClampedArray(img.data.length);
-
-        for(let i=0;i<pixels.length;i+=4){pixels[i]=pixels[i+1]=pixels[i+2]=img.data[i+ch];pixels[i+3]=255;}
-
-        const qr=window.jsQR(pixels,scan.width,scan.height,{inversionAttempts:'attemptBoth'});if(qr&&qr.data.startsWith('F4|')){location=qr.location;validRead=true;readRate.add(time);await receivePacket(qr.data);}
-
-      }
+      for(const packet of await readFrame(img,scan.width,scan.height)){location=packet.location||location;validRead=true;readRate.add(time);await receivePacket(packet.data);}
 
       if(validRead)lastDecoded=time;
       freshRate.add(time,Math.max(0,(receiver?.count||0)-countBefore));
@@ -737,9 +786,11 @@ async function scanFrame(time){
 
     }
 
-  }catch(e){if(transferId())setPaused(true);notice('Leitura interrompida: '+e.message);stopCamera();return;}
+  scanBusy=false;
+  }catch(e){scanBusy=false;if(transferId())setPaused(true);notice('Leitura interrompida: '+e.message);stopCamera();return;}
 
-  if(stream&&stream===scanningStream)raf=requestAnimationFrame(scanFrame);
+  // Next read as soon as the camera can have a new frame, not on the animation clock.
+  if(stream&&stream===scanningStream)scanTimer=setTimeout(()=>scanFrame(performance.now()),Math.max(0,SCAN_PERIOD_MS-(performance.now()-scanStarted)));
 
 }
 
