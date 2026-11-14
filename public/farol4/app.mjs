@@ -14,6 +14,7 @@ import {analyzeFrame,autoZoom,framing} from './camera.mjs?v=20261113-1';
 import {EventRate,screenDetail,confirmedDetail,readDetail} from './speed-meter.mjs?v=20261113-1';
 import {overlayQuad,overlayState,drawOverlay} from './qr-overlay.mjs?v=20261113-1';
 import {speedAdvice,adviceBadge,clampFps,FPS_MIN,FPS_MAX} from './speed-advice.mjs?v=20261113-1';
+import {newControlState,decideSpeed} from './speed-controller.mjs?v=20261113-6';
 import {splitChannels,packetsFrom} from './scan-decode.mjs?v=20261113-5';
 
 import {pairPacket,readPair} from './pairing.mjs?v=20260909-3';
@@ -241,7 +242,7 @@ async function nextFrame(){
 
 }
 
-function play(){lastSpeedAdjustment=performance.now();calibration.cancel();if(!sender||timer)return;screenFrames.reset();screenCodes.reset();transmissionDone=false;frame=0;nextFrame();timer=setInterval(nextFrame,1000/Number($('fps').value));$('play').textContent='Pausar';}
+function play(){speedCtl=null;lastSpeedAdjustment=performance.now();calibration.cancel();if(!sender||timer)return;screenFrames.reset();screenCodes.reset();transmissionDone=false;frame=0;nextFrame();timer=setInterval(nextFrame,1000/Number($('fps').value));$('play').textContent='Pausar';}
 
 $('play').onclick=()=>setPaused(!!timer);
 
@@ -418,6 +419,11 @@ function updateSendProgress(){
 }
 setInterval(updateSendProgress,1000);
 function currentFps(){return Number($('fps').value);}
+// Automatic speed control state (sender side), kept per receiving device.
+let speedCtl=null;
+function deviceId(){try{let id=localStorage.getItem('farol4-device');if(!id){id=crypto.randomUUID();localStorage.setItem('farol4-device',id);}return id;}catch{return 'anon';}}
+function loadCeiling(id){try{const map=JSON.parse(localStorage.getItem('farol4-speed-profiles')||'{}');return Number.isInteger(map[id])?map[id]:null;}catch{return null;}}
+function saveCeiling(id,ceiling){try{const map=JSON.parse(localStorage.getItem('farol4-speed-profiles')||'{}');map[id]=ceiling;localStorage.setItem('farol4-speed-profiles',JSON.stringify(map));}catch{}}
 // Sender only: change the frame rate without restarting the transfer, then tell the receiver.
 function setFps(value,why=''){
   const fps=clampFps(value);if(fps===currentFps())return false;
@@ -1047,6 +1053,14 @@ function onControl(m){
       if(action.pause){setPaused(true,'stall');notice('Pausa automática: receptor sem blocos novos há 25 segundos. Ele pedirá os blocos faltantes e tentará continuar em 5 segundos.');}
       else if(action.fps)setFps(action.fps,`Leitura sem progresso: velocidade reduzida para ${action.fps} quadros/s. Reenviando os blocos solicitados.`);
     }
+    // Automatic speed: the receiver's own measurements decide whether to go up or down.
+    if(timer&&$('autoSpeed').checked&&m.cameraActive===true&&m.paused===false&&typeof m.device==='string'&&m.device.length<=64){
+      if(!speedCtl||speedCtl.device!==m.device)speedCtl={device:m.device,state:newControlState(currentFps(),loadCeiling(m.device))};
+      speedCtl.state={...speedCtl.state,fps:currentFps()};
+      const full=!sender.remotePlan||sender.repairs.length>=3*currentFps();const r=decideSpeed(speedCtl.state,{fresh:Number(m.fresh)||0,stalled:!!m.stalled,active:full},performance.now());
+      speedCtl.state=r.state;
+      if(r.fps!==currentFps()){saveCeiling(m.device,r.state.ceiling);setFps(r.fps,r.reason==='up'?`O receptor está acompanhando: velocidade sobe para ${r.fps} quadros/s.`:`O receptor está ficando para trás: velocidade cai para ${r.fps} quadros/s.`);}
+    }
     feedbackPeer=m.from;peerLastSeen=Date.now();updateLinkStatus();$('nextBlock').textContent=sender.repairs.length?sender.repairs[0]+1:'Aguardando verificação';$('connectionStatus').textContent=m.stalled?'Receptor sem blocos novos · fila de recuperação atualizada':'Receptor conectado · recuperação automática ativa';
 
     {const clock=performance.now(),measure=v=>Number.isFinite(v)&&v>=0&&v<=1000?v:0;
@@ -1069,7 +1083,7 @@ async function feedback(){
   feedbackBusy=true;lastFeedbackAt=Date.now();
   const r=receiver,stalled=needsRecovery({active:!!stream,paused:pauseState.value.paused,complete:r.verified,lastDecoded,progressSince:lastProgressAt||cameraStartedAt,now:performance.now()});
   try{
-    const sent=await connection.send(r.verified?{type:'done',role:mode,file:r.meta.id,count:r.count,hash:r.meta.hash}:{type:'missing',role:mode,file:r.meta.id,count:r.count,indices:r.missing(),stalled,cameraActive:!!stream,paused:pauseState.value.paused,scans:Math.round(scanRate.perSecond(performance.now())*10)/10,fresh:Math.round(freshRate.perSecond(performance.now())*10)/10,progressAgeMs:Math.max(0,Math.round(performance.now()-(lastProgressAt||cameraStartedAt)))});
+    const sent=await connection.send(r.verified?{type:'done',role:mode,file:r.meta.id,count:r.count,hash:r.meta.hash}:{type:'missing',device:deviceId(),role:mode,file:r.meta.id,count:r.count,indices:r.missing(),stalled,cameraActive:!!stream,paused:pauseState.value.paused,scans:Math.round(scanRate.perSecond(performance.now())*10)/10,fresh:Math.round(freshRate.perSecond(performance.now())*10)/10,progressAgeMs:Math.max(0,Math.round(performance.now()-(lastProgressAt||cameraStartedAt)))});
     if(stalled&&receiver===r)$('connectionStatus').textContent=sent?'Sem blocos novos · pedido de recuperação reenviado':'Retorno falhou · tentando novamente';
     return sent;
   }catch{$('connectionStatus').textContent='Retorno falhou · tentando novamente';}finally{feedbackBusy=false;}
