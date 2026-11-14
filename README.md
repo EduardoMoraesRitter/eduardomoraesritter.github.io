@@ -98,6 +98,23 @@ Antes da otimização, o receptor era o gargalo: fazia ~12 varreduras por segund
 - Transmissor e receptor na mesma página compartilham o estado de pausa. Para testar, é preciso limpar a `sessionStorage` e usar arquivo novo a cada medição.
 - A câmera simulada precisa de `requestFrame()` por quadro, senão o canvas congela.
 
+### Padrões novos: bloco de 600 bytes e 12 quadros/s (medido em 13/11/2026)
+
+Antes, o Farol vinha com bloco de 400 bytes e 6 quadros/s. Agora o bloco padrão é de 600 bytes e a velocidade padrão é de 12 quadros/s (os dois continuam ajustáveis na página, e o envio ainda reduz sozinho a velocidade se o receptor travar).
+
+Medidas com o mesmo método de antes (quadros reais do transmissor, câmera simulada a 1100 px, notebook). Taxa em régime = blocos aceitos nos primeiros 5 s × tamanho do bloco ÷ 5.
+
+| Arquivo | Antes (400 bytes, 6 quadros/s) | Agora (600 bytes, 12 quadros/s) | Diferença |
+|---|---|---|---|
+| 30 KB (completo e verificado) | 5,6 s · ~5,4 KB/s | 2,5 s · ~12 KB/s | tempo −55%, velocidade +124% |
+| 100 KB (taxa em régime) | ~7,0 KB/s | ~17,3 KB/s | velocidade +147% |
+
+Só para comparar as etapas: o bloco de 600 sozinho, a 6 quadros/s, deu ~10,4 KB/s (+49%); o bloco de 400 a 12 quadros/s deu ~12,1 KB/s (+73%). Ou seja, quase metade do ganho vem da velocidade e o resto do bloco maior.
+
+Na conta, 1 MB passaria de cerca de 2 min 23 s para cerca de 1 min, e 100 MB de cerca de 3 h 58 min para cerca de 1 h 36 min. Essas duas últimas são contas a partir da taxa medida, não transferências feitas.
+
+**Limites destas medidas:** foram feitas com câmera simulada em notebook. O QR de 600 bytes é maior, então fica mais difícil de ler a distância; isso precisa ser visto no celular real (o botão "Testar leitura" continua disponível). O protocolo não mudou: o tamanho do bloco vem no cabeçalho do arquivo, então versões antigas e novas continuam conversando.
+
 ### Próximas soluções (backlog)
 
 Em ordem de prioridade. Os ganhos são estimativas da pesquisa, não medições do Farol.

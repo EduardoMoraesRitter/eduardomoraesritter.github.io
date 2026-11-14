@@ -106,3 +106,18 @@ Resultado:
 - [ ] Causa provável: cada varredura espera o próximo quadro de animação (16 ms) e leva ~45 ms (preparação dos canais, cópia para os workers, leitura). Ver se a espera pode ser tirada e se a cópia pode ser reduzida.
 - [ ] Ainda não medido no celular, onde a animação roda perto de 60 Hz e a leitura pode ser mais lenta.
 - [x] Teste feito em uma única página (transmissor e receptor juntos, câmera simulada). Números para comparar entre versões, não valor absoluto de velocidade real.
+
+
+## Parte 8 · bloco de 600 bytes e 12 quadros/s como padrão (13/11/2026)
+
+Pedido: mais velocidade, medida em percentual, com arquivos pequenos e grandes.
+
+- [x] Medido antes (400 bytes, 6 quadros/s): 30 KB em 5,6 s (~5,4 KB/s); 100 KB a ~7,0 KB/s em régime
+- [x] Medido o bloco de 600 bytes: 30 KB a 6 quadros/s em 7,1 s (ruído da espera pelo metadado, ver abaixo); 100 KB a ~10,4 KB/s em régime
+- [x] Medido 400 bytes a 12 quadros/s: 100 KB a ~12,1 KB/s em régime; 30 KB em 1,6 s (medição antiga, cronômetro começava antes da confirmação, descartada)
+- [x] Medido 600 bytes a 12 quadros/s: 100 KB a ~17,3 KB/s em régime; 30 KB em 2,5 s, verificado
+- [x] Implementado: padrão do bloco 600 e padrão da velocidade 12 em `index.html`
+- [x] Teste com os padrões, sem ajuste manual: 30 KB completo em 2,5 s (5,4 → 12 KB/s, +124%); 100 KB com 8,3 s para completar, com taxa em régime de ~17,3 KB/s (+147%)
+- [ ] Ainda não medido no celular: QR de 600 bytes pode ser mais difícil de ler a distância
+- [x] Observação de método: o tempo total de 100 KB fica inflado pela forma como a captura cai no ciclo da câmera simulada; por isso a comparação usa a taxa em régime
+- [x] Armadilha encontrada: o navegador guardou o `index.html` antigo; a verificação só passou depois de recarregar com um parâmetro novo na URL
