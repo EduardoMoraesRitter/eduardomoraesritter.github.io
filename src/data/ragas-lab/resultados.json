@@ -1,0 +1,2106 @@
+{
+ "gerado": "2026-11-18",
+ "repositorio": "https://github.com/EduardoMoraesRitter/ragas-lab",
+ "ferramentas": [
+  "ragas",
+  "deepeval",
+  "promptfoo"
+ ],
+ "metricas": [
+  "context_precision",
+  "context_recall",
+  "faithfulness",
+  "answer_relevancy"
+ ],
+ "tecnicas": [
+  "arvore",
+  "agentico",
+  "bom",
+  "bm25",
+  "grafo",
+  "ruim"
+ ],
+ "custo_busca": {
+  "ruim": {
+   "llm": "0",
+   "indice": "—"
+  },
+  "bom": {
+   "llm": "0",
+   "indice": "embedding de 30 trechos"
+  },
+  "bm25": {
+   "llm": "0",
+   "indice": "—"
+  },
+  "arvore": {
+   "llm": "1",
+   "indice": "3 chamadas (resumo por seção)"
+  },
+  "agentico": {
+   "llm": "2 a 7",
+   "indice": "—"
+  },
+  "grafo": {
+   "llm": "0",
+   "indice": "3 chamadas (triplas)"
+  }
+ },
+ "medias": {
+  "arvore": {
+   "ragas": {
+    "context_precision": 0.875,
+    "context_recall": 0.917,
+    "faithfulness": 0.792,
+    "answer_relevancy": 0.778
+   }
+  },
+  "agentico": {
+   "ragas": {
+    "context_precision": 0.875,
+    "context_recall": 0.854,
+    "faithfulness": 0.875,
+    "answer_relevancy": 0.782
+   }
+  },
+  "bom": {
+   "ragas": {
+    "context_precision": 0.5,
+    "context_recall": 0.875,
+    "faithfulness": 0.979,
+    "answer_relevancy": 0.801
+   },
+   "deepeval": {
+    "context_precision": 0.771,
+    "context_recall": 0.812,
+    "faithfulness": 0.875,
+    "answer_relevancy": 0.958
+   },
+   "promptfoo": {
+    "context_precision": 0.25,
+    "context_recall": 0.778,
+    "faithfulness": 1.0,
+    "answer_relevancy": 0.853
+   }
+  },
+  "bm25": {
+   "ragas": {
+    "context_precision": 0.5,
+    "context_recall": 0.708,
+    "faithfulness": 1.0,
+    "answer_relevancy": 0.567
+   }
+  },
+  "grafo": {
+   "ragas": {
+    "context_precision": 0.312,
+    "context_recall": 0.458,
+    "faithfulness": 1.0,
+    "answer_relevancy": 0.344
+   }
+  },
+  "ruim": {
+   "ragas": {
+    "context_precision": 0.312,
+    "context_recall": 0.583,
+    "faithfulness": 0.719,
+    "answer_relevancy": 0.422
+   },
+   "deepeval": {
+    "context_precision": 0.5,
+    "context_recall": 0.417,
+    "faithfulness": 0.5,
+    "answer_relevancy": 0.958
+   },
+   "promptfoo": {
+    "context_precision": 0.167,
+    "context_recall": 0.367,
+    "faithfulness": 0.833,
+    "answer_relevancy": 0.647
+   }
+  }
+ },
+ "perguntas": [
+  {
+   "id": "q1",
+   "pergunta": "Qual é a pressão da bomba da Aurora K2 e quanto ela pesa?",
+   "referencia": "A bomba da Aurora K2 é de 15 bar e a máquina pesa 4,2 kg.",
+   "fontes": [
+    "manual"
+   ],
+   "tipo": "fato simples, uma fonte",
+   "tecnicas": {
+    "arvore": {
+     "trechos": [
+      "manual-01"
+     ],
+     "resposta": "A Aurora K2 possui uma bomba de 15 bar e pesa 4,2 kg.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.852,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "agentico": {
+     "trechos": [
+      "manual-01"
+     ],
+     "resposta": "A Aurora K2 possui uma bomba de 15 bar e pesa 4,2 kg.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.852,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "bom": {
+     "trechos": [
+      "wiki-05",
+      "faq-10",
+      "manual-01"
+     ],
+     "resposta": "A cafeteira Aurora K2 possui uma bomba de 15 bar. O peso do aparelho é de 4,2 kg.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.333,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.949,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because all retrieval context nodes are relevant and perfectly ranked! The first node establishes that the Aurora K2 has a 'bomba de 15 bar', the second node reinforces this with 'K2 tem bomba de 15 bar', and the third node completes the picture by providing both the pump pressure and the 'Peso de 4,2 kg', ensuring a flawless retrieval process!"
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because all information regarding the 15 bar pump and the 4.2 kg weight in the expected output is fully supported by the node(s) in retrieval context (specifically nodes 1 and 3). Excellent retrieval accuracy!"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the actual output is completely faithful to the retrieval context with no contradictions found. Great job!"
+       },
+       "answer_relevancy": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the output directly and completely addresses all parts of the input regarding the Aurora K2's pump pressure and weight without including any irrelevant information. Great job!"
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.6,
+        "motivo": "Context relevance 0.60 is >= 0.5"
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": "Recall 1.00 is >= 0.5"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "Faithfulness 1.00 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.95,
+        "motivo": "Relevance 0.95 is greater than threshold 0.5"
+       }
+      }
+     }
+    },
+    "bm25": {
+     "trechos": [
+      "manual-09",
+      "wiki-05",
+      "faq-10"
+     ],
+     "resposta": "A Aurora K2 possui uma bomba de 15 bar. Não encontrei essa informação nas fontes disponíveis sobre o peso do equipamento.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.5,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "grafo": {
+     "trechos": [
+      "faq-10",
+      "manual-09",
+      "wiki-04"
+     ],
+     "resposta": "A Aurora K2 possui uma bomba de 15 bar. Não encontrei essa informação nas fontes disponíveis sobre o peso do equipamento.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.5,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "ruim": {
+     "trechos": [
+      "wiki-05",
+      "faq-10"
+     ],
+     "resposta": "A pressão da bomba da Aurora K2 é de 15 bar. Não encontrei essa informação nas fontes disponíveis sobre o peso dela.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.5,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.992,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the first node in the retrieval contexts is relevant, as it directly provides the pressure of the Aurora K2 pump by stating 'bomba de 15 bar' ('It directly provides the pressure of the Aurora K2 pump by stating 'bomba de 15 bar'.'), and it is correctly ranked above the second node in the retrieval contexts, which is irrelevant because it discusses differences between K1 and K2 and mentions…"
+       },
+       "context_recall": {
+        "v": 0.0,
+        "motivo": "The score is 0.00 because, although the first part of the sentence regarding the 15-bar pump of the Aurora K2 is found in the 1st and 2nd node(s) in retrieval context, the claim that the machine weighs 4.2 kg is entirely missing from all retrieval contexts."
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the actual output is completely faithful to the retrieval context with zero contradictions!"
+       },
+       "answer_relevancy": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the output directly and completely addresses all parts of the input regarding the Aurora K2's pump pressure and weight without including any irrelevant information. Great job!"
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.667,
+        "motivo": "Context relevance 0.67 is >= 0.5"
+       },
+       "context_recall": {
+        "v": 0.5,
+        "motivo": "Recall 0.50 is >= 0.5"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "Faithfulness 1.00 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.956,
+        "motivo": "Relevance 0.96 is greater than threshold 0.5"
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "q2",
+   "pergunta": "A cada quantas extrações devo descalcificar a Aurora K2 se a água da minha cidade for dura?",
+   "referencia": "Com água dura, a recomendação é descalcificar a cada 150 extrações, em vez das 300 do manual.",
+   "fontes": [
+    "faq",
+    "manual"
+   ],
+   "tipo": "duas fontes, a FAQ ajusta o manual",
+   "tecnicas": {
+    "arvore": {
+     "trechos": [
+      "manual-04",
+      "faq-07"
+     ],
+     "resposta": "Se a água da sua cidade for dura, recomendamos descalcificar a cada 150 extrações em vez de 300.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.5,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 0.333,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.81,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "agentico": {
+     "trechos": [
+      "faq-07",
+      "manual-04"
+     ],
+     "resposta": "Recomendamos descalcificar a cada 150 extrações em vez de 300 se a água da sua cidade for dura. Isso ocorre porque a água dura acelera o acúmulo de calcário.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.81,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "bom": {
+     "trechos": [
+      "faq-07",
+      "manual-04",
+      "wiki-05"
+     ],
+     "resposta": "Água dura acelera o acúmulo de calcário e recomendamos usar água filtrada e descalcificar a cada 150 extrações em vez de 300.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.767,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because all relevant nodes are perfectly ranked at the top! Node 1 and Node 2 correctly provide the descaling frequency for hard water (\"It directly answers the question by stating, 'Recomendamos usar água filtrada e descalcificar a cada 150 extrações em vez de 300' when dealing with hard water\" and \"It mentions the general rule of descaling 'a cada 300 extrações', which provides necessary context…"
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because all information in the expected output is fully supported by the 1st node in the retrieval context. Fantastic job!"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the actual output is completely faithful to the retrieval context with no contradictions detected. Great job!"
+       },
+       "answer_relevancy": {
+        "v": 0.667,
+        "motivo": "The score is 0.67 because while it correctly addresses part of the question regarding the espresso machine, it includes an irrelevant tip about filtered water instead of directly specifying the exact descaling interval for hard water."
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.2,
+        "motivo": "Context relevance 0.20 is < 0.5"
+       },
+       "context_recall": {
+        "v": null,
+        "motivo": "ERRO do juiz: Grader returned no [Attributed]/[Not Attributed] classifications"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "Faithfulness 1.00 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.738,
+        "motivo": "Relevance 0.74 is greater than threshold 0.5"
+       }
+      }
+     }
+    },
+    "bm25": {
+     "trechos": [
+      "faq-07",
+      "manual-04",
+      "manual-06"
+     ],
+     "resposta": "Se a água da sua cidade for dura, recomendamos descalcificar a cada 150 extrações em vez de 300.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.81,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "grafo": {
+     "trechos": [
+      "manual-04",
+      "wiki-04",
+      "manual-06"
+     ],
+     "resposta": "Descalcifique a cada 300 extrações ou quando a luz indicadora piscar em vermelho. A garantia não cobre danos por obstrução por água com alto teor de calcário.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.758,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "ruim": {
+     "trechos": [
+      "faq-07",
+      "manual-04"
+     ],
+     "resposta": "Se a água da sua cidade for dura, recomendamos descalcificar a cada 150 extrações em vez de 300. Água dura acelera o acúmulo de calcário, e danos por calcário não são cobertos pela garantia.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 0.75,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.808,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because all relevant nodes containing the necessary information about descaling frequency for hard water were retrieved and perfectly prioritized!"
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because all information in the expected output is fully supported by node(s) in the retrieval context. Fantastic job!"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the actual output is completely faithful to the retrieval context with no contradictions found. Great job!"
+       },
+       "answer_relevancy": {
+        "v": 0.667,
+        "motivo": "The score is 0.67 because while it correctly addresses the machine and water hardness mentioned in the input, it includes irrelevant information about warranty coverage instead of focusing solely on the descaling frequency."
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": "Grader output does not quote the provided context"
+       },
+       "context_recall": {
+        "v": null,
+        "motivo": "ERRO do juiz: Grader returned no [Attributed]/[Not Attributed] classifications"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "Faithfulness 1.00 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.797,
+        "motivo": "Relevance 0.80 is greater than threshold 0.5"
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "q3",
+   "pergunta": "Quanto tempo de garantia eu tenho na Aurora K2?",
+   "referencia": "A garantia padrão é de 12 meses. Quem cadastra a máquina no site em até 30 dias ganha mais 12 meses, totalizando 24 meses.",
+   "fontes": [
+    "manual",
+    "faq"
+   ],
+   "tipo": "duas fontes com complemento",
+   "tecnicas": {
+    "arvore": {
+     "trechos": [
+      "manual-06",
+      "faq-04"
+     ],
+     "resposta": "A Aurora K2 possui garantia legal e contratual de 12 meses contra defeitos de fabricação. Ao cadastrar a máquina no site da Caffeo em até 30 dias após a compra, você ganha 12 meses adicionais, totalizando 24 meses de garantia.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.5,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.958,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "agentico": {
+     "trechos": [
+      "manual-06"
+     ],
+     "resposta": "A Aurora K2 tem garantia legal e contratual de 12 meses contra defeitos de fabricação, contados a partir da data da nota fiscal.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.5,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.991,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "bom": {
+     "trechos": [
+      "manual-06",
+      "faq-02",
+      "faq-05"
+     ],
+     "resposta": "A Aurora K2 tem garantia legal e contratual de 12 meses contra defeitos de fabricação, contados a partir da data da nota fiscal.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.5,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.972,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the first node in the retrieval contexts is ranked highest and directly answers the question by stating that 'A Aurora K2 tem garantia legal e contratual de 12 meses'. The irrelevant nodes, which discuss third-party adapter warranty cancellations (second node) and app compatibility (third node), are correctly ranked lower, resulting in a perfect retrieval precision!"
+       },
+       "context_recall": {
+        "v": 0.5,
+        "motivo": "The score is 0.50 because sentence 1 in the expected output is supported by node 1 in the retrieval context, but the remaining information about registering within 30 days for an extra warranty is missing from the retrieval context."
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the actual output is completely faithful to the retrieval context with no contradictions found. Great job!"
+       },
+       "answer_relevancy": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the output directly and completely addresses the user's question about the warranty period without including any irrelevant information. Great job!"
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": "Grader output does not quote the provided context"
+       },
+       "context_recall": {
+        "v": 0.5,
+        "motivo": "Recall 0.50 is >= 0.5"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "Faithfulness 1.00 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.97,
+        "motivo": "Relevance 0.97 is greater than threshold 0.5"
+       }
+      }
+     }
+    },
+    "bm25": {
+     "trechos": [
+      "faq-02",
+      "manual-06",
+      "manual-08"
+     ],
+     "resposta": "A Aurora K2 tem garantia legal e contratual de 12 meses contra defeitos de fabricação, contados a partir da data da nota fiscal.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.5,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.991,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "grafo": {
+     "trechos": [
+      "wiki-04",
+      "manual-04",
+      "wiki-09"
+     ],
+     "resposta": "Não encontrei essa informação nas fontes disponíveis.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "ruim": {
+     "trechos": [
+      "manual-01",
+      "wiki-05"
+     ],
+     "resposta": "Não encontrei essa informação nas fontes disponíveis.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": "The score is 0.00 because all retrieved nodes are irrelevant to the input. Specifically, the first node in the retrieval contexts is irrelevant because \"The context mentions technical specifications like 'bomba de 15 bar' and dimensions, but does not provide any information regarding warranty,\" and the second node in the retrieval contexts is also irrelevant because \"The context discusses the launch date, history, a…"
+       },
+       "context_recall": {
+        "v": 0.0,
+        "motivo": "The score is 0.00 because the first sentence regarding the 12-month standard warranty and the second sentence about the warranty extension upon registration cannot be found in any of the nodes in the retrieval context."
+       },
+       "faithfulness": {
+        "v": 0.0,
+        "motivo": "The score is 0.00 because the actual output claims that the information was not found, whereas the retrieval context actually provides complete details about the Aurora K2 coffee maker."
+       },
+       "answer_relevancy": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the output directly and completely addresses the user's question about the warranty period without any irrelevant information."
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": "Context relevance 0.00 is < 0.5"
+       },
+       "context_recall": {
+        "v": 0.0,
+        "motivo": "Recall 0.00 is < 0.5"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "Faithfulness 1.00 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.477,
+        "motivo": "Relevance 0.48 is less than threshold 0.5"
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "q4",
+   "pergunta": "Quem fundou a Caffeo Brasil e quem a preside hoje?",
+   "referencia": "A Caffeo Brasil foi fundada por Helena Brandt e Rogério Tancredi. Helena Brandt é a presidente desde a fundação.",
+   "fontes": [
+    "wiki"
+   ],
+   "tipo": "fato simples, uma fonte",
+   "tecnicas": {
+    "arvore": {
+     "trechos": [
+      "wiki-02"
+     ],
+     "resposta": "A Caffeo Brasil foi fundada por Helena Brandt e Rogério Tancredi. Helena Brandt é a presidente desde a fundação.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.984,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "agentico": {
+     "trechos": [
+      "wiki-02"
+     ],
+     "resposta": "A Caffeo Brasil foi fundada por Helena Brandt e Rogério Tancredi. Helena Brandt é a presidente desde a fundação.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.984,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "bom": {
+     "trechos": [
+      "wiki-01",
+      "faq-08",
+      "wiki-02"
+     ],
+     "resposta": "A Caffeo Brasil foi fundada por Helena Brandt e Rogério Tancredi. Helena Brandt é a presidente desde a fundação.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.333,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.976,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 0.333,
+        "motivo": "The score is 0.33 because the only relevant node is ranked third, as the first node was 'fornece informações gerais sobre a empresa, mas não menciona quem a fundou ou quem a preside hoje' and the second node was 'totalmente irrelevante para a pergunta sobre fundadores e presidência', whereas the third node correctly states that 'A empresa foi fundada por Helena Brandt e Rogério Tancredi. Helena Brandt é a presidente…"
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because all information in the expected output is fully captured, with sentences correctly attributed to the 3rd node in the retrieval context."
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the actual output is completely faithful to the retrieval context with no contradictions found. Great job!"
+       },
+       "answer_relevancy": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the response completely and accurately addresses both parts of the input question without any irrelevant statements."
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.2,
+        "motivo": "Context relevance 0.20 is < 0.5"
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": "Recall 1.00 is >= 0.5"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "Faithfulness 1.00 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.982,
+        "motivo": "Relevance 0.98 is greater than threshold 0.5"
+       }
+      }
+     }
+    },
+    "bm25": {
+     "trechos": [
+      "faq-04",
+      "faq-08",
+      "wiki-01"
+     ],
+     "resposta": "Não encontrei essa informação nas fontes disponíveis.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "grafo": {
+     "trechos": [
+      "faq-04",
+      "wiki-06",
+      "wiki-07"
+     ],
+     "resposta": "Não encontrei essa informação nas fontes disponíveis.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "ruim": {
+     "trechos": [
+      "faq-04",
+      "wiki-02"
+     ],
+     "resposta": "A empresa foi fundada por Helena Brandt e Rogério Tancredi. Helena Brandt é a presidente desde a fundação.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.5,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.699,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 0.5,
+        "motivo": "The score is 0.50 because the first node in retrieval contexts is irrelevant, as \"O texto fala sobre 'Como estender a garantia?' e cadastro da máquina no site, o que não tem relação com os fundadores ou a presidência da Caffeo Brasil.\", and should be ranked lower than the second node, which is relevant because \"O texto afirma diretamente que 'A empresa foi fundada por Helena Brandt e Rogério Tancredi' e que 'Helena…"
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because all sentences in the expected output are fully supported by the information provided in the 2nd node in the retrieval context. Fantastic job!"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the actual output is completely faithful to the retrieval context with no contradictions found. Great job!"
+       },
+       "answer_relevancy": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the response directly and completely answers both parts of the input question without any irrelevant information."
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.333,
+        "motivo": "Context relevance 0.33 is < 0.5"
+       },
+       "context_recall": {
+        "v": null,
+        "motivo": "ERRO do juiz: Grader returned no [Attributed]/[Not Attributed] classifications"
+       },
+       "faithfulness": {
+        "v": 0.667,
+        "motivo": "Faithfulness 0.67 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.676,
+        "motivo": "Relevance 0.68 is greater than threshold 0.5"
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "q5",
+   "pergunta": "Por que a Aurora K1 passou por recall e quantas unidades foram afetadas?",
+   "referencia": "O recall de agosto de 2019 foi por falha no anel de vedação da caldeira, que podia vazar vapor. Foram 18.000 unidades.",
+   "fontes": [
+    "wiki"
+   ],
+   "tipo": "fato simples, uma fonte",
+   "tecnicas": {
+    "arvore": {
+     "trechos": [
+      "wiki-04"
+     ],
+     "resposta": "A Aurora K1 passou por um recall devido a uma falha no anel de vedação da caldeira, que podia vazar vapor. Foram afetadas 18.000 unidades.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.999,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "agentico": {
+     "trechos": [
+      "wiki-04"
+     ],
+     "resposta": "A Aurora K1 passou por um recall devido a uma falha no anel de vedação da caldeira, que podia vazar vapor. Foram afetadas 18.000 unidades.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.999,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "bom": {
+     "trechos": [
+      "wiki-04",
+      "wiki-03",
+      "faq-10"
+     ],
+     "resposta": "Em agosto de 2019, a Caffeo fez um recall voluntário da Aurora K1 devido a uma falha no anel de vedação da caldeira, que podia vazar vapor. O total de unidades afetadas foi de 18.000. Nenhum ferimento foi registrado em decorrência do problema.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.868,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the first retrieval context node perfectly answers the input by stating it directly provides the reason for the recall ('falha no anel de vedação da caldeira, que podia vazar vapor') and the number of affected units ('18.000 unidades'). Furthermore, the second and third retrieval context nodes are correctly ranked lower as they only mention general launch details, specifications, difference…"
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because all information in the expected output is fully supported by the 1st node in the retrieval context. Fantastic work!"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the actual output is completely faithful to the retrieval context with no contradictions found. Great job!"
+       },
+       "answer_relevancy": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the output directly and completely addresses all parts of the input question without including any irrelevant information."
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.2,
+        "motivo": "Context relevance 0.20 is < 0.5"
+       },
+       "context_recall": {
+        "v": null,
+        "motivo": "ERRO do juiz: Grader returned no [Attributed]/[Not Attributed] classifications"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "Faithfulness 1.00 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.847,
+        "motivo": "Relevance 0.85 is greater than threshold 0.5"
+       }
+      }
+     }
+    },
+    "bm25": {
+     "trechos": [
+      "wiki-04",
+      "wiki-05",
+      "wiki-03"
+     ],
+     "resposta": "A Aurora K1 passou por um recall devido a uma falha no anel de vedação da caldeira, que podia vazar vapor. Foram afetadas 18.000 unidades.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.999,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "grafo": {
+     "trechos": [
+      "wiki-05",
+      "wiki-04",
+      "manual-04"
+     ],
+     "resposta": "A Aurora K1 passou por um recall devido a uma falha no anel de vedação da caldeira, que podia vazar vapor. Foram afetadas 18.000 unidades.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.5,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.999,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "ruim": {
+     "trechos": [
+      "wiki-04",
+      "wiki-05"
+     ],
+     "resposta": "Em agosto de 2019, a Caffeo fez um recall voluntário da Aurora K1 devido a uma falha no anel de vedação da caldeira, que podia vazar vapor. No total, 18.000 unidades foram afetadas por esse problema.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.88,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": null,
+        "motivo": "ERRO: DeepEvalError: Evaluation LLM outputted an invalid JSON. Please use a better evaluation model."
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because all sentences in the expected output are fully supported by the 1st node in the retrieval context. Fantastic job!"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the actual output is completely faithful to the retrieval context with no contradictions detected. Great job!"
+       },
+       "answer_relevancy": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the output directly and completely addresses all parts of the input question without including any irrelevant information."
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.333,
+        "motivo": "Context relevance 0.33 is < 0.5"
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": "Recall 1.00 is >= 0.5"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "Faithfulness 1.00 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.859,
+        "motivo": "Relevance 0.86 is greater than threshold 0.5"
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "q6",
+   "pergunta": "Posso usar vinagre para descalcificar e a máquina aceita cápsulas?",
+   "referencia": "Não aos dois. Vinagre danifica a vedação de silicone da caldeira. A máquina só funciona com café moído e não existe adaptador oficial para cápsulas.",
+   "fontes": [
+    "manual",
+    "faq"
+   ],
+   "tipo": "duas perguntas, duas fontes",
+   "tecnicas": {
+    "arvore": {
+     "trechos": [
+      "manual-04",
+      "faq-02"
+     ],
+     "resposta": "Nunca use vinagre, pois ele danifica a vedação de silicone da caldeira. A Aurora K2 funciona apenas com café moído e não aceita cápsulas.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.624,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "agentico": {
+     "trechos": [
+      "manual-04",
+      "faq-02"
+     ],
+     "resposta": "Nunca use vinagre, pois ele danifica a vedação de silicone da caldeira. A Aurora K2 funciona apenas com café moído e não aceita cápsulas.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.624,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "bom": {
+     "trechos": [
+      "manual-04",
+      "faq-01",
+      "faq-02"
+     ],
+     "resposta": "Não, você nunca deve usar vinagre para descalcificar, pois ele danifica a vedação de silicone da caldeira. Além disso, a Aurora K2 funciona apenas com café moído e não aceita cápsulas.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.333,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.882,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 0.833,
+        "motivo": "The score is 0.83 because while the first and third retrieval context nodes are relevant—providing the answers that 'Nunca use vinagre: ele danifica a vedação de silicone da caldeira' and 'A Aurora K2 funciona apenas com café moído. Não existe adaptador oficial para cápsulas'—the second retrieval context node is irrelevant as 'It discusses the red blinking light for descaling, which is not directly relevant to wheth…"
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because all sentences in the expected output are fully supported by the node(s) in retrieval context, with the first node confirming the warning about vinegar and the third node confirming the details about ground coffee and capsules."
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the actual output is completely faithful to the retrieval context with no contradictions found. Great job!"
+       },
+       "answer_relevancy": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the output directly and accurately addresses both parts of the user's input regarding using vinegar for descaling and the machine's capsule compatibility, with no irrelevant statements."
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.4,
+        "motivo": "Context relevance 0.40 is < 0.5"
+       },
+       "context_recall": {
+        "v": 0.667,
+        "motivo": "Recall 0.67 is >= 0.5"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "Faithfulness 1.00 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.864,
+        "motivo": "Relevance 0.86 is greater than threshold 0.5"
+       }
+      }
+     }
+    },
+    "bm25": {
+     "trechos": [
+      "faq-02",
+      "faq-07",
+      "faq-09"
+     ],
+     "resposta": "Não encontrei essa informação nas fontes disponíveis. A Aurora K2 funciona apenas com café moído e não existe adaptador oficial para cápsulas.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.667,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.737,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "grafo": {
+     "trechos": [
+      "manual-04",
+      "manual-05",
+      "manual-06"
+     ],
+     "resposta": "Nunca use vinagre, pois ele danifica a vedação de silicone da caldeira. Não encontrei essa informação nas fontes disponíveis sobre a aceitação de cápsulas.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.667,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "ruim": {
+     "trechos": [
+      "faq-02",
+      "wiki-02"
+     ],
+     "resposta": "Não encontrei essa informação nas fontes disponíveis.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.667,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the first node in the retrieval contexts is relevant, stating that the machine 'funciona apenas com café moído' and 'Não existe adaptador oficial para cápsulas', while the second node discusses the founders and directors of the company ('Helena Brandt e Rogério Tancredi'), which is completely irrelevant to descaling the machine with vinegar, and it was correctly ranked lower."
+       },
+       "context_recall": {
+        "v": 0.333,
+        "motivo": "The score is 0.33 because while sentence 2 can be attributed to the 1st node in the retrieval context regarding the use of ground coffee, sentences 1 and 3 lack any corresponding information in the retrieval context."
+       },
+       "faithfulness": {
+        "v": 0.0,
+        "motivo": "The score is 0.00 because the actual output incorrectly states that no information was found, whereas the context actually contains specific details about the Aurora K2 coffee maker and its founders."
+       },
+       "answer_relevancy": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the output directly and accurately addresses both parts of the user's input regarding using vinegar for descaling and the machine's capsule compatibility, with zero irrelevant statements."
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": "Context relevance 0.00 is < 0.5"
+       },
+       "context_recall": {
+        "v": 0.333,
+        "motivo": "Recall 0.33 is < 0.5"
+       },
+       "faithfulness": {
+        "v": 0.0,
+        "motivo": "Faithfulness 0.00 is < 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.47,
+        "motivo": "Relevance 0.47 is less than threshold 0.5"
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "q7",
+   "pergunta": "O que significa o código de erro E2 e como resolver?",
+   "referencia": "E2 é pressão insuficiente. A causa comum é moagem grossa demais. A solução é usar moagem fina, parecida com açúcar refinado.",
+   "fontes": [
+    "manual",
+    "faq"
+   ],
+   "tipo": "duas fontes se complementam",
+   "tecnicas": {
+    "arvore": {
+     "trechos": [
+      "manual-09"
+     ],
+     "resposta": "O código de erro E2 significa pressão insuficiente. Para resolver, verifique a moagem.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.333,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.996,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "agentico": {
+     "trechos": [
+      "manual-09"
+     ],
+     "resposta": "O código de erro E2 significa pressão insuficiente. Para resolver, verifique a moagem.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.333,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.996,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "bom": {
+     "trechos": [
+      "manual-09",
+      "faq-06",
+      "faq-01"
+     ],
+     "resposta": "O código de erro E2 significa pressão insuficiente causada por moagem grossa demais, que deixa o café aguado. Para resolver, verifique a moagem e utilize uma moagem fina, parecida com açúcar refinado, evitando que seja grossa demais.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 0.833,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.997,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because all the relevant nodes are perfectly positioned at the top! Specifically, the first node in the retrieval contexts is ranked highest because it directly defines the error code 'E2: pressão insuficiente, verifique a moagem', which is the core of the expected output, followed closely by the second node which explains the cause and solution for the error by stating 'Moagem grossa demais causa…"
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because all sentences in the expected output are successfully attributed to the nodes in the retrieval context, with sentence 1 matched by the 1st node, and sentences 2 and 3 fully supported by the 2nd node!"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the actual output is completely faithful to the retrieval context with zero contradictions!"
+       },
+       "answer_relevancy": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the output directly and comprehensively answers what the error code E2 means and how to resolve it, with no irrelevant information included."
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.4,
+        "motivo": "Context relevance 0.40 is < 0.5"
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": "Recall 1.00 is >= 0.5"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "Faithfulness 1.00 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.996,
+        "motivo": "Relevance 1.00 is greater than threshold 0.5"
+       }
+      }
+     }
+    },
+    "bm25": {
+     "trechos": [
+      "faq-06",
+      "manual-09",
+      "faq-01"
+     ],
+     "resposta": "O código de erro E2 significa pressão insuficiente. Para resolver, verifique a moagem, utilizando uma moagem fina, parecida com açúcar refinado.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.996,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "grafo": {
+     "trechos": [
+      "manual-09",
+      "faq-06"
+     ],
+     "resposta": "O código de erro E2 significa pressão insuficiente. Para resolver, verifique a moagem, pois uma moagem grossa demais causa esse erro.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.996,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "ruim": {
+     "trechos": [
+      "manual-01",
+      "manual-03"
+     ],
+     "resposta": "Não encontrei essa informação nas fontes disponíveis.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": "The score is 0.00 because all retrieval nodes are irrelevant to the input. Specifically, the first node in the retrieval contexts is irrelevant because it states that \"O documento fala sobre 'Especificações técnicas. A Aurora K2 é uma cafeteira...', o que não menciona o código de erro E2.\", and the second node is also irrelevant because it mentions that \"O documento aborda o 'Preparo do café', mas não contém nenhuma…"
+       },
+       "context_recall": {
+        "v": 0.0,
+        "motivo": "The score is 0.00 because all sentences in the expected output lack corresponding support in the node(s) in retrieval context; sentence 1's mention of insufficient pressure is absent, sentence 2's cause of coarse grinding is not supported by node 2, and sentence 3's specific analogy for fine grinding goes beyond the information provided in node 2."
+       },
+       "faithfulness": {
+        "v": 0.0,
+        "motivo": "The score is 0.00 because the actual output incorrectly claims that the information was not found, whereas the retrieval context actually provides detailed information about the Aurora K2 coffee maker."
+       },
+       "answer_relevancy": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the output directly and comprehensively addresses both parts of the input by explaining the meaning of error code E2 and providing clear steps to resolve it without any irrelevant information."
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": "Context relevance 0.00 is < 0.5"
+       },
+       "context_recall": {
+        "v": null,
+        "motivo": "ERRO do juiz: Grader returned no [Attributed]/[Not Attributed] classifications"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "Faithfulness 1.00 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.465,
+        "motivo": "Relevance 0.46 is less than threshold 0.5"
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "q8",
+   "pergunta": "Qual é a capacidade do reservatório de água da Aurora K3?",
+   "referencia": "Não há essa informação. A Aurora K3 foi anunciada para 2027 e nenhuma especificação foi divulgada.",
+   "fontes": [
+    "wiki"
+   ],
+   "tipo": "pergunta sem resposta no corpus, armadilha de alucinação",
+   "tecnicas": {
+    "arvore": {
+     "trechos": [
+      "wiki-09"
+     ],
+     "resposta": "Não encontrei essa informação nas fontes disponíveis.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "agentico": {
+     "trechos": [
+      "wiki-09"
+     ],
+     "resposta": "Não encontrei essa informação nas fontes disponíveis.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "bom": {
+     "trechos": [
+      "wiki-05",
+      "faq-10",
+      "manual-01"
+     ],
+     "resposta": "Não encontrei essa informação nas fontes disponíveis.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.5,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": "The score is 0.00 because all retrieval context nodes are irrelevant and failed to provide information about the Aurora K3 water reservoir capacity. Specifically, the first node (rank 1) was deemed irrelevant because \"O contexto menciona a 'Aurora K2', mas a pergunta e a resposta tratam da 'Aurora K3', portanto não é útil.\", the second node (rank 2) was irrelevant because \"O texto fala sobre as diferenças para a Aur…"
+       },
+       "context_recall": {
+        "v": 0.0,
+        "motivo": "The score is 0.00 because sentences 1 and 2 of the expected output cannot be attributed to any node(s) in retrieval context, as the context only discusses the Aurora K1 and K2 models and contains no information regarding the Aurora K3."
+       },
+       "faithfulness": {
+        "v": 0.0,
+        "motivo": "The score is 0.00 because the actual output incorrectly states that the information was not found, whereas the retrieval context actually provides diverse information about the Aurora K2."
+       },
+       "answer_relevancy": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the response directly and accurately addresses the input without containing any irrelevant statements. Excellent job!"
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": "Context relevance 0.00 is < 0.5"
+       },
+       "context_recall": {
+        "v": 0.5,
+        "motivo": "Recall 0.50 is >= 0.5"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "Faithfulness 1.00 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.476,
+        "motivo": "Relevance 0.48 is less than threshold 0.5"
+       }
+      }
+     }
+    },
+    "bm25": {
+     "trechos": [
+      "wiki-09",
+      "manual-05",
+      "manual-01"
+     ],
+     "resposta": "Não encontrei essa informação nas fontes disponíveis.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "grafo": {
+     "trechos": [
+      "faq-10",
+      "wiki-04",
+      "faq-07"
+     ],
+     "resposta": "Não encontrei essa informação nas fontes disponíveis.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.5,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      }
+     }
+    },
+    "ruim": {
+     "trechos": [
+      "faq-10",
+      "manual-01"
+     ],
+     "resposta": "Não encontrei essa informação nas fontes disponíveis.",
+     "notas": {
+      "ragas": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": null
+       },
+       "context_recall": {
+        "v": 0.5,
+        "motivo": null
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": null
+       },
+       "answer_relevancy": {
+        "v": 0.0,
+        "motivo": null
+       }
+      },
+      "deepeval": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": "The score is 0.00 because all retrieved nodes are irrelevant. Specifically, the first node incorrectly discusses the capacity of 'Aurora K1' and 'Aurora K2' instead of 'Aurora K3', and the second node only lists technical specifications for 'Aurora K2' ('Reservatório de água removível de 1,4 litro') without containing information about the 'Aurora K3'. Therefore, no relevant nodes were retrieved to be ranked above t…"
+       },
+       "context_recall": {
+        "v": 0.0,
+        "motivo": "The score is 0.00 because the entire expected output regarding the Aurora K3 model and its 2027 announcement cannot be attributed to the 1st and 2nd nodes in the retrieval context, which only contain information about the Aurora K1 and Aurora K2 models."
+       },
+       "faithfulness": {
+        "v": 0.0,
+        "motivo": "The score is 0.00 because the actual output incorrectly claims that no information was found, whereas the context actually contains various details about the K2 and Aurora K1 coffee makers."
+       },
+       "answer_relevancy": {
+        "v": 1.0,
+        "motivo": "The score is 1.00 because the output directly and completely addresses the input without containing any irrelevant statements."
+       }
+      },
+      "promptfoo": {
+       "context_precision": {
+        "v": 0.0,
+        "motivo": "Context relevance 0.00 is < 0.5"
+       },
+       "context_recall": {
+        "v": 0.0,
+        "motivo": "Recall 0.00 is < 0.5"
+       },
+       "faithfulness": {
+        "v": 1.0,
+        "motivo": "Faithfulness 1.00 is >= 0.5"
+       },
+       "answer_relevancy": {
+        "v": 0.476,
+        "motivo": "Relevance 0.48 is less than threshold 0.5"
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "corpus": {
+  "fontes": 3,
+  "trechos": 30,
+  "perguntas": 8
+ }
+}

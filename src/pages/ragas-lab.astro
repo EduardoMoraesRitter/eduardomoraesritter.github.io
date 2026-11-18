@@ -1,0 +1,540 @@
+---
+// src/pages/ragas-lab.astro
+// ──────────────────────────
+// Lab RAG — qual técnica de busca traz os trechos certos, medida por três avaliadores
+// (Ragas, DeepEval e Promptfoo). Tudo estático: os números vêm de src/data/ragas-lab/resultados.json,
+// exportado do repositório ragas-lab por src/exportar_site.py, e são agregados no build.
+import Nav    from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import R      from '../data/ragas-lab/resultados.json';
+
+import '../styles/global.css';
+
+const D: any = R;
+const FERR = [
+  { id: 'ragas',     nome: 'Ragas' },
+  { id: 'deepeval',  nome: 'DeepEval' },
+  { id: 'promptfoo', nome: 'Promptfoo' },
+] as const;
+const MET = [
+  { id: 'context_precision', chave: 'rag.m.prec',  nome: 'Precisão do contexto',   busca: true },
+  { id: 'context_recall',    chave: 'rag.m.rec',   nome: 'Cobertura do contexto',  busca: true },
+  { id: 'faithfulness',      chave: 'rag.m.faith', nome: 'Fidelidade',             busca: false },
+  { id: 'answer_relevancy',  chave: 'rag.m.rel',   nome: 'Relevância da resposta', busca: false },
+] as const;
+const TEC: Record<string, { nome: string; chave: string; desc: string; dchave: string }> = {
+  arvore:   { nome: 'Árvore (PageIndex)', chave: 'rag.t.arvore',   desc: 'Sem vetor. O LLM lê um sumário com título e resumo de cada seção e escolhe onde a resposta deve estar.', dchave: 'rag.td.arvore' },
+  agentico: { nome: 'Agêntica',           chave: 'rag.t.agentico', desc: 'O LLM busca sozinho, em até 6 passos, com as ferramentas listar, grep e ler.', dchave: 'rag.td.agentico' },
+  bom:      { nome: 'Vetor',              chave: 'rag.t.bom',      desc: 'Embedding (gemini-embedding-001) e os 3 trechos mais parecidos em significado.', dchave: 'rag.td.bom' },
+  bm25:     { nome: 'BM25',               chave: 'rag.t.bm25',     desc: 'Palavra exata, sem stopwords. Nenhuma chamada de LLM na busca.', dchave: 'rag.td.bm25' },
+  grafo:    { nome: 'Grafo (GraphRAG)',   chave: 'rag.t.grafo',    desc: 'Grafo em memória (networkx, sem Neo4j). O LLM extraiu triplas entidade-relação-entidade; a busca anda 1 salto a partir das entidades da pergunta.', dchave: 'rag.td.grafo' },
+  ruim:     { nome: 'Palavras (piso)',    chave: 'rag.t.ruim',     desc: 'Conta palavras em comum, inclusive "a", "de", "o". Feita para errar, serve de piso.', dchave: 'rag.td.ruim' },
+};
+const tecnicas: string[] = D.tecnicas;
+
+// ---------- formatação ----------
+const f2 = (v: number | null | undefined) => (v == null ? '–' : v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+const mediaDe = (vs: (number | null | undefined)[]) => { const x = vs.filter((v): v is number => v != null); return x.length ? x.reduce((a, b) => a + b, 0) / x.length : null; };
+const gravadoEm = new Date(D.gerado + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+// média de uma métrica numa técnica, entre as ferramentas que avaliaram
+const metTec = (t: string, m: string) => mediaDe(FERR.map(f => D.medias[t]?.[f.id]?.[m]));
+const ferrDe = (t: string) => FERR.filter(f => D.medias[t]?.[f.id]).map(f => f.nome);
+// nota da busca = média de precisão e cobertura do contexto
+const notaBusca = (t: string) => mediaDe([metTec(t, 'context_precision'), metTec(t, 'context_recall')]);
+const ranking = [...tecnicas].sort((a, b) => (notaBusca(b) ?? 0) - (notaBusca(a) ?? 0));
+
+// ---------- gráficos de barras (SVG gerado no build) ----------
+const W = 380, H = 220, PL = 30, PR = 6, PT = 14, PB = 34, IW = W - PL - PR, IH = H - PT - PB;
+function grafico(m: string) {
+  const grupo = IW / ranking.length, gap = 2, bw = Math.min(16, (grupo * 0.78 - gap * 2) / 3);
+  const barras: any[] = [];
+  ranking.forEach((t, i) => {
+    const cx = PL + grupo * i + grupo / 2, total = 3 * bw + 2 * gap, x0 = cx - total / 2;
+    FERR.forEach((f, j) => {
+      const v = D.medias[t]?.[f.id]?.[m];
+      const x = x0 + j * (bw + gap);
+      if (v == null) { barras.push({ vazio: true, x: x + bw / 2, y: PT + IH - 4 }); return; }
+      const h = Math.max(IH * v, 1.5), y = PT + IH - h, r = Math.min(3, h, bw / 2);
+      const d = `M${x},${y + r} a${r},${r} 0 0 1 ${r},-${r} h${bw - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${h - r} h-${bw} z`;
+      barras.push({ d, f: f.id, tip: `${TEC[t].nome} · ${f.nome}\n${v.toFixed(2)} (média de 8 perguntas)` });
+    });
+  });
+  const rotulos = ranking.map((t, i) => ({ x: PL + grupo * i + grupo / 2, txt: TEC[t].nome.split(' (')[0] }));
+  return { barras, rotulos };
+}
+const graficos = MET.map(m => ({ ...m, ...grafico(m.id) }));
+
+// ---------- tabela: melhor por coluna ----------
+const colunas = MET.flatMap(m => FERR.map(f => ({ m: m.id, f: f.id })));
+const melhor = Object.fromEntries(colunas.map(c => {
+  const vs = tecnicas.map(t => D.medias[t]?.[c.f]?.[c.m]).filter((v): v is number => v != null);
+  return [`${c.m}|${c.f}`, vs.length > 1 ? Math.max(...vs) : null];
+}));
+
+// ---------- perguntas ----------
+const perguntas: any[] = D.perguntas;
+const notaPergunta = (q: any, t: string) => mediaDe(FERR.flatMap(f => ['context_precision', 'context_recall'].map(m => q.tecnicas[t].notas[f.id]?.[m]?.v)));
+const nivel = (v: number | null) => (v == null ? 'rg-n0' : v >= 0.75 ? 'rg-n3' : v >= 0.4 ? 'rg-n2' : 'rg-n1');
+const tipTxt = (f: string, m: string, n: any) => {
+  if (!n) return 'Não avaliado por esta ferramenta.';
+  const motivo = n.motivo ?? (f === 'ragas' ? 'O Ragas não devolve motivo, só a nota.' : 'Sem motivo registrado.');
+  return `${n.v == null ? 'sem nota' : n.v.toFixed(2)}\n${motivo}`;
+};
+---
+
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark" data-lang="pt"
+      data-title-pt="Lab RAG — Técnicas de busca · Eduardo Ritter"
+      data-title-en="RAG Lab — Retrieval techniques · Eduardo Ritter">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lab RAG — Técnicas de busca · Eduardo Ritter</title>
+  <meta name="description" content="Árvore (PageIndex), vetor, BM25, grafo e busca agêntica no mesmo RAG, avaliados por Ragas, DeepEval e Promptfoo." />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <script is:inline>
+    (function () {
+      var s = localStorage.getItem('theme');
+      var d = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', s || (d ? 'dark' : 'light'));
+    })();
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Display:wght@400;500&family=Google+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+
+<body class="rg">
+
+  <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+  <Nav base="/" />
+
+  <main>
+
+    <!-- ── Abertura ─────────────────────────────────────────────── -->
+    <section class="section rg-abertura reveal-section" id="topo">
+      <div class="container">
+        <p class="label rg-eyebrow"><span data-i18n="rag.eyebrow">Lab · Avaliação de RAG</span> · {gravadoEm}</p>
+        <h1 class="rg-titulo">
+          <span data-i18n="rag.title.a">Árvore</span> <em>vs</em> <span data-i18n="rag.title.b">Vetor</span> <em>vs</em>
+          BM25 <em>vs</em> <span data-i18n="rag.title.c">Grafo</span>
+          <span class="rg-titulo-sub"> · <span data-i18n="rag.title.sub">qual busca traz o trecho certo</span></span>
+        </h1>
+        <p class="rg-sub" data-i18n="rag.sub">O mesmo RAG, o mesmo corpus, as mesmas perguntas e o mesmo gerador de resposta. Só a busca muda. Três avaliadores (Ragas, DeepEval e Promptfoo) dão nota de 0 a 1 para o que cada busca trouxe e para a resposta final.</p>
+        <ul class="rg-chips">
+          <li class="label">{D.corpus.perguntas} <span data-i18n="rag.chip.q">perguntas com gabarito</span></li>
+          <li class="label">{D.corpus.trechos} <span data-i18n="rag.chip.chunks">trechos</span> · {D.corpus.fontes} <span data-i18n="rag.chip.src">fontes</span></li>
+          <li class="label">{tecnicas.length} <span data-i18n="rag.chip.tec">técnicas de busca</span></li>
+          <li class="label">3 <span data-i18n="rag.chip.judges">avaliadores</span></li>
+          <li class="label rg-chip-alerta" data-i18n="rag.chip.fake">dados fictícios</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── 01 Resumo ─────────────────────────────────────────────── -->
+    <section class="section reveal-section" id="resumo">
+      <div class="container">
+        <header class="section-header">
+          <span class="section-index">01</span>
+          <h2 data-i18n="rag.summary.title">Resultado</h2>
+        </header>
+        <p class="rg-intro" data-i18n="rag.summary.intro">Nota da busca = média de precisão e cobertura do contexto, entre os avaliadores que rodaram. Precisão diz se os trechos trazidos são os certos. Cobertura diz se eles contêm tudo o que o gabarito pede.</p>
+
+        <div class="rg-podio">
+          {ranking.map((t, i) => (
+            <article class={`rg-card reveal-item ${i === 0 ? 'rg-card-1' : ''} ${t === 'ruim' ? 'rg-card-piso' : ''}`} style={`--delay: ${i * 0.06}s`}>
+              <div class="rg-card-topo">
+                <span class="rg-posicao">{i + 1}º</span>
+                <div>
+                  <h3 class="rg-card-nome" data-i18n={TEC[t].chave}>{TEC[t].nome}</h3>
+                  <p class="rg-card-desc" data-i18n={TEC[t].dchave}>{TEC[t].desc}</p>
+                </div>
+              </div>
+              <div class="rg-card-nota">
+                <span class="stat-num">{f2(notaBusca(t))}</span>
+                <span class="label" data-i18n="rag.card.score">nota da busca</span>
+              </div>
+              <dl class="rg-linhas">
+                {MET.map(m => <div><dt class="label" data-i18n={m.chave}>{m.nome}</dt><dd>{f2(metTec(t, m.id))}</dd></div>)}
+                <div><dt class="label" data-i18n="rag.card.calls">LLM na busca, por pergunta</dt><dd>{D.custo_busca[t].llm}</dd></div>
+                <div><dt class="label" data-i18n="rag.card.judges">avaliado por</dt><dd class="rg-pequeno">{ferrDe(t).join(', ')}</dd></div>
+              </dl>
+            </article>
+          ))}
+        </div>
+
+        <p class="rg-veredito" data-i18n="rag.verdict">A <strong>árvore</strong> venceu: o LLM lê o sumário e aponta a seção certa, e quase nunca traz trecho sobrando. A <strong>agêntica</strong> chega perto, mas gasta de 2 a 7 chamadas por pergunta. O <strong>vetor</strong> acha a resposta, só que traz dois trechos inúteis junto. O <strong>BM25</strong> perde quando a palavra muda de forma ("pesa" e "peso"). O <strong>grafo</strong> ficou no piso: 30 trechos geram poucas relações, e o nó "Aurora K2" liga tudo a tudo.</p>
+
+        <div class="rg-acoes">
+          <a class="btn-outline" href="#graficos"><span data-i18n="rag.cta.charts">Ver os gráficos</span></a>
+          <a class="btn-outline" href="#perguntas"><span data-i18n="rag.cta.q">Ler pergunta por pergunta</span></a>
+          <a class="btn-outline" href={D.repositorio} target="_blank" rel="noopener"><span data-i18n="rag.cta.repo">Código no GitHub</span></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 02 Gráficos ───────────────────────────────────────────── -->
+    <section class="section reveal-section" id="graficos">
+      <div class="container">
+        <header class="section-header">
+          <span class="section-index">02</span>
+          <h2 data-i18n="rag.charts.title">Gráficos</h2>
+        </header>
+        <p class="rg-intro" data-i18n="rag.charts.intro">Média das 8 perguntas. As duas primeiras métricas medem a busca. As duas últimas medem a resposta e servem de controle. Técnicas na ordem do ranking.</p>
+        <ul class="rg-legenda">
+          {FERR.map(f => <li class="label"><i class={`rg-sw rg-f-${f.id}`}></i>{f.nome}</li>)}
+          <li class="label rg-legenda-nota" data-i18n="rag.charts.pf">Promptfoo só avaliou vetor e piso</li>
+        </ul>
+        <div class="rg-graficos">
+          {graficos.map(g => (
+            <figure class="rg-grafico">
+              <figcaption>
+                <span class="rg-graf-nome" data-i18n={g.chave}>{g.nome}</span>
+                <span class="label">{g.busca ? <span data-i18n="rag.charts.search">mede a busca</span> : <span data-i18n="rag.charts.answer">mede a resposta</span>}</span>
+              </figcaption>
+              <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={g.nome}>
+                {[0, 0.5, 1].map(v => {
+                  const y = PT + IH * (1 - v);
+                  return (<Fragment><line class={v === 0 ? 'rg-eixo' : 'rg-grade'} x1={PL} x2={W - PR} y1={y} y2={y} /><text class="rg-tick" x={PL - 6} y={y + 4} text-anchor="end">{v}</text></Fragment>);
+                })}
+                {g.barras.map(b => b.vazio
+                  ? <text class="rg-tick" x={b.x} y={b.y} text-anchor="middle">·</text>
+                  : <path class={`rg-barra rg-f-${b.f}`} d={b.d} data-tip={b.tip} />)}
+                {g.rotulos.map(r => <text class="rg-rotulo" x={r.x} y={H - 12} text-anchor="middle">{r.txt}</text>)}
+              </svg>
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 03 Tabela ─────────────────────────────────────────────── -->
+    <section class="section reveal-section" id="tabela">
+      <div class="container">
+        <header class="section-header">
+          <span class="section-index">03</span>
+          <h2 data-i18n="rag.table.title">Tabela</h2>
+        </header>
+        <div class="rg-tabela-wrap">
+          <table class="rg-tabela">
+            <thead>
+              <tr>
+                <th class="label" rowspan="2" data-i18n="rag.table.tec">Técnica</th>
+                {MET.map(m => <th class="label rg-grupo-th" colspan="3" data-i18n={m.chave}>{m.nome}</th>)}
+              </tr>
+              <tr>
+                {MET.map(() => FERR.map((f, j) => <th class={`label rg-sub-th ${j === 0 ? 'rg-borda' : ''}`}><i class={`rg-sw rg-f-${f.id}`}></i>{f.nome}</th>))}
+              </tr>
+            </thead>
+            <tbody>
+              {ranking.map(t => (
+                <tr>
+                  <th class="rg-metrica" data-i18n={TEC[t].chave}>{TEC[t].nome}</th>
+                  {colunas.map((c, j) => {
+                    const v = D.medias[t]?.[c.f]?.[c.m];
+                    const best = v != null && melhor[`${c.m}|${c.f}`] != null && v === melhor[`${c.m}|${c.f}`];
+                    return <td class={[j % 3 === 0 ? 'rg-borda' : '', best ? 'rg-melhor' : '', v == null ? 'rg-vazio' : ''].filter(Boolean).join(' ')}>{best && <span class="rg-estrela">★</span>}{f2(v)}</td>;
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="rg-nota" data-i18n="rag.table.note">★ melhor técnica naquela coluna. Juiz: Gemini 3.5 Flash Lite no Ragas das técnicas vetor e piso e em todo o DeepEval; Gemini 3.1 Flash Lite no Promptfoo e no Ragas das técnicas novas, porque a cota gratuita do 3.5 acabou no meio. Os números de juízes diferentes não são idênticos em escala.</p>
+      </div>
+    </section>
+
+    <!-- ── 04 Onde os avaliadores discordam ──────────────────────── -->
+    <section class="section reveal-section" id="discordam">
+      <div class="container">
+        <header class="section-header">
+          <span class="section-index">04</span>
+          <h2 data-i18n="rag.dis.title">Divergências</h2>
+        </header>
+        <p class="rg-intro" data-i18n="rag.dis.intro">Quando os trechos não têm a resposta, o RAG responde: "Não encontrei essa informação nas fontes disponíveis." Cada avaliador julga essa recusa de um jeito.</p>
+        <div class="rg-tabela-wrap">
+          <table class="rg-tabela rg-tabela-texto">
+            <thead><tr>
+              <th class="label" data-i18n="rag.dis.metric">Métrica</th>
+              {FERR.map(f => <th class="label"><i class={`rg-sw rg-f-${f.id}`}></i>{f.nome}</th>)}
+              <th class="label" data-i18n="rag.dis.read">Leitura</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <th class="rg-metrica" data-i18n="rag.m.faith">Fidelidade</th><td>1,0</td><td>0,0</td><td>1,0</td>
+                <td class="rg-texto-cel" data-i18n="rag.dis.faith">Ragas e Promptfoo: a recusa não inventa nada, então é fiel. DeepEval: a recusa contradiz o contexto quando o contexto tinha a resposta.</td>
+              </tr>
+              <tr>
+                <th class="rg-metrica" data-i18n="rag.m.rel">Relevância da resposta</th><td>0,0</td><td>1,0</td><td>~0,47</td>
+                <td class="rg-texto-cel" data-i18n="rag.dis.rel">Ragas acerta: recusa não responde. DeepEval dá nota máxima porque a resposta "não tem frase irrelevante". Promptfoo mede por embedding e fica no meio.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="rg-achados">
+          <li data-i18n="rag.dis.1"><strong>O juiz pesa mais que a biblioteca.</strong> Metade das discordâncias veio do modelo barato que julgou, não do código das ferramentas.</li>
+          <li data-i18n="rag.dis.2"><strong>Só o Ragas não explica a nota.</strong> DeepEval devolve o motivo em frase. Promptfoo guarda o raciocínio no JSON bruto.</li>
+          <li data-i18n="rag.dis.3"><strong>Juiz fora do formato vira erro silencioso.</strong> O DeepEval avisa "invalid JSON". O Promptfoo registra 0,0. Aqui essas células ficam sem nota.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── 05 Pergunta por pergunta ──────────────────────────────── -->
+    <section class="section reveal-section" id="perguntas">
+      <div class="container">
+        <header class="section-header">
+          <span class="section-index">05</span>
+          <h2 data-i18n="rag.q.title">Perguntas</h2>
+        </header>
+        <p class="rg-intro" data-i18n="rag.q.intro">Abra uma pergunta para ver o que cada busca trouxe, o que o RAG respondeu e as notas. Passe o mouse numa nota para ler o motivo do juiz. Perguntas e respostas estão em português.</p>
+        <div class="rg-q-legenda label">
+          <span><i class="rg-ponto rg-n3"></i><span data-i18n="rag.q.l3">busca boa (≥ 0,75)</span></span>
+          <span><i class="rg-ponto rg-n2"></i><span data-i18n="rag.q.l2">média</span></span>
+          <span><i class="rg-ponto rg-n1"></i><span data-i18n="rag.q.l1">ruim (&lt; 0,40)</span></span>
+        </div>
+        <ul class="rg-qs">
+          {perguntas.map(q => (
+            <li>
+              <details>
+                <summary>
+                  <span class="label rg-q-id">{q.id}</span>
+                  <span class="rg-q-txt">{q.pergunta}</span>
+                  <span class="rg-q-pontos">{ranking.map(t => <i class={`rg-ponto ${nivel(notaPergunta(q, t))}`} title={`${TEC[t].nome}: ${f2(notaPergunta(q, t))}`}></i>)}</span>
+                </summary>
+                <div class="rg-q-corpo">
+                  <p class="rg-gabarito"><span class="label" data-i18n="rag.q.ref">Gabarito</span> {q.referencia}</p>
+                  <div class="rg-q-grade">
+                    {ranking.map(t => {
+                      const x = q.tecnicas[t];
+                      return (
+                        <div class="rg-q-tec">
+                          <div class="rg-q-tec-cab">
+                            <b data-i18n={TEC[t].chave}>{TEC[t].nome}</b>
+                            <span class={`rg-pill ${nivel(notaPergunta(q, t))}`}>{f2(notaPergunta(q, t))}</span>
+                          </div>
+                          <p class="label rg-q-trechos">{x.trechos.join(' · ') || '—'}</p>
+                          <blockquote>{x.resposta}</blockquote>
+                          <table class="rg-mini">
+                            <thead><tr><th></th>{MET.map(m => <th class="label" data-i18n={`${m.chave}.curto`}>{m.nome.split(' ')[0]}</th>)}</tr></thead>
+                            <tbody>
+                              {FERR.filter(f => x.notas[f.id]).map(f => (
+                                <tr>
+                                  <th><i class={`rg-sw rg-f-${f.id}`}></i>{f.nome}</th>
+                                  {MET.map(m => { const n = x.notas[f.id][m.id]; return <td class="rg-tip" data-tip={`${f.nome} · ${m.nome}\n${tipTxt(f.id, m.id, n)}`}>{f2(n?.v)}</td>; })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </details>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── 06 Como foi feito ─────────────────────────────────────── -->
+    <section class="section reveal-section" id="como">
+      <div class="container">
+        <header class="section-header">
+          <span class="section-index">06</span>
+          <h2 data-i18n="rag.how.title">Como foi feito</h2>
+        </header>
+        <ol class="rg-passos">
+          <li><span class="stat-num">1</span><div><h3 data-i18n="rag.how.1t">Corpus inventado</h3><p data-i18n="rag.how.1">Uma cafeteira fictícia em 3 fontes (manual, wiki e FAQ), 10 seções cada. Inventado de propósito: o juiz não pode responder de memória, e o gabarito é exato.</p></div></li>
+          <li><span class="stat-num">2</span><div><h3 data-i18n="rag.how.2t">Só a busca muda</h3><p data-i18n="rag.how.2">Cada técnica devolve até 3 trechos. O mesmo Gemini escreve a resposta com a mesma instrução: usar só os trechos ou dizer que não encontrou.</p></div></li>
+          <li><span class="stat-num">3</span><div><h3 data-i18n="rag.how.3t">Três avaliadores, mesmas métricas</h3><p data-i18n="rag.how.3">Ragas, DeepEval e Promptfoo usam um LLM como juiz. As quatro métricas são as mesmas nas três ferramentas, com definições um pouco diferentes.</p></div></li>
+          <li><span class="stat-num">4</span><div><h3 data-i18n="rag.how.4t">Custo zero</h3><p data-i18n="rag.how.4">Tudo no nível gratuito do Gemini. O preço foi tempo: os limites de pedidos por minuto e por dia esticaram as rodadas para algumas horas.</p></div></li>
+        </ol>
+        <div class="rg-ressalvas">
+          <p class="label" data-i18n="rag.how.limits">Limites</p>
+          <ul>
+            <li data-i18n="rag.how.l1">8 perguntas e 30 trechos: uma pergunta muda 0,12 na média. Serve para entender as técnicas, não para ranquear RAGs reais.</li>
+            <li data-i18n="rag.how.l2">O corpus favorece a árvore: seções curtas, com título claro e um assunto cada. Em documento sem estrutura, a ordem pode mudar.</li>
+            <li data-i18n="rag.how.l3">O grafo precisa de dado com muitas entidades ligadas entre si. Aqui ele teve pouco material.</li>
+            <li data-i18n="rag.how.l4">Juiz de nível gratuito gera ruído de 10 a 20 pontos e às vezes sai do formato.</li>
+          </ul>
+        </div>
+        <div class="rg-acoes">
+          <a class="btn-outline" href={D.repositorio} target="_blank" rel="noopener"><span data-i18n="rag.cta.repo">Código no GitHub</span></a>
+          <a class="btn-outline" href={`${D.repositorio}/blob/master/docs/RELATORIO.md`} target="_blank" rel="noopener"><span data-i18n="rag.cta.report">Relatório completo</span></a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="rg-tooltip" id="rgTip" role="tooltip"></div>
+
+  <Footer />
+
+  <script>
+    import '../scripts/main.js';
+
+    // Tooltip das barras e das notas: lê data-tip, segue o mouse e cabe na tela
+    const tip = document.getElementById('rgTip') as HTMLDivElement;
+    const mover = (e: MouseEvent) => {
+      const w = tip.offsetWidth, h = tip.offsetHeight;
+      let x = e.clientX + 14, y = e.clientY + 14;
+      if (x + w > innerWidth - 8) x = e.clientX - w - 14;
+      if (y + h > innerHeight - 8) y = e.clientY - h - 14;
+      tip.style.left = x + 'px'; tip.style.top = y + 'px';
+    };
+    document.querySelectorAll<HTMLElement | SVGElement>('[data-tip]').forEach(el => {
+      el.addEventListener('mouseenter', (e) => { tip.textContent = (el as HTMLElement).dataset.tip ?? ''; tip.classList.add('is-on'); mover(e as MouseEvent); });
+      el.addEventListener('mousemove', (e) => mover(e as MouseEvent));
+      el.addEventListener('mouseleave', () => tip.classList.remove('is-on'));
+    });
+
+    document.querySelector('.nav-links a[href="/ragas-lab/"]')?.classList.add('is-current');
+  </script>
+
+</body>
+</html>
+
+<style is:global>
+  /* Avaliadores: cores validadas (validate_palette.js) contra o fundo de cada tema, no tom do site */
+  [data-theme="dark"] .rg  { --f-ragas: #b8892f; --f-deepeval: #3b8ed2; --f-promptfoo: #d0656f; --n3: #6fae7f; --n2: #b8892f; --n1: #d0656f; --n0: #2a2a2a; }
+  [data-theme="light"] .rg { --f-ragas: #a8781f; --f-deepeval: #2a74c9; --f-promptfoo: #c04a5f; --n3: #3f7a52; --n2: #a8781f; --n1: #c04a5f; --n0: #d8d3cc; }
+  .rg-f-ragas { --cor: var(--f-ragas); fill: var(--f-ragas); }
+  .rg-f-deepeval { --cor: var(--f-deepeval); fill: var(--f-deepeval); }
+  .rg-f-promptfoo { --cor: var(--f-promptfoo); fill: var(--f-promptfoo); }
+  .rg-sw { display: inline-block; width: 10px; height: 10px; background: var(--cor); margin-right: 8px; vertical-align: 0; }
+
+  .rg-abertura { padding-top: calc(var(--header-h) + clamp(48px, 7vw, 96px)); }
+  .rg-eyebrow { margin-bottom: 22px; }
+  .rg-titulo { font-family: var(--font-display); font-weight: 300; letter-spacing: -0.02em; line-height: 1.08; font-size: clamp(2.1rem, 5.2vw, 4.2rem); max-width: 20ch; }
+  .rg-titulo em { font-family: var(--font-display-editorial); font-style: italic; color: var(--text-2); font-weight: 300; }
+  .rg-titulo-sub { font-family: var(--font-display-editorial); font-style: italic; font-weight: 300; color: var(--text-2); font-size: .58em; }
+  .rg-sub { margin-top: 26px; max-width: 64ch; color: var(--text-2); font-size: 1.02rem; line-height: 1.7; }
+  .rg-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 32px; list-style: none; padding: 0; }
+  .rg-chips li { border: 1px solid var(--border); padding: 8px 14px; color: var(--text-1); }
+  .rg-chips .rg-chip-alerta { border-color: var(--accent); color: var(--accent); }
+  .rg-intro { max-width: 70ch; color: var(--text-2); line-height: 1.7; margin: -24px 0 30px; }
+  /* título da seção não quebra: a linha decorativa ocupa só o espaço que sobra */
+  .rg .section-header h2 { flex-shrink: 0; white-space: nowrap; }
+  .rg .section-header::after { flex: 1 1 auto; min-width: 40px; }
+  .rg-achados li, .rg-ressalvas li { margin-bottom: 6px; }
+  .rg-tabela-texto thead th:last-child { text-align: left; }
+
+  .rg-podio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .rg-card { background: var(--bg); padding: 28px 26px 22px; position: relative; display: flex; flex-direction: column; }
+  .rg-card-1::before { content: ''; position: absolute; left: 0; top: 0; right: 0; height: 2px; background: var(--accent); }
+  .rg-card-piso { opacity: .72; }
+  .rg-card-topo { display: flex; gap: 16px; align-items: flex-start; }
+  .rg-posicao { font-family: var(--font-display-editorial); font-size: 2.4rem; line-height: .9; color: var(--text-2); font-weight: 300; }
+  .rg-card-1 .rg-posicao { color: var(--accent); }
+  .rg-card-nome { font-family: var(--font-display); font-weight: 400; font-size: 1.25rem; letter-spacing: -0.01em; margin-bottom: 6px; }
+  .rg-card-desc { color: var(--text-2); font-size: .86rem; line-height: 1.55; }
+  .rg-card-nota { margin: 22px 0 14px; display: flex; flex-direction: column; gap: 6px; }
+  .rg-card-nota .stat-num { font-size: clamp(2.2rem, 3.4vw, 3rem); }
+  .rg-card-1 .rg-card-nota .stat-num { color: var(--accent); }
+  .rg-linhas { display: grid; margin-top: auto; }
+  .rg-linhas div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border); }
+  .rg-linhas dd { font-size: .93rem; color: var(--text-1); text-align: right; font-variant-numeric: tabular-nums; }
+  .rg-pequeno { font-size: .8rem !important; color: var(--text-2) !important; }
+
+  .rg-veredito { margin-top: 40px; max-width: 72ch; font-family: var(--font-display-editorial); font-size: clamp(1.25rem, 2vw, 1.55rem); line-height: 1.5; font-weight: 300; }
+  .rg-veredito strong { font-weight: 500; color: var(--accent); }
+  .rg-acoes { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 34px; }
+
+  .rg-legenda { display: flex; flex-wrap: wrap; gap: 22px; list-style: none; padding: 0; margin: 0 0 18px; align-items: center; }
+  .rg-legenda li { color: var(--text-1); }
+  .rg-legenda .rg-legenda-nota { color: var(--text-2); }
+  .rg-graficos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .rg-grafico { background: var(--bg); padding: 20px 18px 10px; margin: 0; }
+  .rg-grafico figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+  .rg-graf-nome { font-family: var(--font-display); font-size: 1.05rem; font-weight: 400; }
+  .rg-grafico text { font-family: var(--font-body); }
+  .rg-tick { fill: var(--text-2); font-size: 10px; font-variant-numeric: tabular-nums; }
+  .rg-rotulo { fill: var(--text-2); font-size: 10.5px; }
+  .rg-grade { stroke: var(--border); stroke-width: 1; }
+  .rg-eixo { stroke: var(--border-hover); stroke-width: 1; }
+  .rg-barra { cursor: pointer; transition: opacity var(--dur) var(--ease); }
+  .rg-graficos:hover .rg-barra { opacity: .55; }
+  .rg-graficos .rg-barra:hover { opacity: 1; }
+
+  .rg-tabela-wrap { overflow-x: auto; border: 1px solid var(--border); }
+  .rg-tabela { width: 100%; border-collapse: collapse; min-width: 900px; }
+  .rg-tabela th, .rg-tabela td { padding: 12px 12px; border-bottom: 1px solid var(--border); text-align: right; font-size: .9rem; white-space: nowrap; }
+  .rg-tabela td { font-variant-numeric: tabular-nums; }
+  .rg-tabela thead th:first-child, .rg-tabela .rg-metrica { text-align: left; }
+  .rg-tabela .rg-metrica { font-weight: 400; color: var(--text-1); }
+  .rg-tabela .rg-grupo-th { text-align: center; border-left: 1px solid var(--border); color: var(--text-1); }
+  .rg-tabela .rg-sub-th { font-size: .6rem; color: var(--text-2); }
+  .rg-tabela .rg-borda { border-left: 1px solid var(--border); }
+  .rg-tabela tbody tr:last-child th, .rg-tabela tbody tr:last-child td { border-bottom: 0; }
+  .rg-tabela tbody tr:hover { background: var(--bg-surface); }
+  .rg-melhor { color: var(--accent); background: rgba(201, 169, 110, 0.07); }
+  .rg-estrela { margin-right: 5px; font-size: .75rem; }
+  .rg-vazio { color: var(--text-2); }
+  .rg-nota { margin-top: 16px; color: var(--text-2); font-size: .85rem; line-height: 1.6; max-width: 90ch; }
+  .rg-tabela-texto { min-width: 760px; }
+  .rg-tabela-texto td { text-align: center; }
+  .rg-tabela-texto .rg-texto-cel { white-space: normal; text-align: left; color: var(--text-2); font-size: .85rem; line-height: 1.55; min-width: 320px; }
+  .rg-achados { margin: 30px 0 0; padding-left: 18px; color: var(--text-2); line-height: 1.8; max-width: 82ch; }
+  .rg-achados strong { color: var(--text-1); font-weight: 500; }
+
+  .rg-q-legenda { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 14px; color: var(--text-2); }
+  .rg-q-legenda > span { display: inline-flex; align-items: center; gap: 8px; }
+  .rg-ponto { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--n0); }
+  .rg-ponto.rg-n3, .rg-pill.rg-n3 { --nv: var(--n3); } .rg-ponto.rg-n2, .rg-pill.rg-n2 { --nv: var(--n2); } .rg-ponto.rg-n1, .rg-pill.rg-n1 { --nv: var(--n1); }
+  .rg-ponto[class*="rg-n"] { background: var(--nv, var(--n0)); }
+  .rg-qs { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--border); }
+  .rg-qs > li { border-bottom: 1px solid var(--border); }
+  .rg-qs summary { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 16px 6px; cursor: pointer; list-style: none; transition: background var(--dur) var(--ease); }
+  .rg-qs summary::-webkit-details-marker { display: none; }
+  .rg-qs summary:hover, .rg-qs details[open] > summary { background: var(--bg-surface); }
+  .rg-q-id { color: var(--text-2); }
+  .rg-q-txt { color: var(--text-1); font-size: .98rem; }
+  .rg-q-pontos { display: inline-flex; gap: 6px; }
+  .rg-q-corpo { padding: 8px 6px 26px; background: var(--bg-surface); }
+  .rg-gabarito { display: flex; gap: 12px; align-items: baseline; margin-bottom: 18px; color: var(--text-1); line-height: 1.6; max-width: 100ch; }
+  .rg-gabarito .label { flex-shrink: 0; color: var(--accent); }
+  .rg-q-grade { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .rg-q-tec { background: var(--bg); padding: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .rg-q-tec-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .rg-q-tec-cab b { font-weight: 500; font-size: .92rem; }
+  .rg-pill { font-size: .72rem; font-variant-numeric: tabular-nums; padding: 3px 8px; border: 1px solid var(--nv, var(--border)); color: var(--nv, var(--text-2)); }
+  .rg-q-trechos { color: var(--text-2); font-size: .6rem; }
+  .rg-q-tec blockquote { border-left: 2px solid var(--border-hover); padding-left: 10px; margin: 0; font-size: .86rem; line-height: 1.55; color: var(--text-1); }
+  .rg-mini { width: 100%; border-collapse: collapse; margin-top: auto; font-size: .78rem; }
+  .rg-mini th, .rg-mini td { padding: 5px 4px; border-top: 1px solid var(--border); text-align: right; font-variant-numeric: tabular-nums; }
+  .rg-mini thead th { font-size: .55rem; border-top: 0; }
+  .rg-mini tbody th { text-align: left; font-weight: 400; color: var(--text-2); white-space: nowrap; }
+  .rg-tip { cursor: help; }
+  .rg-tip:hover { background: var(--bg-elevated); color: var(--text-1); }
+
+  .rg-tooltip { position: fixed; z-index: 50; pointer-events: none; max-width: 380px; padding: 10px 12px; background: var(--bg-elevated); color: var(--text-1);
+    border: 1px solid var(--border-hover); font-size: .8rem; line-height: 1.5; white-space: pre-wrap; opacity: 0; transition: opacity .12s; }
+  .rg-tooltip.is-on { opacity: 1; }
+
+  .rg-passos { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .rg-passos li { background: var(--bg); padding: 28px 26px; display: flex; gap: 20px; }
+  .rg-passos .stat-num { font-size: 2.2rem; }
+  .rg-passos h3 { font-family: var(--font-display); font-weight: 400; font-size: 1.15rem; margin-bottom: 8px; }
+  .rg-passos p { color: var(--text-2); line-height: 1.65; font-size: .95rem; }
+  .rg-ressalvas { margin-top: 44px; }
+  .rg-ressalvas ul { margin: 14px 0 0; padding-left: 18px; color: var(--text-2); line-height: 1.8; font-size: .95rem; max-width: 80ch; }
+
+  .nav-links a.is-current { color: var(--accent); }
+
+  @media (max-width: 1000px) {
+    .rg-podio { grid-template-columns: repeat(2, 1fr); }
+    .rg-q-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 720px) {
+    .rg-podio, .rg-graficos, .rg-passos, .rg-q-grade { grid-template-columns: 1fr; }
+    .rg-qs summary { grid-template-columns: 34px minmax(0, 1fr); }
+    .rg-q-pontos { grid-column: 2; }
+  }
+</style>
