@@ -3,7 +3,7 @@ export const SESSION_TTL=7*24*60*60*1000;
 export function validSession(value,now=Date.now()){
   if(!value||value.v!==1||!['send','receive'].includes(value.role)||
     !/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(value.url)||
-    !/^[a-f0-9]{64}$/.test(value.code)||! /^[a-f0-9]{64}:(256|400|600)$/.test(value.file)||
+    !/^[a-f0-9]{64}$/.test(value.code)||! /^[a-f0-9]{64}:(256|400|600|880)$/.test(value.file)||
     !Number.isFinite(value.savedAt)||value.savedAt>now+60000||now-value.savedAt>SESSION_TTL)return null;
   const bs=Number(value.file.split(':')[1]);
   const pause=value.pause;

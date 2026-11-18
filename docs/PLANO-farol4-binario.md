@@ -41,4 +41,5 @@ Os metadados (`F4|M|...`) e o pareamento continuam em texto. Os metadados contin
 - [x] Receptor: lê `bytes` do zxing e `binaryData` do jsQR, e aceita o bloco binário (`acceptBinary`)
 - [x] Interruptor "Formato binário" na página, desligado por padrão, e opção de bloco 880
 - [x] Subagente: medir no navegador texto 600 contra binário 600 e binário 880, em 30 KB e 100 KB, com hash conferido → `docs/teste-binario-2026-11-18.md` (18/18 verificaram; em 100 KB a taxa aos 5 s satura; em 200 KB o binário 880 deu +77%; sem commit)
-- [ ] Decidir o padrão com os números, registrar no README e commitar
+- [x] Decidir o padrão com os números, registrar no README e commitar → padrão novo: binário + bloco 880 (+77% em 200 KB). Desligar o binário volta para 600; teste de leitura limitado a 600; sala salva aceita 880 (18/11/2026)
+- [ ] Teste em produção com dois celulares (Eduardo)

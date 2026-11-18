@@ -24,7 +24,7 @@ import {sendProgress} from './send-progress.mjs?v=20261113-1';
 
 import {PauseState} from './pause-state.mjs?v=20261009-1';
 
-import {readSession,writeSession} from './session-store.mjs?v=20260909-3';
+import {readSession,writeSession} from './session-store.mjs?v=20261118-3';
 
 import {diagnoseTransfer} from './diagnostics.mjs?v=20260909-3';
 
@@ -190,7 +190,7 @@ const rgb=$('rgbCanvas'),rgbCtx=rgb.getContext('2d');
 
 const scan=document.createElement('canvas'),scanCtx=scan.getContext('2d',{willReadFrequently:true});
 
-const calibration=createCalibration({render,beforeTest:()=>setPaused(true),getFps:()=>$('fps').value,getBlockSize:()=>$('blockSize').value,isReceiving:()=>mode==='receive',isCameraActive:()=>!!stream,onFinished:()=>updatePauseUI()});
+const calibration=createCalibration({render,beforeTest:()=>setPaused(true),getFps:()=>$('fps').value,getBlockSize:()=>Math.min(600,Number($('blockSize').value)),isReceiving:()=>mode==='receive',isCameraActive:()=>!!stream,onFinished:()=>updatePauseUI()});
 
 const CELL=6,QUIET=4;
 
@@ -340,7 +340,10 @@ async function prepare(){calibration.cancel();
 
 }
 
-$('file').onchange=()=>{file=$('file').files[0];prepare();};$('blockSize').onchange=prepare;
+$('file').onchange=()=>{file=$('file').files[0];prepare();};
+// Blocks of 880 bytes only fit in the binary format, so the two controls stay in step.
+$('blockSize').onchange=()=>{if(Number($('blockSize').value)>600)$('binaryFormat').checked=true;prepare();};
+$('binaryFormat').onchange=()=>{if(!$('binaryFormat').checked&&Number($('blockSize').value)>600)$('blockSize').value='600';prepare();};
 
 function setMode(value){calibration.cancel();if(mode!==value)restoredRoom=null;if(mode!==value&&transferId())setPaused(true);mode=value;try{sessionStorage.setItem('farol4-role',mode);}catch{}stop();stopCamera();$('sendView').hidden=value!=='send';$('receiveView').hidden=value!=='receive';$('createPair').hidden=value!=='send';$('joinPair').hidden=value!=='receive';$('connectionDetails').open=false;$('sendMode').setAttribute('aria-pressed',String(value==='send'));$('receiveMode').setAttribute('aria-pressed',String(value==='receive'));document.body.dataset.mode=value;feedback();updatePauseUI();}
 
@@ -1224,7 +1227,7 @@ async function initialize(){
 
       if(mode==='send'){
 
-        $('blockSize').value=String(restoredRoom.bs);
+        $('blockSize').value=String(restoredRoom.bs);if(restoredRoom.bs>600)$('binaryFormat').checked=true;
 
         notice(`Sala salva. Selecione novamente ${restoredRoom.name||'o mesmo arquivo'} para continuar pelos blocos faltantes.`);
 

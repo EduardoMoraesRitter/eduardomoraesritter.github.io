@@ -4,6 +4,7 @@ import {validSession,readSession,writeSession,SESSION_TTL} from '../public/farol
 const now=Date.now(),base={v:1,role:'send',url:'https://example.supabase.co',code:'a'.repeat(64),file:'b'.repeat(64)+':400',name:'file.bin',cursor:12,savedAt:now,pause:{revision:3,author:'sender',paused:true}};
 test('session validates identifiers, block sizes, expiry and pause order',()=>{
  assert.equal(validSession(base,now).bs,400);
+ assert.equal(validSession({...base,file:'b'.repeat(64)+':880'},now).bs,880);
  assert.equal(validSession({...base,savedAt:now-SESSION_TTL-1},now),null);
  for(const patch of [{file:'bad'},{url:'https://elsewhere.test'},{code:'short'},{file:'b'.repeat(64)+':401'},{pause:{...base.pause,revision:Infinity}}])assert.equal(validSession({...base,...patch},now),null);
 });

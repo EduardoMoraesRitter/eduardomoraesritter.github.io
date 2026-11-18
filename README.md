@@ -115,15 +115,32 @@ Na conta, 1 MB passaria de cerca de 2 min 23 s para cerca de 1 min, e 100 MB de 
 
 **Limites destas medidas:** foram feitas com câmera simulada em notebook. O QR de 600 bytes é maior, então fica mais difícil de ler a distância; isso precisa ser visto no celular real (o botão "Testar leitura" continua disponível). O protocolo não mudou: o tamanho do bloco vem no cabeçalho do arquivo, então versões antigas e novas continuam conversando.
 
+### Formato binário com bloco de 880 bytes: novo padrão (medido em 18/11/2026)
+
+O bloco passa a ir como bytes puros, com cabeçalho de 15 bytes ('F5B' + 4 bytes do hash + número do bloco + CRC32), no lugar do texto em base64 com o hash de 64 letras. Um bloco binário de 880 bytes cabe no mesmo tamanho de QR (113 módulos) que um bloco de texto de 600 bytes. Os metadados continuam em texto. O nome do prefixo não tem relação com o Farol 5: o formato é do Farol 4.
+
+Mesmo método das medidas anteriores. Arquivo de 200 KB, 12 quadros/s, mediana de 3 rodadas, taxa nos primeiros 5 s:
+
+| Formato | Taxa | Diferença sobre o texto 600 |
+|---|---|---|
+| Texto, bloco 600 (padrão anterior) | 16,7 KB/s | — |
+| Binário, bloco 600 | 17,3 KB/s | +4% |
+| Binário, bloco 880 (padrão novo) | 29,6 KB/s | **+77%** |
+
+- **Integridade:** as 9 medições binárias do plano chegaram a "Arquivo verificado" (SHA-256 conferido).
+- **Limites:** câmera simulada em notebook. Em todos os formatos, os últimos blocos demoram a chegar sem o pedido de blocos faltantes; uma rodada binária de 600 parou em 331 de 334. Falta teste em celular real.
+- **Compatibilidade:** o receptor precisa estar nesta versão para ler blocos binários. Na página, desligar "Formato binário" volta o bloco para 600 em texto; escolher 880 liga o binário. O teste de leitura usa no máximo 600 bytes.
+- Detalhes: [`docs/teste-binario-2026-11-18.md`](docs/teste-binario-2026-11-18.md) e [`docs/PLANO-farol4-binario.md`](docs/PLANO-farol4-binario.md).
+
 ### Próximas soluções (backlog)
 
 Em ordem de prioridade. Os ganhos são estimativas da pesquisa, não medições do Farol.
 
 1. **Medir a velocidade real entre dois aparelhos** (teste físico em [`farol4-teste-fisico.md`](docs/farol4-teste-fisico.md)). Pré-requisito para medir qualquer ganho.
-2. **Ganhar mais dados por QR:** bytes puros e cabeçalho curto de 4 bytes no lugar de base64 e do hash de 64 letras (protocolo v5). Estimativa: +50% a +60% no mesmo tamanho de QR. Muda o protocolo, então os dois aparelhos precisam da mesma versão.
+2. ~~Ganhar mais dados por QR com bytes puros~~: feito (formato binário, +77% medido; ver acima).
 3. **Mais de um QR por canal em tela grande** (dois ou quatro por quadro), com opção na interface. Estimativa: até 2× (ou 4×) de monitor para celular. Depende de o leitor achar vários códigos por imagem.
 4. **Aumentar o teto de quadros/s:** o controle hoje vai até 12. Com câmera de 60 fps (`exact: 60`, quando o aparelho aceita), dá para ir a 24–30. Precisa de teste em celular.
-5. **Subir a velocidade sozinho** quando o receptor confirmar que está lendo tudo. O conselho já existe, mas precisa ser refeito com as medições corrigidas.
+5. ~~Subir a velocidade sozinho~~: feito (controle automático, opção "Velocidade automática", ligada por padrão). Tem testes de unidade; o teste ponta a ponta ficou para o celular real ([`docs/teste-controlador-2026-11-13.md`](docs/teste-controlador-2026-11-13.md)).
 6. **Leitura em resolução menor quando o QR estiver grande.** Na bancada, meia resolução cortou o tempo de leitura pela metade e manteve os três canais. Não testado no celular, onde QR pequeno pode deixar de ser lido.
 7. **Fountain code (LT ou wirehair) para o modo sem canal de retorno.** Não ajuda com o retorno ligado; sem retorno, corta o tempo final. Esforço médio a grande.
 8. **Compressão gzip quando o arquivo encolher** (`CompressionStream`). Zero em vídeo, foto e ZIP; grande em texto.
