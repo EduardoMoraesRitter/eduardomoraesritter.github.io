@@ -20,7 +20,7 @@ import {splitChannels,packetsFrom,isBinaryPacket} from './scan-decode.mjs?v=2026
 import {pairPacket,readPair} from './pairing.mjs?v=20261118-2';
 
 import {TransferRate,duration,needsRecovery} from './transfer-rate.mjs?v=20260909-8';
-import {sendProgress} from './send-progress.mjs?v=20261113-1';
+import {sendProgress,fileSummary} from './send-progress.mjs?v=20261118-4';
 
 import {PauseState} from './pause-state.mjs?v=20261009-1';
 
@@ -262,7 +262,7 @@ function showPair(){calibration.cancel();
 
 $('showPair').onclick=showPair;
 
-$('fps').oninput=()=>{$('fpsValue').textContent=$('fps').value;if(timer){stop();play();}lastSpeedAdjustment=performance.now();lastAdviceAt=0;updateSpeedControl();sendSpeedState();};
+$('fps').oninput=()=>{$('fpsValue').textContent=$('fps').value;if(timer){stop();play();}lastSpeedAdjustment=performance.now();lastAdviceAt=0;updateSpeedControl();sendSpeedState();updateSendProgress();};
 $('sendSlower').onclick=()=>setFps(currentFps()-1);$('sendFaster').onclick=()=>setFps(currentFps()+1);
 $('receiveSlower').onclick=()=>requestSpeed(-1);$('receiveFaster').onclick=()=>requestSpeed(1);
 
@@ -314,7 +314,7 @@ async function prepare(){calibration.cancel();
 
     if(restoredRoom)sender.cursor=restoredRoom.cursor%sender.meta.total;
 
-    $('sendName').textContent=file.name; $('partInfo').textContent=`${Math.max(1,Math.ceil(file.size/PART_SIZE))} parte(s) internas · arquivo único no final · sem conversão`; $('totalBlocks').textContent=sender.meta.total;
+    $('sendName').textContent=`${file.name} · ${dataSize(file.size)}`;$('partInfo').textContent=`${Math.max(1,Math.ceil(file.size/PART_SIZE))} parte(s) internas · arquivo único no final · sem conversão`; $('totalBlocks').textContent=sender.meta.total;
 
     $('nextBlock').textContent=sender.cursor+1;$('sentBlocks').textContent='0';$('startBlock').max=sender.meta.total;$('startBlock').value=String(sender.cursor+1);
 
@@ -418,7 +418,7 @@ function updateSendProgress(){
   const clock=performance.now(),screen=running?screenDetail({frames:screenFrames.perSecond(clock),codes:screenCodes.perSecond(clock),bs:meta.bs}):'';
   $('sendSpeedDetail').textContent=[screen,running&&!stalled?confirmedDetail({rate,bs:meta.bs}):''].filter(Boolean).join(' · ');
   const {totalMs,activeMs,pausedMs}=sendClock.summary(now);
-  $('sendSummary').textContent=sendClock.startedAt?`${dataSize(Math.min(meta.size,v.count*meta.bs))} de ${dataSize(meta.size)} · Tempo total: ${elapsed(totalMs)} · Transmitindo: ${elapsed(activeMs)} · Pausas: ${elapsed(pausedMs)}`:'';
+  $('sendSummary').textContent=sendClock.startedAt?`${dataSize(Math.min(meta.size,v.count*meta.bs))} de ${dataSize(meta.size)} · Tempo total: ${elapsed(totalMs)} · Transmitindo: ${elapsed(activeMs)} · Pausas: ${elapsed(pausedMs)}`:fileSummary({size:meta.size,total:meta.total,bs:meta.bs,fps:currentFps()});
 }
 setInterval(updateSendProgress,1000);
 function currentFps(){return Number($('fps').value);}

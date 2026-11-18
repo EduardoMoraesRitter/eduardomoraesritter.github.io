@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {sendProgress,BLOCKS_PER_FRAME} from '../public/farol4/send-progress.mjs';
+import {sendProgress,sendEstimate,fileSummary,BLOCKS_PER_FRAME} from '../public/farol4/send-progress.mjs';
 import {Sender} from '../public/farol4/protocol.mjs';
 const base={total:100,size:40000,bs:400};
 test('receiver confirmations drive percent, remaining time and speed',()=>{
@@ -21,6 +21,15 @@ test('states: idle, paused, stopped, done',()=>{
  assert.equal(sendProgress({...base,covered:10,running:true,paused:true}).remaining,'Pausado');
  assert.equal(sendProgress({...base,covered:10}).remaining,'Transmissão parada');
  const done=sendProgress({...base,confirmed:80,done:true});assert.equal(done.percent,100);assert.equal(done.remaining,'Concluído');
+});
+test('before sending, the sender sees the file size and an estimated time',()=>{
+ // 1 MB in 880-byte blocks at 12 frames/s: 1137 blocks / 33 blocks per second = ~35 s.
+ const big={total:1137,size:1000000,bs:880};
+ assert.equal(sendEstimate({total:big.total,fps:12}),big.total/(12*BLOCKS_PER_FRAME));
+ assert.equal(sendEstimate({total:big.total,fps:0}),null);
+ assert.equal(sendProgress({...big,fps:12}).remaining,'~35 s (estimado)');
+ assert.equal(fileSummary({...big,fps:12}),'Tamanho: 1.00 MB · 1137 blocos de 880 bytes · Estimativa: ~35 s a 12 quadros/s, se o receptor ler todos os QR');
+ assert.equal(fileSummary({...big,fps:0}),'Tamanho: 1.00 MB · 1137 blocos de 880 bytes');
 });
 test('sender coverage ignores repetitions',async()=>{
  const s=await Sender.create(new Uint8Array(1000),'a.bin',400);

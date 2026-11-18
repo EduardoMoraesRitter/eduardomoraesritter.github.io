@@ -121,3 +121,13 @@ Pedido: mais velocidade, medida em percentual, com arquivos pequenos e grandes.
 - [ ] Ainda não medido no celular: QR de 600 bytes pode ser mais difícil de ler a distância
 - [x] Observação de método: o tempo total de 100 KB fica inflado pela forma como a captura cai no ciclo da câmera simulada; por isso a comparação usa a taxa em régime
 - [x] Armadilha encontrada: o navegador guardou o `index.html` antigo; a verificação só passou depois de recarregar com um parâmetro novo na URL
+
+## Parte 9: tamanho e tempo estimado antes de transmitir (18/11/2026)
+
+Pedido: ao escolher o arquivo, quem envia não via o tamanho nem uma estimativa de tempo (só quem recebe via).
+
+- [x] Conferido: antes de transmitir, a tela mostrava só o nome e "Aguardando transmissão"
+- [x] Nome do arquivo com o tamanho (ex.: `video-teste.mp4 · 1.00 MB`)
+- [x] "Tempo restante" mostra a estimativa antes de começar (ex.: `~35 s (estimado)`), e muda junto com a velocidade
+- [x] Linha de resumo: tamanho, número de blocos, bytes por bloco e estimativa a N quadros/s, "se o receptor ler todos os QR" (é o melhor caso: uma volta sem perdas)
+- [x] Teste de unidade em `tests/farol4-send-progress.test.mjs`; conferido na página local com arquivo de 1 MB (12 quadros/s → ~35 s; 6 quadros/s → ~2 min)
