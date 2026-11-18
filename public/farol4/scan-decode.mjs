@@ -21,7 +21,7 @@ export function toLocation(position) {
   };
 }
 
-// A binary block (format v5) starts with the bytes 'F5B'.
+// A binary block starts with the bytes 'F5B'.
 export function isBinaryPacket(bytes) {
   return bytes instanceof Uint8Array && bytes.length > 15 && bytes[0] === 0x46 && bytes[1] === 0x35 && bytes[2] === 0x42;
 }

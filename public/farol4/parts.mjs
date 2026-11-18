@@ -54,7 +54,7 @@ export class PartReceiver{
   const part=Math.floor(i/this.blocksPerChunk),bytes=await this.chunk(part);bytes.set(data,(i%this.blocksPerChunk)*this.meta.bs);
   this.flags[i]=1;this.count++;this.changed.add(part);return true;
  });}
- // Binary block (format v5). Same checks as the text block; identified by the hash prefix.
+ // Binary block format. Same checks as the text block; identified by the hash prefix.
  acceptBinary(bytes){return this.run(async()=>{
   const p=parseBinaryBlock(bytes);if(!p)return false;
   const tag=fileTag(this.meta.hash);if(p.tag.some((b,k)=>b!==tag[k]))return false;

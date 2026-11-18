@@ -522,7 +522,7 @@ async function verifyReceiver(){
 async function receivePacket(packet){
   await initialization;
 
-  // Binary block (format v5): same handling as a text block, without the text parsing.
+  // Binary block format: same handling as a text block, without the text parsing.
   if(packet instanceof Uint8Array){
     if(mode!=='receive'||resettingReception)return;
     if(receiver&&!receiver.verified&&!pauseState.value.paused){

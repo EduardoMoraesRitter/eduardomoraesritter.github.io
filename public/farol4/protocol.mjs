@@ -19,7 +19,7 @@ export function crc32(bytes) {
   for (const b of bytes) { c ^= b; for (let i=0;i<8;i++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1)); }
   return ((c ^ 0xffffffff) >>> 0).toString(16).padStart(8,'0');
 }
-// Binary block (format v5): 'F5B' + first 4 bytes of the file hash + uint32 index +
+// Binary block format (Farol 4, not Farol 5): 'F5B' + first 4 bytes of the file hash + uint32 index +
 // uint32 CRC32 of the data + the data. 15 bytes of header instead of ~90 characters,
 // and no base64: about 47% more data in the same QR size. Metadata stays as text.
 export const MAX_BLOCK_BYTES = 880;
