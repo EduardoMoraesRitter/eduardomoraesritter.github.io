@@ -108,6 +108,14 @@ test('return channel rejects stale, replayed, wrong-session and oversized messag
   await handler({payload:{iv:'a'.repeat(16),data:'a'.repeat(24001)}});assert.equal(deliveries,1);
   await ch.close();await handler({payload:await seal(key,{...msg,seq:4})});assert.equal(deliveries,1);
 });
+test('return channel delivers the reset message, so the other device learns about "start over"',async()=>{
+  let handler;const got=[];const fake=()=>({channel:()=>({on(_e,_f,cb){handler=cb;return this;},subscribe(cb){cb('SUBSCRIBED');return this;}}),removeAllChannels:async()=>{},realtime:{disconnect(){}}});
+  const ch=new ReturnChannel(m=>got.push(m.type),()=>{},fake),code=newPairCode();await ch.connect('url','key',code);
+  const key=await controlKey(code);
+  await handler({payload:await seal(key,{v:4,type:'reset',role:'receive',file:'x',from:'peer',seq:1,time:Date.now()})});
+  await handler({payload:await seal(key,{v:4,type:'wipe',role:'receive',file:'x',from:'peer',seq:2,time:Date.now()})});
+  assert.deepEqual(got,['reset']);
+});
 test('LIVE Supabase: missing request → exact repairs → integrity confirmation', {skip:process.env.FAROL_LIVE!=='1',timeout:40000},async()=>{
   const sdk=await readFile(new URL('../public/farol4/vendor/supabase.js',import.meta.url),'utf8');
   const {createClient}=new Function(sdk+';return supabase;')();

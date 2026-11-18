@@ -131,3 +131,18 @@ Pedido: ao escolher o arquivo, quem envia não via o tamanho nem uma estimativa 
 - [x] "Tempo restante" mostra a estimativa antes de começar (ex.: `~35 s (estimado)`), e muda junto com a velocidade
 - [x] Linha de resumo: tamanho, número de blocos, bytes por bloco e estimativa a N quadros/s, "se o receptor ler todos os QR" (é o melhor caso: uma volta sem perdas)
 - [x] Teste de unidade em `tests/farol4-send-progress.test.mjs`; conferido na página local com arquivo de 1 MB (12 quadros/s → ~35 s; 6 quadros/s → ~2 min)
+
+## Parte 10: "Recomeçar do zero" avisa o outro aparelho (18/11/2026)
+
+Pedido: no receptor, "Recomeçar do zero" apagava tudo só daquele lado. O transmissor continuava enviando como se nada tivesse acontecido. Eu não tinha testado esse botão antes.
+
+- [x] Causa: o botão fechava a conexão sem mandar nenhuma mensagem; o canal de retorno nem tinha um tipo de mensagem para isso
+- [x] Mensagem nova `reset` no canal de retorno (cifrada com o segredo da sala, como as outras), enviada antes de fechar a conexão
+- [x] Enviada por "Recomeçar do zero" (nos dois lados) e por "Iniciar nova recepção" / "Descartar" no receptor
+- [x] Transmissor ao receber: para a transmissão, volta ao bloco 1 com uma volta completa, zera o progresso do receptor e mostra o QR de conexão de novo
+- [x] Receptor ao receber: avisa que o transmissor recomeçou; os blocos já recebidos continuam salvos
+- [x] Teste de unidade: o canal de retorno entrega `reset` e continua descartando tipos desconhecidos
+- [x] Teste real com duas abas e Supabase: receptor recomeça → transmissor parou, voltou ao bloco 1 e mostrou o QR; transmissor recomeça → receptor mostrou o aviso
+- [x] Erro achado no teste: o receptor que entrou só pelo código (sem ler o QR) descartava o aviso; corrigido
+- [ ] Não testado no navegador: o aviso vindo de "Iniciar nova recepção" e "Descartar" (mesmo código do "Recomeçar do zero")
+- [ ] Teste com dois celulares (Eduardo)

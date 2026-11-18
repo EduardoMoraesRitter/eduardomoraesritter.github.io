@@ -8,7 +8,7 @@ import {cameraConstraints,syncCameraAspect} from './camera-view.mjs?v=20260914-1
 
 import {Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from './protocol.mjs?v=20261118-2';
 
-import {ReturnChannel} from './realtime.mjs?v=20261113-1';
+import {ReturnChannel} from './realtime.mjs?v=20261118-5';
 
 import {analyzeFrame,autoZoom,framing} from './camera.mjs?v=20261113-1';
 import {EventRate,screenDetail,confirmedDetail,readDetail} from './speed-meter.mjs?v=20261113-1';
@@ -276,6 +276,18 @@ $('startBlock').onchange=()=>{
 
 };
 
+// Tells the other device that this one is starting over, before the connection closes.
+// A receiver paired by code alone has no file yet; the room secret already limits who can send this.
+async function announceReset(){if(connection.ready)try{await connection.send({type:'reset',role:mode,file:transferId()||null});}catch{}}
+// The receiver threw its blocks away: stop, go back to block 1 with a full pass, and show the pairing QR again.
+function onReceiverReset(){
+  stop();transmissionDone=false;sendConfirmed=null;sendStalled=false;speedCtl=null;feedbackPeer=null;peerLastSeen=0;
+  sender.cursor=0;sender.repairs=[];sender.remotePlan=false;sender.sent=0;sender.resetCoverage();
+  $('startBlock').value='1';$('sentBlocks').textContent='0';$('nextBlock').textContent='1';
+  $('peerProgress').textContent='O receptor recomeçou do zero e apagou os blocos dele.';$('connectionStatus').textContent='Receptor saiu da sala · aguardando ele ler o QR de conexão';
+  updateSendProgress();updatePauseUI();updateLinkStatus();showPair();
+  notice('O receptor recomeçou do zero. A transmissão parou e voltou ao bloco 1. No receptor, leia este QR de conexão de novo.');
+}
 $('restart').onclick=()=>{if(sender){setPaused(true);sender.cursor=0;sender.repairs=[];sender.sent=0;sender.resetCoverage();$('startBlock').value='1';$('sentBlocks').textContent='0';$('nextBlock').textContent='1';render([sender.metadata()]);notice('Pronto para recomeçar do bloco 1.');}};
 
 $('repair').onclick=()=>{
@@ -837,7 +849,7 @@ async function resetReception(keepCamera=false){
   if(receiver&&!confirm(receiver.verified?'Começar outro arquivo? Salve o arquivo verificado antes de continuar. A cópia no navegador será removida.':'Começar outro arquivo? Os blocos da recepção atual serão removidos.'))return false;
   resettingReception=true;
   try{
-    if(transferId())setPaused(true);forgetRoom();const oldReceiver=receiver;receiver=null;storageTouched=true;dirty=false;await oldReceiver?.dispose?.();
+    await announceReset();if(transferId())setPaused(true);forgetRoom();const oldReceiver=receiver;receiver=null;storageTouched=true;dirty=false;await oldReceiver?.dispose?.();
     await connection.close();onConnectionState('CLOSED');pairTarget=null;lastPairCode='';$('pairCode').value='';pauseState.reset();pauseConfirmed=false;
     feedbackPeer=null;peerLastSeen=0;lastPairAttempt=0;opticalBlocked=false;transmissionDone=false;
     if(!keepCamera)stopCamera();await saveSnapshot(null);
@@ -858,7 +870,7 @@ $('resetAll').onclick=async()=>{
   if(!confirm('Recomeçar o Farol 4 do zero? Isso remove os blocos, salas e configurações salvos neste navegador. Salve seu arquivo antes de continuar.'))return;
   $('resetAll').disabled=true;
   try{
-    await initialization;resettingReception=true;storageTouched=true;sessionEnabled=false;dirty=false;const oldReceiver=receiver;receiver=null;sender=null;restoredRoom=null;await oldReceiver?.dispose?.();
+    await initialization;await announceReset();resettingReception=true;storageTouched=true;sessionEnabled=false;dirty=false;const oldReceiver=receiver;receiver=null;sender=null;restoredRoom=null;await oldReceiver?.dispose?.();
     stop();stopCamera();await connection.close();
     if(db)await new Promise((resolve,reject)=>{const tx=db.transaction(['sessions','parts'],'readwrite');tx.objectStore('sessions').clear();tx.objectStore('parts').clear();tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});
     for(const storage of [localStorage,sessionStorage])for(const key of Object.keys(storage))if(key.startsWith('farol4'))storage.removeItem(key);
@@ -1002,6 +1014,14 @@ function onControl(m){
   if(m.role===mode){sameRole=true;updateLinkStatus();return;}
 
   sameRole=false;
+
+  if(m.type==='reset'){
+    // Either side may not know the file yet (paired by code alone); the room secret already authenticates the peer.
+    if(m.file!=null&&transferId()&&m.file!==transferId())return;
+    if(mode==='send'&&sender&&m.role==='receive'&&(!feedbackPeer||feedbackPeer===m.from))onReceiverReset();
+    else if(mode==='receive'&&m.role==='send'){peerLastSeen=0;updateLinkStatus();$('connectionStatus').textContent='Transmissor saiu da sala';notice('O transmissor recomeçou do zero. Os blocos já recebidos continuam salvos aqui. Leia o novo QR de conexão dele para continuar.');}
+    return;
+  }
 
   if(m.type==='pause_state'||m.type==='pause_ack'){
 
