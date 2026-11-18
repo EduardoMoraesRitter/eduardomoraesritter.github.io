@@ -25,6 +25,6 @@ test('low capture at a slow rate is a framing problem, not speed',()=>{
  assert.equal(speedAdvice({...base,fps:1,frames:1,codes:2.7,scans:1.5,fresh:.5}).action,'frame');
 });
 test('badge and clamp',()=>{
- assert.equal(adviceBadge(6,'up'),'6 quadros/s · pode aumentar');assert.equal(adviceBadge(4,'wait'),'4 quadros/s');
+ assert.equal(adviceBadge(6,'up'),'6 quadros/s · pode aumentar');assert.equal(adviceBadge(8,'auto'),'8 quadros/s · automático');assert.equal(adviceBadge(4,'wait'),'4 quadros/s');
  assert.equal(clampFps(0),1);assert.equal(clampFps(99),12);assert.equal(clampFps('7'),7);assert.equal(clampFps(NaN),1);
 });

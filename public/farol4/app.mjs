@@ -13,7 +13,7 @@ import {ReturnChannel} from './realtime.mjs?v=20261113-1';
 import {analyzeFrame,autoZoom,framing} from './camera.mjs?v=20261113-1';
 import {EventRate,screenDetail,confirmedDetail,readDetail} from './speed-meter.mjs?v=20261113-1';
 import {overlayQuad,overlayState,drawOverlay} from './qr-overlay.mjs?v=20261113-1';
-import {speedAdvice,adviceBadge,clampFps,FPS_MIN,FPS_MAX} from './speed-advice.mjs?v=20261113-1';
+import {speedAdvice,adviceBadge,clampFps,FPS_MIN,FPS_MAX} from './speed-advice.mjs?v=20261118-1';
 import {newControlState,decideSpeed} from './speed-controller.mjs?v=20261113-6';
 import {splitChannels,packetsFrom} from './scan-decode.mjs?v=20261113-5';
 
@@ -434,8 +434,9 @@ function setFps(value,why=''){
 }
 function sendSpeedState(){
   if(mode!=='send'||!sender||!connection.ready)return;
-  const fresh=!!timer&&Date.now()-lastAdviceAt<12000;
-  connection.send({type:'speed',role:'send',file:sender.meta.id,fps:currentFps(),action:fresh?lastAdvice.action:'wait',text:fresh?lastAdvice.text:''});
+  const fresh=!!timer&&Date.now()-lastAdviceAt<12000,auto=$('autoSpeed').checked;
+  // With automatic speed on, the advice is acted on here; the receiver only needs to know that.
+  connection.send({type:'speed',role:'send',file:sender.meta.id,fps:currentFps(),action:auto?'auto':fresh?lastAdvice.action:'wait',text:auto?'Velocidade automática: o transmissor sobe e desce sozinho conforme a leitura.':fresh?lastAdvice.text:''});
 }
 // Receiver only: ask the sender for one step faster or slower.
 async function requestSpeed(delta){
@@ -446,8 +447,9 @@ async function requestSpeed(delta){
 function updateSpeedControl(){
   const fps=currentFps(),adviceFresh=!!timer&&Date.now()-lastAdviceAt<12000;
   $('sendFpsLabel').textContent=`${fps} quadros/s`;$('sendSlower').disabled=fps<=FPS_MIN;$('sendFaster').disabled=fps>=FPS_MAX;
-  $('sendSpeedAdvice').textContent=adviceFresh?lastAdvice.text:timer?'Sem medidas do receptor: o conselho de velocidade precisa da sala conectada e da câmera lendo.':'';
-  $('sendSpeedAdvice').dataset.advice=adviceFresh?lastAdvice.action:'wait';
+  const auto=$('autoSpeed').checked;
+  $('sendSpeedAdvice').textContent=auto?'Automático ligado: a velocidade sobe e desce sozinha conforme o receptor lê. Os botões continuam valendo para ajuste manual.':adviceFresh?lastAdvice.text:timer?'Sem medidas do receptor: o conselho de velocidade precisa da sala conectada e da câmera lendo.':'';
+  $('sendSpeedAdvice').dataset.advice=auto?'auto':adviceFresh?lastAdvice.action:'wait';
   const known=!!peerSpeed&&connection.ready&&Date.now()-peerSpeed.at<12000;
   $('receiveFpsLabel').textContent=known?`${peerSpeed.fps} quadros/s`:'—';
   $('receiveSlower').disabled=!known||peerSpeed.fps<=FPS_MIN;$('receiveFaster').disabled=!known||peerSpeed.fps>=FPS_MAX;
@@ -458,6 +460,7 @@ function updateSpeedControl(){
   if(known){badge.textContent=adviceBadge(peerSpeed.fps,peerSpeed.action);badge.dataset.advice=peerSpeed.action;}
 }
 setInterval(updateSpeedControl,1000);
+$('autoSpeed').onchange=()=>{updateSpeedControl();sendSpeedState();};
 
 
 
@@ -1019,7 +1022,7 @@ function onControl(m){
   }
 
   if(m.type==='speed'){
-    if(mode==='receive'&&m.role==='send'&&m.file===transferId()&&Number.isInteger(m.fps)&&m.fps>=FPS_MIN&&m.fps<=FPS_MAX&&['wait','up','down','keep','frame'].includes(m.action)&&typeof m.text==='string'&&m.text.length<=200){peerSpeed={fps:m.fps,action:m.action,text:m.text,at:Date.now()};updateSpeedControl();}
+    if(mode==='receive'&&m.role==='send'&&m.file===transferId()&&Number.isInteger(m.fps)&&m.fps>=FPS_MIN&&m.fps<=FPS_MAX&&['wait','up','down','keep','frame','auto'].includes(m.action)&&typeof m.text==='string'&&m.text.length<=200){peerSpeed={fps:m.fps,action:m.action,text:m.text,at:Date.now()};updateSpeedControl();}
     return;
   }
   if(mode!=='send'||!sender||m.role!=='receive'||m.file!==sender.meta.id)return;

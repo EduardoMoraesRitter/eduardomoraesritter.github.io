@@ -23,6 +23,6 @@ export function speedAdvice({fps,frames=0,codes=0,scans=0,fresh=0,sinceAdjustmen
 }
 // Short label for the corner badge.
 export function adviceBadge(fps,action){
-  const hint={up:'pode aumentar',down:'diminua',frame:'ajuste o enquadramento',keep:'boa'}[action];
+  const hint={up:'pode aumentar',down:'diminua',frame:'ajuste o enquadramento',keep:'boa',auto:'automático'}[action];
   return `${fps} quadros/s`+(hint?` · ${hint}`:'');
 }
