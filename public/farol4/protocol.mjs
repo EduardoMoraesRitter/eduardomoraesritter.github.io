@@ -19,11 +19,39 @@ export function crc32(bytes) {
   for (const b of bytes) { c ^= b; for (let i=0;i<8;i++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1)); }
   return ((c ^ 0xffffffff) >>> 0).toString(16).padStart(8,'0');
 }
+// Binary block (format v5): 'F5B' + first 4 bytes of the file hash + uint32 index +
+// uint32 CRC32 of the data + the data. 15 bytes of header instead of ~90 characters,
+// and no base64: about 47% more data in the same QR size. Metadata stays as text.
+export const MAX_BLOCK_BYTES = 880;
+export const BIN_HEADER = 15;
+export function fileTag(hash) { return Uint8Array.from(hash.slice(0,8).match(/../g), h => parseInt(h,16)); }
+export function packBinaryBlock(meta, index, data) {
+  const out = new Uint8Array(BIN_HEADER + data.length);
+  out[0]=0x46; out[1]=0x35; out[2]=0x42;
+  out.set(fileTag(meta.hash), 3);
+  const view = new DataView(out.buffer);
+  view.setUint32(7, index); view.setUint32(11, parseInt(crc32(data), 16));
+  out.set(data, BIN_HEADER);
+  return out;
+}
+export function isBinaryBlock(bytes) {
+  return bytes instanceof Uint8Array && bytes.length > BIN_HEADER && bytes[0]===0x46 && bytes[1]===0x35 && bytes[2]===0x42;
+}
+export function parseBinaryBlock(bytes) {
+  if (!isBinaryBlock(bytes)) return null;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return { tag: bytes.subarray(3,7), index: view.getUint32(7), crc: view.getUint32(11).toString(16).padStart(8,'0'), data: bytes.subarray(BIN_HEADER) };
+}
+// The QR generator turns each character into one byte (code & 0xff), so bytes travel as Latin-1.
+export function latin1(bytes) {
+  let s = ''; for (let i = 0; i < bytes.length; i += 4096) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 4096));
+  return s;
+}
 export function validMeta(m) {
   return !!m && m.v===4 && /^[a-f0-9]{64}$/.test(m.hash) &&
     m.id === `${m.hash}:${m.bs}` && typeof m.name==='string' && m.name.length<=180 &&
     Number.isInteger(m.size) && m.size>=0 && m.size<=MAX_BYTES &&
-    Number.isInteger(m.bs) && m.bs>=256 && m.bs<=600 &&
+    Number.isInteger(m.bs) && m.bs>=256 && m.bs<=MAX_BLOCK_BYTES &&
     m.total===Math.max(1,Math.ceil(m.size/m.bs)) && m.total<=MAX_BLOCKS;
 }
 export class Sender {

@@ -1,4 +1,4 @@
-import {Sender,Receiver,validMeta,MAX_BYTES,b64,unb64,crc32} from './protocol.mjs?v=20261113-1';
+import {Sender,Receiver,validMeta,MAX_BYTES,b64,unb64,crc32,packBinaryBlock,parseBinaryBlock,fileTag,latin1} from './protocol.mjs?v=20261118-2';
 export const READ_SIZE=1024*1024;
 export const PART_SIZE=8*1024*1024;
 async function hasher(){if(!globalThis.hashwasm?.createSHA256)throw Error('Verificador indisponível. Recarregue a página.');return globalThis.hashwasm.createSHA256();}
@@ -8,15 +8,17 @@ export async function hashFile(file,onProgress=()=>{}){
  return h.digest('hex');
 }
 export class FileSender extends Sender{
- static async create(file,name,bs=400,onProgress){
+ static async create(file,name,bs=400,onProgress,binary=false){
   if(file.size>MAX_BYTES)throw Error('Limite: 100 MB por arquivo.');
+  if(bs>600&&!binary)throw Error('Blocos acima de 600 bytes só funcionam no formato binário.');
   const hash=await hashFile(file,onProgress),meta={v:4,id:`${hash}:${bs}`,hash,name:name.slice(0,180),size:file.size,bs,total:Math.max(1,Math.ceil(file.size/bs))};
-  if(!validMeta(meta))throw Error('Arquivo ou tamanho de bloco inválido.');return new FileSender(file,meta);
+  if(!validMeta(meta))throw Error('Arquivo ou tamanho de bloco inválido.');const sender=new FileSender(file,meta);sender.binary=!!binary;return sender;
  }
  constructor(file,meta){super(null,meta);this.file=file;}
  async packet(i){
   if(!Number.isInteger(i)||i<0||i>=this.meta.total)throw Error('Bloco inválido');
   const data=new Uint8Array(await this.file.slice(i*this.meta.bs,(i+1)*this.meta.bs).arrayBuffer());
+  if(this.binary)return latin1(packBinaryBlock(this.meta,i,data));
   return `F4|B|${this.meta.id}|${i}|${crc32(data)}|${b64(data)}`;
  }
 }
@@ -50,6 +52,16 @@ export class PartReceiver{
   if(data.length!==Math.max(0,Math.min(this.meta.bs,this.meta.size-i*this.meta.bs))||crc32(data)!==p[4]){this.corrupt++;return false;}
   if(this.flags[i]){this.duplicates++;return false;}
   const part=Math.floor(i/this.blocksPerChunk),bytes=await this.chunk(part);bytes.set(data,(i%this.blocksPerChunk)*this.meta.bs);
+  this.flags[i]=1;this.count++;this.changed.add(part);return true;
+ });}
+ // Binary block (format v5). Same checks as the text block; identified by the hash prefix.
+ acceptBinary(bytes){return this.run(async()=>{
+  const p=parseBinaryBlock(bytes);if(!p)return false;
+  const tag=fileTag(this.meta.hash);if(p.tag.some((b,k)=>b!==tag[k]))return false;
+  const i=p.index;if(i>=this.meta.total)return false;
+  if(p.data.length!==Math.max(0,Math.min(this.meta.bs,this.meta.size-i*this.meta.bs))||crc32(p.data)!==p.crc){this.corrupt++;return false;}
+  if(this.flags[i]){this.duplicates++;return false;}
+  const part=Math.floor(i/this.blocksPerChunk),chunk=await this.chunk(part);chunk.set(p.data,(i%this.blocksPerChunk)*this.meta.bs);
   this.flags[i]=1;this.count++;this.changed.add(part);return true;
  });}
  flush(timing){return this.run(()=>this.flushNow(timing));}

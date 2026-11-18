@@ -1,4 +1,4 @@
-import {b64,unb64} from './protocol.mjs?v=20260909-3';
+import {b64,unb64} from './protocol.mjs?v=20261118-2';
 export function pairPacket({url,key,code,file}){
   return 'F4|P|'+b64(new TextEncoder().encode(JSON.stringify({url,key,code,file})));
 }
@@ -7,7 +7,7 @@ export function readPair(packet){
   try{
     const p=JSON.parse(new TextDecoder().decode(unb64(packet.slice(5))));
     if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(p.url)||(p.key!==undefined&&(typeof p.key!=='string'||p.key.length>1000))||
-      !/^[a-f0-9]{64}$/.test(p.code)||!/^[a-f0-9]{64}:(256|400|600)$/.test(p.file))return null;
+      !/^[a-f0-9]{64}$/.test(p.code)||!/^[a-f0-9]{64}:(256|400|600|880)$/.test(p.file))return null;
     return p;
   }catch{return null;}
 }

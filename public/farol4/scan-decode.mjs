@@ -21,12 +21,23 @@ export function toLocation(position) {
   };
 }
 
-// Keeps only results that carry a Farol 4 packet. A null list (timed-out channel) yields nothing.
+// A binary block (format v5) starts with the bytes 'F5B'.
+export function isBinaryPacket(bytes) {
+  return bytes instanceof Uint8Array && bytes.length > 15 && bytes[0] === 0x46 && bytes[1] === 0x35 && bytes[2] === 0x42;
+}
+
+// Keeps only results that carry a Farol 4 packet: text (F4|...) or a binary block (raw bytes).
+// A null list (timed-out channel) yields nothing.
 export function packetsFrom(results) {
   if (!Array.isArray(results)) return [];
-  return results
-    .filter((r) => typeof r?.text === 'string' && r.text.startsWith('F4|'))
-    .map((r) => ({ data: r.text, location: toLocation(r.position) }));
+  const out = [];
+  for (const r of results) {
+    if (!r) continue;
+    const location = toLocation(r.position);
+    if (isBinaryPacket(r.bytes)) out.push({ data: new Uint8Array(r.bytes), location });
+    else if (typeof r.text === 'string' && r.text.startsWith('F4|')) out.push({ data: r.text, location });
+  }
+  return out;
 }
 
 // Splits one RGBA frame into three greyscale RGBA images in a single pass.

@@ -8,7 +8,7 @@ self.onmessage = async ({data}) => {
   try {
     const image = new ImageData(new Uint8ClampedArray(data.buffer), data.width, data.height);
     const results = await readBarcodesFromImageData(image, options);
-    self.postMessage({id: data.id, results: results.map((r) => ({text: r.text, position: r.position})), buffer: data.buffer}, [data.buffer]);
+    self.postMessage({id: data.id, results: results.map((r) => ({text: r.text, bytes: r.bytes, position: r.position})), buffer: data.buffer}, [data.buffer]);
   } catch (error) {
     self.postMessage({id: data.id, error: String(error?.message || error), buffer: data.buffer}, [data.buffer]);
   }

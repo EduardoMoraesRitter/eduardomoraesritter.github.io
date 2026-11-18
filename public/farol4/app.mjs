@@ -1,12 +1,12 @@
 import {videoAudio} from './video-audio.mjs?v=20260920-6';
 import {videoPrints} from './video-prints.mjs?v=20260921-1';
 import {recoveryAction,canRetryReception} from './adaptive-recovery.mjs?v=20261009-1';
-import {FileSender,PartReceiver,PART_SIZE} from './parts.mjs?v=20261113-1';
+import {FileSender,PartReceiver,PART_SIZE} from './parts.mjs?v=20261118-2';
 import {TransferClock,elapsed,dataSize} from './transfer-clock.mjs?v=20260909-5';
 
 import {cameraConstraints,syncCameraAspect} from './camera-view.mjs?v=20260914-1';
 
-import {Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from './protocol.mjs?v=20261113-1';
+import {Receiver,readMeta,ranges,parseRanges,newPairCode,MAX_BYTES} from './protocol.mjs?v=20261118-2';
 
 import {ReturnChannel} from './realtime.mjs?v=20261113-1';
 
@@ -15,9 +15,9 @@ import {EventRate,screenDetail,confirmedDetail,readDetail} from './speed-meter.m
 import {overlayQuad,overlayState,drawOverlay} from './qr-overlay.mjs?v=20261113-1';
 import {speedAdvice,adviceBadge,clampFps,FPS_MIN,FPS_MAX} from './speed-advice.mjs?v=20261118-1';
 import {newControlState,decideSpeed} from './speed-controller.mjs?v=20261113-6';
-import {splitChannels,packetsFrom} from './scan-decode.mjs?v=20261113-5';
+import {splitChannels,packetsFrom,isBinaryPacket} from './scan-decode.mjs?v=20261118-2';
 
-import {pairPacket,readPair} from './pairing.mjs?v=20260909-3';
+import {pairPacket,readPair} from './pairing.mjs?v=20261118-2';
 
 import {TransferRate,duration,needsRecovery} from './transfer-rate.mjs?v=20260909-8';
 import {sendProgress} from './send-progress.mjs?v=20261113-1';
@@ -304,7 +304,7 @@ async function prepare(){calibration.cancel();
 
     if(generation!==loadGeneration)return;
 
-    const candidate=await FileSender.create(file,file.name,Number($('blockSize').value),(done,total)=>{if(generation===loadGeneration)notice(`Preparando em partes: ${Math.round(done/Math.max(1,total)*100)}%`);});
+    const candidate=await FileSender.create(file,file.name,Number($('blockSize').value),(done,total)=>{if(generation===loadGeneration)notice(`Preparando em partes: ${Math.round(done/Math.max(1,total)*100)}%`);},$('binaryFormat').checked);
 
     if(generation!==loadGeneration)return;
 
@@ -522,6 +522,17 @@ async function verifyReceiver(){
 async function receivePacket(packet){
   await initialization;
 
+  // Binary block (format v5): same handling as a text block, without the text parsing.
+  if(packet instanceof Uint8Array){
+    if(mode!=='receive'||resettingReception)return;
+    if(receiver&&!receiver.verified&&!pauseState.value.paused){
+      const target=receiver;const accepted=await target.acceptBinary(packet);if(receiver!==target)return;
+      if(accepted){lastProgressAt=performance.now();dirty=true;if(receiver.count===receiver.meta.total)verifyReceiver();}
+      updateReceiver();
+    }
+    return;
+  }
+
   if(calibration.receive(packet))return;
 
   if(mode!=='receive'||resettingReception)return;
@@ -700,7 +711,7 @@ function startScanWorkers(){
   if(scanWorkers||scanWorkersFailed)return scanWorkers;
   try{
     scanWorkers=[0,1,2].map(()=>{
-      const worker=new Worker(new URL('./scan-worker.mjs?v=20261113-5',import.meta.url),{type:'module'});
+      const worker=new Worker(new URL('./scan-worker.mjs?v=20261118-2',import.meta.url),{type:'module'});
       worker.onmessage=({data})=>{const done=pendingScans.get(data.id);if(!done)return;pendingScans.delete(data.id);done(data.error?null:data.results,data.buffer);};
       worker.onerror=()=>{scanWorkersFailed=true;stopScanWorkers();};
       return worker;
@@ -734,7 +745,7 @@ function readChannelsInWorkers(channels,width,height){
   });
 }
 function decodeWithJsQR(channels,width,height){
-  return channels.flatMap(pixels=>{const qr=window.jsQR?.(pixels,width,height,{inversionAttempts:'attemptBoth'});return qr&&qr.data.startsWith('F4|')?[{data:qr.data,location:qr.location}]:[];});
+  return channels.flatMap(pixels=>{const qr=window.jsQR?.(pixels,width,height,{inversionAttempts:'attemptBoth'});if(!qr)return [];const bytes=qr.binaryData?Uint8Array.from(qr.binaryData):null;if(isBinaryPacket(bytes))return [{data:bytes,location:qr.location}];return qr.data.startsWith('F4|')?[{data:qr.data,location:qr.location}]:[];});
 }
 // The Farol 4 packets in one frame, each with the QR outline when the reader gives one.
 async function readFrame(img,width,height){
