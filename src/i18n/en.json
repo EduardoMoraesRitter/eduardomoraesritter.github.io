@@ -386,7 +386,7 @@
   "rag.m.rec.curto": "Recall",
   "rag.m.faith.curto": "Faithful.",
   "rag.m.rel.curto": "Relevancy",
-  "rag.verdict": "The <strong>tree</strong> won: the LLM reads the table of contents and points to the right section, and almost never brings extra passages. <strong>Agentic</strong> comes close, but spends 2 to 7 calls per question. The <strong>vector</strong> search finds the answer, but brings two useless passages along. <strong>BM25</strong> loses when the word changes form (\"pesa\" and \"peso\"). The <strong>graph</strong> landed at the floor: 30 passages make few relations, and the \"Aurora K2\" node links everything to everything.",
+  "rag.verdict": "A tie at the top. <strong>Agentic</strong> and the <strong>tree</strong> ended half a point apart, and each evaluator put a different one first: DeepEval preferred agentic, Ragas preferred the tree. The tree gets there with 1 LLM call per question. Agentic spends 2 to 7. The <strong>vector</strong> search finds the answer, but brings two useless passages along. <strong>BM25</strong> loses when the word changes form (\"pesa\" and \"peso\"). The <strong>graph</strong> landed at the floor: 30 passages make few relations, and the \"Aurora K2\" node links everything to everything.",
   "rag.cta.charts": "See the charts",
   "rag.cta.q": "Read question by question",
   "rag.cta.repo": "Code on GitHub",

@@ -1181,6 +1181,10 @@ header {
     .nav-links { gap: 14px; }
     .nav-links a { font-size: 0.66rem; letter-spacing: 0.05em; }
 }
+@media (max-width: 1040px) {
+    .nav-links { gap: 9px; }
+    .nav-links a { font-size: 0.6rem; letter-spacing: 0.02em; }
+}
 
 @media (max-width: 768px) {
     :root {

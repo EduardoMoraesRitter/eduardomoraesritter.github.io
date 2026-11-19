@@ -168,7 +168,7 @@ const tipTxt = (f: string, m: string, n: any) => {
           ))}
         </div>
 
-        <p class="rg-veredito" data-i18n="rag.verdict">A <strong>árvore</strong> venceu: o LLM lê o sumário e aponta a seção certa, e quase nunca traz trecho sobrando. A <strong>agêntica</strong> chega perto, mas gasta de 2 a 7 chamadas por pergunta. O <strong>vetor</strong> acha a resposta, só que traz dois trechos inúteis junto. O <strong>BM25</strong> perde quando a palavra muda de forma ("pesa" e "peso"). O <strong>grafo</strong> ficou no piso: 30 trechos geram poucas relações, e o nó "Aurora K2" liga tudo a tudo.</p>
+        <p class="rg-veredito" data-i18n="rag.verdict">Empate no topo. A <strong>agêntica</strong> e a <strong>árvore</strong> ficaram a meio ponto uma da outra, e cada avaliador pôs uma na frente: o DeepEval preferiu a agêntica, o Ragas preferiu a árvore. A árvore chega lá com 1 chamada de LLM por pergunta. A agêntica gasta de 2 a 7. O <strong>vetor</strong> acha a resposta, só que traz dois trechos inúteis junto. O <strong>BM25</strong> perde quando a palavra muda de forma ("pesa" e "peso"). O <strong>grafo</strong> ficou no piso: 30 trechos geram poucas relações, e o nó "Aurora K2" liga tudo a tudo.</p>
 
         <div class="rg-acoes">
           <a class="btn-outline" href="#graficos"><span data-i18n="rag.cta.charts">Ver os gráficos</span></a>
